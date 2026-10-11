@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1280" viewBox="0 0 1920 1280">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#15648a"/>
+      <stop offset="45%" stop-color="#3f9ec5"/>
+      <stop offset="75%" stop-color="#a9d9ec"/>
+      <stop offset="100%" stop-color="#e9dcc3"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#104e6e"/>
+      <stop offset="100%" stop-color="#0c3a52"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fde8c8"/>
+      <stop offset="100%" stop-color="#e8926b"/>
+    </linearGradient>
+  </defs>
+  <!-- Ciel -->
+  <rect width="1920" height="1280" fill="url(#sky)"/>
+  <!-- Soleil couchant -->
+  <circle cx="1380" cy="560" r="130" fill="url(#sun)" opacity="0.9"/>
+  <circle cx="1380" cy="560" r="200" fill="#e8926b" opacity="0.15"/>
+  <!-- Mer -->
+  <rect y="780" width="1920" height="500" fill="url(#sea)"/>
+  <!-- Reflets du soleil sur l'eau -->
+  <ellipse cx="1380" cy="820" rx="90" ry="10" fill="#e8926b" opacity="0.5"/>
+  <ellipse cx="1380" cy="870" rx="140" ry="8" fill="#e8926b" opacity="0.35"/>
+  <ellipse cx="1380" cy="920" rx="190" ry="7" fill="#e8926b" opacity="0.25"/>
+  <ellipse cx="1380" cy="975" rx="240" ry="6" fill="#e8926b" opacity="0.18"/>
+  <!-- Le Chalet de Gruissan sur pilotis (silhouette) -->
+  <g transform="translate(300,470)">
+    <!-- Toit pyramidal -->
+    <path d="M120 60 L0 130 L240 130 Z" fill="#072836"/>
+    <path d="M120 60 L240 130 L120 130 Z" fill="#0c3a52"/>
+    <!-- Corps de la cabane -->
+    <rect x="35" y="130" width="170" height="110" fill="#104e6e"/>
+    <!-- Fenêtres -->
+    <rect x="60" y="155" width="35" height="35" fill="#fde8c8" opacity="0.9"/>
+    <rect x="145" y="155" width="35" height="35" fill="#fde8c8" opacity="0.9"/>
+    <!-- Pilotis -->
+    <rect x="55" y="240" width="14" height="120" fill="#072836"/>
+    <rect x="115" y="240" width="14" height="120" fill="#072836"/>
+    <rect x="171" y="240" width="14" height="120" fill="#072836"/>
+    <!-- Reflet dans l'eau -->
+    <rect x="35" y="360" width="170" height="60" fill="#104e6e" opacity="0.4"/>
+  </g>
+  <!-- Vagues douces au premier plan -->
+  <path d="M0 1050 Q240 1010 480 1050 T960 1050 T1440 1050 T1920 1050 V1280 H0 Z" fill="#0c3a52" opacity="0.6"/>
+  <path d="M0 1130 Q240 1095 480 1130 T960 1130 T1440 1130 T1920 1130 V1280 H0 Z" fill="#072836" opacity="0.7"/>
+</svg>

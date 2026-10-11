@@ -24,62 +24,99 @@ function fmtMonth(iso: string): string {
 }
 
 const statutClass: Record<string, string> = {
-  libre: 'bg-emerald-100 text-emerald-800',
-  reserve: 'bg-rose-100 text-rose-800',
-  partiel: 'bg-amber-100 text-amber-800',
+  libre: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  reserve: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200',
+  partiel: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
 };
 ---
 
 <Layout lang={lang} title={tr['hero.title']}>
-  <!-- Hero -->
-  <section class="relative bg-gradient-to-br from-sea-600 to-sea-800 text-white">
-    <div class="absolute inset-0 opacity-20" style="background-image: url('/gruissan-location/images/hero-pattern.svg'); background-size: cover;"></div>
-    <div class="relative max-w-6xl mx-auto px-4 py-24 md:py-32">
-      <p class="uppercase tracking-widest text-sea-200 text-sm mb-4">{tr['hero.badge']}</p>
-      <h1 class="font-display text-4xl md:text-6xl font-bold max-w-3xl leading-tight">{tr['hero.title']}</h1>
-      <p class="mt-6 text-lg text-sea-100 max-w-2xl">{tr['hero.subtitle']}</p>
-      <div class="mt-8 flex flex-wrap gap-4">
-        <a href="#tarifs" class="bg-white text-sea-700 font-semibold px-6 py-3 rounded-lg hover:bg-sea-50 transition">{tr['hero.cta1']}</a>
-        <a href="#contact" class="border border-white/60 text-white font-semibold px-6 py-3 rounded-lg hover:bg-white/10 transition">{tr['hero.cta2']}</a>
+  <!-- Hero — photo plein cadre avec voile sombre -->
+  <section class="relative min-h-[85vh] flex items-center overflow-hidden">
+    <img
+      src="/gruissan-location/images/hero.svg"
+      alt=""
+      aria-hidden="true"
+      class="absolute inset-0 w-full h-full object-cover"
+    />
+    <div class="absolute inset-0 bg-gradient-to-r from-ocean-900/85 via-ocean-900/55 to-ocean-900/20"></div>
+    <div class="relative max-w-6xl mx-auto px-4 py-24 w-full">
+      <p class="text-sunset-400 text-xs font-semibold tracking-[0.25em] uppercase mb-5">
+        {tr['hero.badge']}
+      </p>
+      <h1 class="font-display text-4xl md:text-6xl lg:text-7xl font-semibold text-white max-w-3xl leading-[1.05]">
+        {tr['hero.title']}
+      </h1>
+      <p class="mt-6 text-lg md:text-xl text-sand-100/90 max-w-xl leading-relaxed">
+        {tr['hero.subtitle']}
+      </p>
+      <div class="mt-10 flex flex-wrap gap-4">
+        <a
+          href="#tarifs"
+          class="bg-sunset-500 hover:bg-sunset-600 text-white font-semibold px-7 py-3.5 rounded-full transition-colors shadow-lg shadow-sunset-600/25"
+        >{tr['hero.cta1']}</a>
+        <a
+          href="#contact"
+          class="border border-white/40 hover:bg-white/10 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
+        >{tr['hero.cta2']}</a>
       </div>
+    </div>
+    <!-- Indicateur de scroll -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/50 animate-bounce" aria-hidden="true">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+      </svg>
     </div>
   </section>
 
   <!-- Appartement -->
-  <section id="appart" class="max-w-6xl mx-auto px-4 py-20 scroll-mt-20">
-    <h2 class="font-display text-3xl md:text-4xl font-bold text-sea-800">{tr['appart.title']}</h2>
-    <p class="mt-2 text-slate-600 text-lg">{tr['appart.subtitle']}</p>
-    <p class="mt-6 max-w-3xl text-slate-700 leading-relaxed">{tr['appart.desc']}</p>
-    <div class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-sand-200 text-center">
-        <p class="text-3xl font-bold text-sea-600">{site.capacite}</p>
-        <p class="text-sm text-slate-500 mt-1">{tr['appart.capacite']}</p>
+  <section id="appart" class="max-w-6xl mx-auto px-4 py-24 scroll-mt-16">
+    <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+      {tr['appart.subtitle']}
+    </p>
+    <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900 max-w-2xl leading-tight">
+      {tr['appart.title']}
+    </h2>
+    <p class="mt-8 max-w-2xl text-ocean-700/80 text-lg leading-relaxed">{tr['appart.desc']}</p>
+    <div class="mt-14 grid grid-cols-2 md:grid-cols-4 gap-px bg-sand-200 rounded-2xl overflow-hidden shadow-card">
+      <div class="bg-sand-50 p-8 text-center">
+        <p class="font-display text-5xl font-semibold text-ocean-600">{site.capacite}</p>
+        <p class="text-xs text-ocean-700/60 mt-2 uppercase tracking-wider">{tr['appart.capacite']}</p>
       </div>
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-sand-200 text-center">
-        <p class="text-3xl font-bold text-sea-600">{site.chambres}</p>
-        <p class="text-sm text-slate-500 mt-1">{tr['appart.chambres']}</p>
+      <div class="bg-sand-50 p-8 text-center">
+        <p class="font-display text-5xl font-semibold text-ocean-600">{site.chambres}</p>
+        <p class="text-xs text-ocean-700/60 mt-2 uppercase tracking-wider">{tr['appart.chambres']}</p>
       </div>
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-sand-200 text-center">
-        <p class="text-3xl font-bold text-sea-600">{site.surface_m2} <span class="text-base font-normal">m²</span></p>
-        <p class="text-sm text-slate-500 mt-1">{tr['appart.surface']}</p>
+      <div class="bg-sand-50 p-8 text-center">
+        <p class="font-display text-5xl font-semibold text-ocean-600">{site.surface_m2}<span class="text-2xl font-normal"> m²</span></p>
+        <p class="text-xs text-ocean-700/60 mt-2 uppercase tracking-wider">{tr['appart.surface']}</p>
       </div>
-      <div class="bg-white rounded-xl p-6 shadow-sm border border-sand-200 text-center">
-        <p class="text-3xl font-bold text-sea-600">{site.terrasse_m2} <span class="text-base font-normal">m²</span></p>
-        <p class="text-sm text-slate-500 mt-1">{tr['appart.terrasse']}</p>
+      <div class="bg-sand-50 p-8 text-center">
+        <p class="font-display text-5xl font-semibold text-ocean-600">{site.terrasse_m2}<span class="text-2xl font-normal"> m²</span></p>
+        <p class="text-xs text-ocean-700/60 mt-2 uppercase tracking-wider">{tr['appart.terrasse']}</p>
       </div>
     </div>
   </section>
 
   <!-- Galerie -->
-  <section id="galerie" class="bg-white py-20 scroll-mt-20">
+  <section id="galerie" class="bg-ocean-900 py-24 scroll-mt-16">
     <div class="max-w-6xl mx-auto px-4">
-      <h2 class="font-display text-3xl md:text-4xl font-bold text-sea-800">{tr['galerie.title']}</h2>
-      <p class="mt-2 text-slate-600 text-lg">{tr['galerie.subtitle']}</p>
-      <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <p class="text-sunset-400 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+        {tr['galerie.subtitle']}
+      </p>
+      <h2 class="font-display text-3xl md:text-5xl font-semibold text-white">{tr['galerie.title']}</h2>
+      <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {galerieData.photos.map((photo) => (
-          <figure class="rounded-xl overflow-hidden shadow-sm border border-sand-200">
-            <img src={photo.src} alt={photo.alt} loading="lazy" class="w-full h-56 object-cover" />
-            <figcaption class="p-3 text-sm text-slate-500">{photo.alt}</figcaption>
+          <figure class="group relative rounded-2xl overflow-hidden aspect-[4/3]">
+            <img
+              src={photo.src}
+              alt={photo.alt}
+              loading="lazy"
+              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <figcaption class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ocean-900/90 to-transparent p-5 pt-12">
+              <p class="text-sm text-sand-100">{photo.alt}</p>
+            </figcaption>
           </figure>
         ))}
       </div>
@@ -87,35 +124,65 @@ const statutClass: Record<string, string> = {
   </section>
 
   <!-- Tarifs -->
-  <section id="tarifs" class="max-w-6xl mx-auto px-4 py-20 scroll-mt-20">
-    <h2 class="font-display text-3xl md:text-4xl font-bold text-sea-800">{tr['tarifs.title']}</h2>
-    <p class="mt-2 text-slate-600 text-lg">{tr['tarifs.subtitle']}</p>
-    <div class="mt-10 grid md:grid-cols-3 gap-6">
-      {tarifsData.saisons.map((saison) => (
-        <div class="bg-white rounded-2xl p-8 shadow-sm border border-sand-200 flex flex-col">
-          <h3 class="font-semibold text-lg text-sea-700">{saison.periode}</h3>
-          <p class="mt-4 text-4xl font-bold text-sea-800">{saison.prix_semaine} €<span class="text-sm font-normal text-slate-500 ml-2">{tr['tarifs.parSemaine']}</span></p>
-          <p class="mt-2 text-sm text-slate-500">
+  <section id="tarifs" class="max-w-6xl mx-auto px-4 py-24 scroll-mt-16">
+    <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+      {tr['tarifs.subtitle']}
+    </p>
+    <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['tarifs.title']}</h2>
+    <div class="mt-14 grid md:grid-cols-3 gap-6">
+      {tarifsData.saisons.map((saison, i) => (
+        <div
+          class:list={[
+            'rounded-2xl p-8 flex flex-col transition-shadow',
+            i === 0
+              ? 'bg-ocean-800 text-white shadow-card-hover ring-1 ring-ocean-700'
+              : 'bg-white border border-sand-200 shadow-card hover:shadow-card-hover',
+          ]}
+        >
+          <h3 class:list={['font-display text-2xl font-semibold', i === 0 ? 'text-white' : 'text-ocean-800']}>
+            {saison.periode}
+          </h3>
+          <p class="mt-6">
+            <span class:list={['font-display text-5xl font-semibold', i === 0 ? 'text-white' : 'text-ocean-900']}>
+              {saison.prix_semaine} €
+            </span>
+            <span class:list={['text-sm ml-2', i === 0 ? 'text-ocean-100/70' : 'text-ocean-700/50']}>
+              {tr['tarifs.parSemaine']}
+            </span>
+          </p>
+          <p class:list={['mt-3 text-sm', i === 0 ? 'text-ocean-100/70' : 'text-ocean-700/60']}>
             {saison.prix_nuit_min} € {tr['tarifs.parNuit']} · {saison.nuits_min} {tr['tarifs.nuitsMin']}
           </p>
-          <p class="mt-4 text-sm text-slate-600 italic">{saison.note}</p>
+          <p class:list={['mt-5 pt-5 text-sm border-t', i === 0 ? 'border-ocean-700 text-ocean-100/80' : 'border-sand-200 text-ocean-700/70 italic']}>
+            {saison.note}
+          </p>
         </div>
       ))}
     </div>
-    <div class="mt-12 grid md:grid-cols-2 gap-8">
-      <div class="bg-sea-50 rounded-2xl p-8">
-        <h3 class="font-semibold text-sea-700 mb-4">{tr['tarifs.inclus']}</h3>
-        <ul class="space-y-2 text-slate-700">
-          {tarifsData.inclus.map((item) => <li class="flex items-center gap-2"><span class="text-sea-500">✓</span>{item}</li>)}
+    <div class="mt-8 grid md:grid-cols-2 gap-6">
+      <div class="bg-sand-100 rounded-2xl p-8">
+        <h3 class="font-display text-xl font-semibold text-ocean-800 mb-5">{tr['tarifs.inclus']}</h3>
+        <ul class="space-y-3 text-ocean-800/80">
+          {tarifsData.inclus.map((item) => (
+            <li class="flex items-center gap-3">
+              <svg class="w-4 h-4 text-sunset-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+              {item}
+            </li>
+          ))}
         </ul>
-        <p class="mt-4 text-sm text-slate-500">{tr['tarifs.caution']}: {tarifsData.caution} €</p>
+        <p class="mt-6 pt-5 border-t border-sand-200 text-sm text-ocean-700/60">
+          {tr['tarifs.caution']}: <span class="font-semibold text-ocean-800">{tarifsData.caution} €</span>
+        </p>
       </div>
       <div class="bg-white rounded-2xl p-8 border border-sand-200">
-        <h3 class="font-semibold text-sea-700 mb-4">{tr['tarifs.options']}</h3>
-        <ul class="space-y-2 text-slate-700">
+        <h3 class="font-display text-xl font-semibold text-ocean-800 mb-5">{tr['tarifs.options']}</h3>
+        <ul class="space-y-3 text-ocean-800/80">
           {tarifsData.options.map((opt) => (
-            <li class="flex justify-between gap-2">
-              <span>{opt.nom}</span><span class="font-medium text-sea-700">{opt.prix} €</span>
+            <li class="flex justify-between items-baseline gap-4">
+              <span>{opt.nom}</span>
+              <span class="font-display text-lg font-semibold text-ocean-600 whitespace-nowrap">{opt.prix} €</span>
             </li>
           ))}
         </ul>
@@ -124,76 +191,92 @@ const statutClass: Record<string, string> = {
   </section>
 
   <!-- Disponibilités -->
-  <section id="dispo" class="bg-white py-20 scroll-mt-20">
+  <section id="dispo" class="bg-sand-100 py-24 scroll-mt-16">
     <div class="max-w-6xl mx-auto px-4">
-      <h2 class="font-display text-3xl md:text-4xl font-bold text-sea-800">{tr['dispo.title']}</h2>
-      <p class="mt-2 text-slate-600 text-lg">{tr['dispo.subtitle']}</p>
-      <div class="mt-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+        {tr['dispo.subtitle']}
+      </p>
+      <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['dispo.title']}</h2>
+      <div class="mt-14 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {dispoData.mois.map((m) => (
-          <div class="rounded-xl border border-sand-200 p-4 text-center">
-            <p class="font-medium text-slate-700">{fmtMonth(m.mois)}</p>
-            <span class:list={['inline-block mt-2 text-xs font-semibold px-3 py-1 rounded-full', statutClass[m.statut]]}>
+          <div class="bg-white rounded-xl p-5 text-center shadow-card">
+            <p class="font-medium text-ocean-800">{fmtMonth(m.mois)}</p>
+            <span class:list={['inline-block mt-3 text-xs font-semibold px-3 py-1 rounded-full', statutClass[m.statut]]}>
               {dispoData.legende[m.statut as keyof typeof dispoData.legende]}
             </span>
           </div>
         ))}
       </div>
-      <a href="#contact" class="inline-block mt-8 bg-sea-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-sea-700 transition">
+      <a
+        href="#contact"
+        class="inline-block mt-10 bg-sunset-500 hover:bg-sunset-600 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
+      >
         {tr['dispo.contact']}
       </a>
     </div>
   </section>
 
   <!-- Contact -->
-  <section id="contact" class="max-w-6xl mx-auto px-4 py-20 scroll-mt-20">
-    <h2 class="font-display text-3xl md:text-4xl font-bold text-sea-800">{tr['contact.title']}</h2>
-    <p class="mt-2 text-slate-600 text-lg">{tr['contact.subtitle']}</p>
-    <div class="mt-10 grid md:grid-cols-2 gap-10">
+  <section id="contact" class="max-w-6xl mx-auto px-4 py-24 scroll-mt-16">
+    <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+      {tr['contact.subtitle']}
+    </p>
+    <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['contact.title']}</h2>
+    <div class="mt-14 grid md:grid-cols-2 gap-10">
       <form
         action={`https://formsubmit.co/${site.email}`}
         method="POST"
-        class="bg-white rounded-2xl p-8 shadow-sm border border-sand-200 space-y-4"
+        class="bg-white rounded-2xl p-8 shadow-card border border-sand-200 space-y-5"
       >
         <input type="hidden" name="_captcha" value="false" />
         <input type="hidden" name="_subject" value={`Nouvelle demande — ${site.nom}`} />
         <div>
-          <label class="block text-sm font-medium text-slate-600 mb-1" for="nom">{tr['contact.nom']}</label>
-          <input id="nom" name="nom" required class="w-full rounded-lg border border-sand-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sea-400" />
+          <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="nom">{tr['contact.nom']}</label>
+          <input id="nom" name="nom" required class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-600 mb-1" for="email">{tr['contact.email']}</label>
-          <input id="email" name="email" type="email" required class="w-full rounded-lg border border-sand-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sea-400" />
+          <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="email">{tr['contact.email']}</label>
+          <input id="email" name="email" type="email" required class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-600 mb-1" for="dates">{tr['contact.dates']}</label>
-          <input id="dates" name="dates" placeholder="ex. 12–19 juillet" class="w-full rounded-lg border border-sand-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sea-400" />
+          <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="dates">{tr['contact.dates']}</label>
+          <input id="dates" name="dates" placeholder={tr['contact.datesPlaceholder']} class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-600 mb-1" for="message">{tr['contact.message']}</label>
-          <textarea id="message" name="message" rows="4" required class="w-full rounded-lg border border-sand-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sea-400"></textarea>
+          <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="message">{tr['contact.message']}</label>
+          <textarea id="message" name="message" rows="4" required class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"></textarea>
         </div>
-        <button type="submit" class="w-full bg-sea-600 text-white font-semibold py-3 rounded-lg hover:bg-sea-700 transition">
+        <button
+          type="submit"
+          class="w-full bg-sunset-500 hover:bg-sunset-600 text-white font-semibold py-3.5 rounded-xl transition-colors"
+        >
           {tr['contact.envoyer']}
         </button>
       </form>
-      <div class="space-y-6">
-        <p class="text-slate-600">{tr['contact.ou']}</p>
-        <div class="bg-white rounded-2xl p-6 border border-sand-200 space-y-3">
-          <p><span class="font-medium">{tr['contact.tel']}:</span> <a href={`tel:${site.telephone}`} class="text-sea-600 hover:underline">{site.telephone_display}</a></p>
-          <p>
-            <span class="font-medium">{tr['contact.whatsapp']}:</span>{' '}
-            <a href={`https://wa.me/${site.whatsapp.replace(/[^0-9]/g, '')}`} class="text-sea-600 hover:underline">{site.whatsapp}</a>
+      <div class="space-y-6 md:pt-2">
+        <p class="text-ocean-700/70">{tr['contact.ou']}</p>
+        <div class="bg-white rounded-2xl p-7 border border-sand-200 shadow-card space-y-4">
+          <p class="flex items-baseline justify-between gap-4">
+            <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.tel']}</span>
+            <a href={`tel:${site.telephone}`} class="font-display text-xl font-semibold text-ocean-700 hover:text-ocean-500 transition-colors">{site.telephone_display}</a>
           </p>
-          <p><span class="font-medium">Email:</span> <a href={`mailto:${site.email}`} class="text-sea-600 hover:underline">{site.email}</a></p>
+          <p class="flex items-baseline justify-between gap-4">
+            <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.whatsapp']}</span>
+            <a href={`https://wa.me/${site.whatsapp.replace(/[^0-9]/g, '')}`} class="font-display text-xl font-semibold text-ocean-700 hover:text-ocean-500 transition-colors">{site.whatsapp}</a>
+          </p>
+          <p class="flex items-baseline justify-between gap-4">
+            <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.emailLabel']}</span>
+            <a href={`mailto:${site.email}`} class="font-semibold text-ocean-700 hover:text-ocean-500 transition-colors break-all">{site.email}</a>
+          </p>
         </div>
         {(site.airbnb_url || site.abritel_url || site.booking_url || site.instagram_url) && (
           <div>
-            <p class="text-slate-600 mb-3">{tr['contact.plateformes']}:</p>
+            <p class="text-ocean-700/70 mb-4">{tr['contact.plateformes']}:</p>
             <div class="flex flex-wrap gap-3">
-              {site.airbnb_url && <a href={site.airbnb_url} class="bg-white border border-sand-200 px-4 py-2 rounded-lg hover:border-sea-400 text-sm">{tr['contact.airbnb']}</a>}
-              {site.abritel_url && <a href={site.abritel_url} class="bg-white border border-sand-200 px-4 py-2 rounded-lg hover:border-sea-400 text-sm">{tr['contact.abritel']}</a>}
-              {site.booking_url && <a href={site.booking_url} class="bg-white border border-sand-200 px-4 py-2 rounded-lg hover:border-sea-400 text-sm">{tr['contact.booking']}</a>}
-              {site.instagram_url && <a href={site.instagram_url} class="bg-white border border-sand-200 px-4 py-2 rounded-lg hover:border-sea-400 text-sm">{tr['contact.instagram']}</a>}
+              {site.airbnb_url && <a href={site.airbnb_url} class="bg-white border border-sand-200 hover:border-ocean-300 px-4 py-2 rounded-full transition-colors text-sm font-medium text-ocean-800">{tr['contact.airbnb']}</a>}
+              {site.abritel_url && <a href={site.abritel_url} class="bg-white border border-sand-200 hover:border-ocean-300 px-4 py-2 rounded-full transition-colors text-sm font-medium text-ocean-800">{tr['contact.abritel']}</a>}
+              {site.booking_url && <a href={site.booking_url} class="bg-white border border-sand-200 hover:border-ocean-300 px-4 py-2 rounded-full transition-colors text-sm font-medium text-ocean-800">{tr['contact.booking']}</a>}
+              {site.instagram_url && <a href={site.instagram_url} class="bg-white border border-sand-200 hover:border-ocean-300 px-4 py-2 rounded-full transition-colors text-sm font-medium text-ocean-800">{tr['contact.instagram']}</a>}
             </div>
           </div>
         )}

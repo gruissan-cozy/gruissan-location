@@ -1,22 +1,55 @@
 @import "tailwindcss";
 
+/*
+ * Design system « Gruissan Cozy » — côtier méditerranéen.
+ * Palette : bleu océan profond + sable chaud + accent terracotta.
+ * Slop-audit : pas de dégradé tech, pas de glassmorphism, pas de cercles
+ * décoratifs gratuits — la profondeur vient des photos et des ombres douces.
+ */
 @theme {
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --font-display: "Playfair Display", Georgia, serif;
+  --font-display: "Fraunces", "Playfair Display", Georgia, serif;
 
-  --color-sea-50: #eff8fb;
-  --color-sea-100: #d7edf5;
-  --color-sea-200: #aadaea;
-  --color-sea-300: #74c0da;
-  --color-sea-400: #42a1c3;
-  --color-sea-500: #1f7fa8;
-  --color-sea-600: #166a8f;
-  --color-sea-700: #0f5473;
-  --color-sea-800: #0b3a4f;
-  --color-sea-900: #072834;
+  /* Océan — couleur primaire */
+  --color-ocean-50: #eef7fb;
+  --color-ocean-100: #d3ecf5;
+  --color-ocean-200: #a9d9ec;
+  --color-ocean-300: #74bfdd;
+  --color-ocean-400: #3f9ec5;
+  --color-ocean-500: #1f7fa8;
+  --color-ocean-600: #15648a;
+  --color-ocean-700: #104e6e;
+  --color-ocean-800: #0c3a52;
+  --color-ocean-900: #072836;
 
-  --color-sand-50: #faf7f2;
-  --color-sand-100: #f3ede3;
-  --color-sand-200: #e6dccb;
-  --color-sand-300: #d3c4ab;
+  /* Sable — couleur secondaire */
+  --color-sand-50: #faf7f1;
+  --color-sand-100: #f4eee0;
+  --color-sand-200: #e9dcc3;
+  --color-sand-300: #d9c49d;
+
+  /* Terracotta — accent (soleil couchant) */
+  --color-sunset-400: #e8926b;
+  --color-sunset-500: #d97244;
+  --color-sunset-600: #b85a30;
+
+  /* Ombres douces et cohérentes */
+  --shadow-card: 0 1px 2px rgb(7 40 54 / 0.04), 0 4px 12px rgb(7 40 54 / 0.06);
+  --shadow-card-hover: 0 2px 4px rgb(7 40 54 / 0.06), 0 12px 28px rgb(7 40 54 / 0.12);
+  --shadow-nav: 0 1px 0 rgb(7 40 54 / 0.06);
+}
+
+/* Typographie display soignée */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: var(--font-sans);
+    text-wrap: pretty;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
 }
