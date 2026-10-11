@@ -1,0 +1,10 @@
+{
+  "photos": [
+    { "src": "/gruissan-location/images/galerie/01-salon.svg", "alt": "Salon lumineux avec vue sur la marina" },
+    { "src": "/gruissan-location/images/galerie/02-chambre.svg", "alt": "Chambre principale avec lit double" },
+    { "src": "/gruissan-location/images/galerie/03-terrasse.svg", "alt": "Terrasse avec mobilier de jardin" },
+    { "src": "/gruissan-location/images/galerie/04-cuisine.svg", "alt": "Cuisine équipée ouverte" },
+    { "src": "/gruissan-location/images/galerie/05-plage.svg", "alt": "Plage de Gruissan à proximité" },
+    { "src": "/gruissan-location/images/galerie/06-chalet.svg", "alt": "Le Chalet, emblème de Gruissan Plage" }
+  ]
+}

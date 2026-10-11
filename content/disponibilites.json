@@ -1,0 +1,21 @@
+{
+  "legende": {
+    "libre": "Disponible",
+    "reserve": "Réservé",
+    "partiel": "Sur demande"
+  },
+  "mois": [
+    { "mois": "2026-04", "statut": "libre" },
+    { "mois": "2026-05", "statut": "libre" },
+    { "mois": "2026-06", "statut": "partiel" },
+    { "mois": "2026-07", "statut": "reserve" },
+    { "mois": "2026-08", "statut": "reserve" },
+    { "mois": "2026-09", "statut": "libre" },
+    { "mois": "2026-10", "statut": "libre" },
+    { "mois": "2026-11", "statut": "libre" },
+    { "mois": "2026-12", "statut": "partiel" },
+    { "mois": "2027-01", "statut": "libre" },
+    { "mois": "2027-02", "statut": "libre" },
+    { "mois": "2027-03", "statut": "libre" }
+  ]
+}

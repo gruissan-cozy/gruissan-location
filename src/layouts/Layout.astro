@@ -1,0 +1,103 @@
+---
+import '../styles/global.css';
+import site from '../../content/site.json';
+import { LANGUAGES, langNames, t } from '../i18n';
+import type { Lang } from '../i18n';
+
+interface Props {
+  lang?: Lang;
+  title: string;
+}
+
+const { lang = 'fr', title } = Astro.props as Props;
+const tr = t[lang];
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} · {site.nom}</title>
+    <meta
+      name="description"
+      content="Location saisonnière à Gruissan Plage — appartement vue mer pour 4 personnes, proche plage et Chalet."
+    />
+    <link rel="icon" type="image/svg+xml" href="/gruissan-location/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-sand-50 text-slate-800 font-sans antialiased">
+    <!-- Header -->
+    <header class="fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur border-b border-sand-200">
+      <nav class="max-w-6xl mx-auto flex items-center justify-between px-4 h-16">
+        <a href={`/gruissan-location/${lang === 'fr' ? '' : lang + '/'}`} class="font-display text-xl font-bold text-sea-700">
+          Gruissan <span class="text-sea-400">·</span> {site.ville}
+        </a>
+        <div class="hidden md:flex items-center gap-6 text-sm font-medium">
+          <a href="#appart" class="hover:text-sea-500">{tr['nav.appart']}</a>
+          <a href="#galerie" class="hover:text-sea-500">{tr['nav.galerie']}</a>
+          <a href="#tarifs" class="hover:text-sea-500">{tr['nav.tarifs']}</a>
+          <a href="#dispo" class="hover:text-sea-500">{tr['nav.dispo']}</a>
+          <a href="#contact" class="bg-sea-600 text-white px-4 py-2 rounded-lg hover:bg-sea-700 transition">
+            {tr['nav.contact']}
+          </a>
+          <div class="flex items-center gap-1 text-xs text-slate-500 border-l border-sand-200 pl-3">
+            {LANGUAGES.map((l) => (
+              <a
+                href={`/gruissan-location/${l === 'fr' ? '' : l + '/'}`}
+                class:list={[l === lang ? 'text-sea-600 font-bold' : 'hover:text-sea-500']}
+                title={langNames[l]}
+              >{l.toUpperCase()}</a>
+            ))}
+          </div>
+        </div>
+        <div class="md:hidden flex items-center gap-2 text-xs text-slate-500">
+          {LANGUAGES.map((l) => (
+            <a
+              href={`/gruissan-location/${l === 'fr' ? '' : l + '/'}`}
+              class:list={[l === lang ? 'text-sea-600 font-bold' : '']}
+            >{l.toUpperCase()}</a>
+          ))}
+        </div>
+      </nav>
+    </header>
+
+    <main class="pt-16">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-sea-800 text-sea-100 mt-20">
+      <div class="max-w-6xl mx-auto px-4 py-12 grid md:grid-cols-3 gap-8 text-sm">
+        <div>
+          <p class="font-display text-xl font-bold text-white mb-3">{site.nom}</p>
+          <p>{site.adresse_ligne}<br />{site.code_postal} {site.ville}<br />{site.region}</p>
+        </div>
+        <div>
+          <p class="font-semibold text-white mb-3">{tr['footer.contact']}</p>
+          <p>
+            <a href={`tel:${site.telephone}`} class="hover:text-white">{site.telephone_display}</a><br />
+            <a href={`mailto:${site.email}`} class="hover:text-white">{site.email}</a>
+          </p>
+        </div>
+        <div>
+          <p class="font-semibold text-white mb-3">{tr['footer.liens']}</p>
+          <p class="flex flex-wrap gap-x-3 gap-y-1">
+            {site.airbnb_url && <a href={site.airbnb_url} class="hover:text-white">{tr['contact.airbnb']}</a>}
+            {site.abritel_url && <a href={site.abritel_url} class="hover:text-white">{tr['contact.abritel']}</a>}
+            {site.instagram_url && <a href={site.instagram_url} class="hover:text-white">{tr['contact.instagram']}</a>}
+          </p>
+        </div>
+      </div>
+      <div class="border-t border-sea-700 py-4 text-center text-xs text-sea-200">
+        © {year} {site.nom}. {tr['footer.rights']}
+      </div>
+    </footer>
+  </body>
+</html>

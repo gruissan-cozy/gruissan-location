@@ -1,0 +1,21 @@
+{
+  "nom": "Appartement vue mer — Gruissan",
+  "ville": "Gruissan",
+  "region": "Occitanie, Aude",
+  "capacite": 4,
+  "chambres": 2,
+  "surface_m2": 55,
+  "terrasse_m2": 12,
+  "adresse_ligne": "Résidence Les Marinas, Gruissan Plage",
+  "code_postal": "11430",
+  "telephone": "+33 6 00 00 00 00",
+  "telephone_display": "+33 6 00 00 00 00",
+  "whatsapp": "+33 6 00 00 00 00",
+  "email": "contact@exemple.com",
+  "airbnb_url": "",
+  "abritel_url": "",
+  "booking_url": "",
+  "instagram_url": "",
+  "latitude": 43.1076,
+  "longitude": 3.0886
+}

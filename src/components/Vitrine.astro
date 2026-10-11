@@ -1,0 +1,203 @@
+---
+import Layout from '../layouts/Layout.astro';
+import site from '../../content/site.json';
+import tarifsData from '../../content/tarifs.json';
+import dispoData from '../../content/disponibilites.json';
+import galerieData from '../../content/galerie.json';
+import { t } from '../i18n';
+import type { Lang } from '../i18n';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props as Props;
+const tr = t[lang];
+
+const monthNames: Record<Lang, string[]> = {
+  fr: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
+  en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+  es: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+  de: ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
+};
+
+function fmtMonth(iso: string): string {
+  const [y, m] = iso.split('-');
+  return `${monthNames[lang][Number(m) - 1]} ${y}`;
+}
+
+const statutClass: Record<string, string> = {
+  libre: 'bg-emerald-100 text-emerald-800',
+  reserve: 'bg-rose-100 text-rose-800',
+  partiel: 'bg-amber-100 text-amber-800',
+};
+---
+
+<Layout lang={lang} title={tr['hero.title']}>
+  <!-- Hero -->
+  <section class="relative bg-gradient-to-br from-sea-600 to-sea-800 text-white">
+    <div class="absolute inset-0 opacity-20" style="background-image: url('/gruissan-location/images/hero-pattern.svg'); background-size: cover;"></div>
+    <div class="relative max-w-6xl mx-auto px-4 py-24 md:py-32">
+      <p class="uppercase tracking-widest text-sea-200 text-sm mb-4">{tr['hero.badge']}</p>
+      <h1 class="font-display text-4xl md:text-6xl font-bold max-w-3xl leading-tight">{tr['hero.title']}</h1>
+      <p class="mt-6 text-lg text-sea-100 max-w-2xl">{tr['hero.subtitle']}</p>
+      <div class="mt-8 flex flex-wrap gap-4">
+        <a href="#tarifs" class="bg-white text-sea-700 font-semibold px-6 py-3 rounded-lg hover:bg-sea-50 transition">{tr['hero.cta1']}</a>
+        <a href="#contact" class="border border-white/60 text-white font-semibold px-6 py-3 rounded-lg hover:bg-white/10 transition">{tr['hero.cta2']}</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Appartement -->
+  <section id="appart" class="max-w-6xl mx-auto px-4 py-20 scroll-mt-20">
+    <h2 class="font-display text-3xl md:text-4xl font-bold text-sea-800">{tr['appart.title']}</h2>
+    <p class="mt-2 text-slate-600 text-lg">{tr['appart.subtitle']}</p>
+    <p class="mt-6 max-w-3xl text-slate-700 leading-relaxed">{tr['appart.desc']}</p>
+    <div class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-sand-200 text-center">
+        <p class="text-3xl font-bold text-sea-600">{site.capacite}</p>
+        <p class="text-sm text-slate-500 mt-1">{tr['appart.capacite']}</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-sand-200 text-center">
+        <p class="text-3xl font-bold text-sea-600">{site.chambres}</p>
+        <p class="text-sm text-slate-500 mt-1">{tr['appart.chambres']}</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-sand-200 text-center">
+        <p class="text-3xl font-bold text-sea-600">{site.surface_m2} <span class="text-base font-normal">m²</span></p>
+        <p class="text-sm text-slate-500 mt-1">{tr['appart.surface']}</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-sand-200 text-center">
+        <p class="text-3xl font-bold text-sea-600">{site.terrasse_m2} <span class="text-base font-normal">m²</span></p>
+        <p class="text-sm text-slate-500 mt-1">{tr['appart.terrasse']}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Galerie -->
+  <section id="galerie" class="bg-white py-20 scroll-mt-20">
+    <div class="max-w-6xl mx-auto px-4">
+      <h2 class="font-display text-3xl md:text-4xl font-bold text-sea-800">{tr['galerie.title']}</h2>
+      <p class="mt-2 text-slate-600 text-lg">{tr['galerie.subtitle']}</p>
+      <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {galerieData.photos.map((photo) => (
+          <figure class="rounded-xl overflow-hidden shadow-sm border border-sand-200">
+            <img src={photo.src} alt={photo.alt} loading="lazy" class="w-full h-56 object-cover" />
+            <figcaption class="p-3 text-sm text-slate-500">{photo.alt}</figcaption>
+          </figure>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Tarifs -->
+  <section id="tarifs" class="max-w-6xl mx-auto px-4 py-20 scroll-mt-20">
+    <h2 class="font-display text-3xl md:text-4xl font-bold text-sea-800">{tr['tarifs.title']}</h2>
+    <p class="mt-2 text-slate-600 text-lg">{tr['tarifs.subtitle']}</p>
+    <div class="mt-10 grid md:grid-cols-3 gap-6">
+      {tarifsData.saisons.map((saison) => (
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-sand-200 flex flex-col">
+          <h3 class="font-semibold text-lg text-sea-700">{saison.periode}</h3>
+          <p class="mt-4 text-4xl font-bold text-sea-800">{saison.prix_semaine} €<span class="text-sm font-normal text-slate-500 ml-2">{tr['tarifs.parSemaine']}</span></p>
+          <p class="mt-2 text-sm text-slate-500">
+            {saison.prix_nuit_min} € {tr['tarifs.parNuit']} · {saison.nuits_min} {tr['tarifs.nuitsMin']}
+          </p>
+          <p class="mt-4 text-sm text-slate-600 italic">{saison.note}</p>
+        </div>
+      ))}
+    </div>
+    <div class="mt-12 grid md:grid-cols-2 gap-8">
+      <div class="bg-sea-50 rounded-2xl p-8">
+        <h3 class="font-semibold text-sea-700 mb-4">{tr['tarifs.inclus']}</h3>
+        <ul class="space-y-2 text-slate-700">
+          {tarifsData.inclus.map((item) => <li class="flex items-center gap-2"><span class="text-sea-500">✓</span>{item}</li>)}
+        </ul>
+        <p class="mt-4 text-sm text-slate-500">{tr['tarifs.caution']}: {tarifsData.caution} €</p>
+      </div>
+      <div class="bg-white rounded-2xl p-8 border border-sand-200">
+        <h3 class="font-semibold text-sea-700 mb-4">{tr['tarifs.options']}</h3>
+        <ul class="space-y-2 text-slate-700">
+          {tarifsData.options.map((opt) => (
+            <li class="flex justify-between gap-2">
+              <span>{opt.nom}</span><span class="font-medium text-sea-700">{opt.prix} €</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Disponibilités -->
+  <section id="dispo" class="bg-white py-20 scroll-mt-20">
+    <div class="max-w-6xl mx-auto px-4">
+      <h2 class="font-display text-3xl md:text-4xl font-bold text-sea-800">{tr['dispo.title']}</h2>
+      <p class="mt-2 text-slate-600 text-lg">{tr['dispo.subtitle']}</p>
+      <div class="mt-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        {dispoData.mois.map((m) => (
+          <div class="rounded-xl border border-sand-200 p-4 text-center">
+            <p class="font-medium text-slate-700">{fmtMonth(m.mois)}</p>
+            <span class:list={['inline-block mt-2 text-xs font-semibold px-3 py-1 rounded-full', statutClass[m.statut]]}>
+              {dispoData.legende[m.statut as keyof typeof dispoData.legende]}
+            </span>
+          </div>
+        ))}
+      </div>
+      <a href="#contact" class="inline-block mt-8 bg-sea-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-sea-700 transition">
+        {tr['dispo.contact']}
+      </a>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section id="contact" class="max-w-6xl mx-auto px-4 py-20 scroll-mt-20">
+    <h2 class="font-display text-3xl md:text-4xl font-bold text-sea-800">{tr['contact.title']}</h2>
+    <p class="mt-2 text-slate-600 text-lg">{tr['contact.subtitle']}</p>
+    <div class="mt-10 grid md:grid-cols-2 gap-10">
+      <form
+        action={`https://formsubmit.co/${site.email}`}
+        method="POST"
+        class="bg-white rounded-2xl p-8 shadow-sm border border-sand-200 space-y-4"
+      >
+        <input type="hidden" name="_captcha" value="false" />
+        <input type="hidden" name="_subject" value={`Nouvelle demande — ${site.nom}`} />
+        <div>
+          <label class="block text-sm font-medium text-slate-600 mb-1" for="nom">{tr['contact.nom']}</label>
+          <input id="nom" name="nom" required class="w-full rounded-lg border border-sand-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sea-400" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-600 mb-1" for="email">{tr['contact.email']}</label>
+          <input id="email" name="email" type="email" required class="w-full rounded-lg border border-sand-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sea-400" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-600 mb-1" for="dates">{tr['contact.dates']}</label>
+          <input id="dates" name="dates" placeholder="ex. 12–19 juillet" class="w-full rounded-lg border border-sand-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sea-400" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-600 mb-1" for="message">{tr['contact.message']}</label>
+          <textarea id="message" name="message" rows="4" required class="w-full rounded-lg border border-sand-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sea-400"></textarea>
+        </div>
+        <button type="submit" class="w-full bg-sea-600 text-white font-semibold py-3 rounded-lg hover:bg-sea-700 transition">
+          {tr['contact.envoyer']}
+        </button>
+      </form>
+      <div class="space-y-6">
+        <p class="text-slate-600">{tr['contact.ou']}</p>
+        <div class="bg-white rounded-2xl p-6 border border-sand-200 space-y-3">
+          <p><span class="font-medium">{tr['contact.tel']}:</span> <a href={`tel:${site.telephone}`} class="text-sea-600 hover:underline">{site.telephone_display}</a></p>
+          <p>
+            <span class="font-medium">{tr['contact.whatsapp']}:</span>{' '}
+            <a href={`https://wa.me/${site.whatsapp.replace(/[^0-9]/g, '')}`} class="text-sea-600 hover:underline">{site.whatsapp}</a>
+          </p>
+          <p><span class="font-medium">Email:</span> <a href={`mailto:${site.email}`} class="text-sea-600 hover:underline">{site.email}</a></p>
+        </div>
+        {(site.airbnb_url || site.abritel_url || site.booking_url || site.instagram_url) && (
+          <div>
+            <p class="text-slate-600 mb-3">{tr['contact.plateformes']}:</p>
+            <div class="flex flex-wrap gap-3">
+              {site.airbnb_url && <a href={site.airbnb_url} class="bg-white border border-sand-200 px-4 py-2 rounded-lg hover:border-sea-400 text-sm">{tr['contact.airbnb']}</a>}
+              {site.abritel_url && <a href={site.abritel_url} class="bg-white border border-sand-200 px-4 py-2 rounded-lg hover:border-sea-400 text-sm">{tr['contact.abritel']}</a>}
+              {site.booking_url && <a href={site.booking_url} class="bg-white border border-sand-200 px-4 py-2 rounded-lg hover:border-sea-400 text-sm">{tr['contact.booking']}</a>}
+              {site.instagram_url && <a href={site.instagram_url} class="bg-white border border-sand-200 px-4 py-2 rounded-lg hover:border-sea-400 text-sm">{tr['contact.instagram']}</a>}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+</Layout>

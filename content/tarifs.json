@@ -1,0 +1,42 @@
+{
+  "saisons": [
+    {
+      "id": "haute",
+      "periode": "Juillet – Août",
+      "prix_semaine": 1450,
+      "prix_nuit_min": 240,
+      "nuits_min": 7,
+      "note": "Haute saison estivale — réservation à la semaine"
+    },
+    {
+      "id": "moyenne",
+      "periode": "Juin – Septembre",
+      "prix_semaine": 1050,
+      "prix_nuit_min": 180,
+      "nuits_min": 3,
+      "note": "Printemps et début d'automne"
+    },
+    {
+      "id": "basse",
+      "periode": "Octobre – Mai",
+      "prix_semaine": 690,
+      "prix_nuit_min": 120,
+      "nuits_min": 2,
+      "note": "Arrière-saison et hiver doux"
+    }
+  ],
+  "inclus": [
+    "Wi-Fi fibre",
+    "Draps et linge de maison",
+    "Parking privatif",
+    "Climatisation réversible",
+    "Lave-linge"
+  ],
+  "options": [
+    { "nom": "Ménage de fin de séjour", "prix": 65 },
+    { "nom": "Location de vélos", "prix": 45 },
+    { "nom": "Forfait plage (parasol + transats)", "prix": 70 }
+  ],
+  "caution": 800,
+  "taxe_sejour_par_nuit_personne": 1.15
+}
