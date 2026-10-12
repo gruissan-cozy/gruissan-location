@@ -1,0 +1,362 @@
+---
+/**
+ * /admin/disponibilites — grille de 12 mois (mois courant + 11).
+ *
+ * Chaque mois porte un sélecteur de statut (libre / partiel / reserve) et un
+ * champ note. À l'enregistrement, une ligne availability est écrite pour le
+ * mois (start_date = 1er du mois, end_date = dernier jour) : mise à jour si
+ * une ligne existe déjà pour ce mois, insertion sinon.
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { AT } from '../../i18n/admin';
+
+const configured = isSupabaseConfigured;
+
+const STATUTS = ['libre', 'partiel', 'reserve'] as const;
+---
+
+<AdminLayout title={AT['dispo.title']} section="disponibilites">
+  {
+    configured && (
+      <>
+        <header class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 class="font-display text-2xl font-semibold text-ocean-900 sm:text-3xl">
+              {AT['dispo.title']}
+            </h1>
+            <p class="mt-1.5 text-sm text-ocean-700/80">{AT['dispo.subtitle']}</p>
+          </div>
+          <p id="dispo-count" class="text-sm text-ocean-700/70"></p>
+        </header>
+
+        <!-- Légende -->
+        <div class="mb-5 flex flex-wrap items-center gap-2 text-xs text-ocean-700/70">
+          <span class="font-medium uppercase tracking-wide">{AT['common.status']} :</span>
+          {
+            STATUTS.map((s) => (
+              <span class="inline-flex items-center gap-1.5">
+                <span
+                  class:list={[
+                    'h-2.5 w-2.5 rounded-full',
+                    s === 'libre' ? 'bg-emerald-500' : s === 'partiel' ? 'bg-amber-400' : 'bg-rose-500',
+                  ]}
+                  aria-hidden="true"
+                />
+                {AT[`statut.${s}`]}
+              </span>
+            ))
+          }
+        </div>
+
+        <p id="dispo-pending" class="mb-4 hidden rounded-lg bg-amber-50 px-3.5 py-2 text-sm text-amber-800 ring-1 ring-amber-200"></p>
+
+        <!-- Grille des 12 mois (remplie par le script) -->
+        <div id="dispo-grid" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <p class="text-sm text-ocean-700/60">{AT['common.loading']}</p>
+        </div>
+
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+          <button id="dispo-save-all" type="button" class="rounded-full bg-sunset-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sunset-600 disabled:opacity-50 disabled:cursor-not-allowed">
+            {AT['dispo.saveAll']}
+          </button>
+          <span id="dispo-status" class="text-sm text-ocean-700/70"></span>
+        </div>
+      </>
+    )
+  }
+</AdminLayout>
+
+{
+  configured && (
+    <script>
+      import { sb, CLS, DISPO_STATUT_CLS, esc, monthLabel, toast, errText } from '../../lib/admin-runtime';
+      import { AT } from '../../i18n/admin';
+      import type { AvailabilityRow } from '../../lib/supabase';
+
+      const STATUTS = ['libre', 'partiel', 'reserve'] as const;
+      type Statut = (typeof STATUTS)[number];
+
+      interface MonthCell {
+        key: string; // 'YYYY-MM'
+        year: number;
+        month: number; // 0-11
+        startDate: string; // 'YYYY-MM-01'
+        endDate: string; // 'YYYY-MM-DD'
+        rowId: string | null;
+        statut: Statut;
+        note: string;
+        dirty: boolean;
+      }
+
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const iso = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
+
+      // -----------------------------------------------------------------
+      // Construction des 12 mois (mois courant + 11)
+      // -----------------------------------------------------------------
+      function buildMonths(): MonthCell[] {
+        const now = new Date();
+        const cells: MonthCell[] = [];
+        for (let i = 0; i < 12; i++) {
+          const year = now.getFullYear();
+          const month = now.getMonth() + i;
+          const y = year + Math.floor(month / 12);
+          const m = ((month % 12) + 12) % 12;
+          const lastDay = new Date(y, m + 1, 0).getDate();
+          cells.push({
+            key: `${y}-${pad(m + 1)}`,
+            year: y,
+            month: m,
+            startDate: iso(y, m, 1),
+            endDate: iso(y, m, lastDay),
+            rowId: null,
+            statut: 'libre',
+            note: '',
+            dirty: false,
+          });
+        }
+        return cells;
+      }
+
+      let cells = buildMonths();
+
+      // -----------------------------------------------------------------
+      // Chargement des lignes existantes (match par mois sur start_date)
+      // -----------------------------------------------------------------
+      async function load() {
+        const { data, error } = await sb()
+          .from('availability')
+          .select('*')
+          .order('start_date', { ascending: true });
+
+        if (error) {
+          toast(errText(error) || AT['dispo.loadError'], 'error');
+          return;
+        }
+
+        // Index par mois : 'YYYY-MM' -> ligne
+        const byMonth = new Map<string, AvailabilityRow>();
+        for (const row of (data ?? []) as AvailabilityRow[]) {
+          const key = String(row.start_date).slice(0, 7);
+          // La ligne la plus récente gagne si plusieurs lignes couvrent le mois.
+          const existing = byMonth.get(key);
+          if (!existing || String(row.start_date) >= String(existing.start_date)) {
+            byMonth.set(key, row);
+          }
+        }
+
+        for (const cell of cells) {
+          const row = byMonth.get(cell.key);
+          cell.rowId = row?.id ?? null;
+          cell.statut = (row?.statut as Statut) ?? 'libre';
+          cell.note = row?.note ?? '';
+          cell.dirty = false;
+        }
+        render();
+      }
+
+      // -----------------------------------------------------------------
+      // Rendu
+      // -----------------------------------------------------------------
+      const grid = document.getElementById('dispo-grid');
+      const pendingBox = document.getElementById('dispo-pending');
+      const statusLine = document.getElementById('dispo-status');
+      const countLine = document.getElementById('dispo-count');
+      const saveAllBtn = document.getElementById('dispo-save-all');
+
+      function render() {
+        if (!grid) return;
+
+        grid.innerHTML = cells
+          .map((cell, index) => {
+            const label = monthLabel(cell.year, cell.month);
+            const badgeCls =
+              DISPO_STATUT_CLS[cell.statut] ?? 'bg-sand-100 text-ocean-700 ring-sand-300';
+            return `
+            <form
+              class="rounded-2xl border ${
+                cell.dirty ? 'border-sunset-400 ring-1 ring-sunset-400/40' : 'border-sand-200/70'
+              } bg-white p-4 shadow-card"
+              data-month="${esc(cell.key)}"
+              data-index="${index}"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h2 class="font-display text-base font-semibold text-ocean-900">${esc(label)}</h2>
+                  <p class="mt-0.5 text-xs text-ocean-700/55">
+                    ${esc(AT['dispo.period'])} : ${esc(cell.startDate)} → ${esc(cell.endDate)}
+                  </p>
+                </div>
+                <span class="${CLS.badge} ${badgeCls}">${esc(AT[`statut.${cell.statut}`])}</span>
+              </div>
+
+              <div class="mt-3">
+                <label class="${CLS.label}" for="statut-${esc(cell.key)}">${esc(AT['common.status'])}</label>
+                <select id="statut-${esc(cell.key)}" data-role="statut" class="${CLS.select}">
+                  ${STATUTS.map(
+                    (s) =>
+                      `<option value="${s}" ${s === cell.statut ? 'selected' : ''}>${esc(AT[`statut.${s}`])}</option>`
+                  ).join('')}
+                </select>
+              </div>
+
+              <div class="mt-3">
+                <label class="${CLS.label}" for="note-${esc(cell.key)}">
+                  ${esc(AT['dispo.note'])} <span class="font-normal text-ocean-700/45">(${esc(AT['common.optional'])})</span>
+                </label>
+                <input
+                  id="note-${esc(cell.key)}"
+                  data-role="note"
+                  type="text"
+                  value="${esc(cell.note)}"
+                  placeholder="${esc(AT['dispo.notePlaceholder'])}"
+                  class="${CLS.input}"
+                />
+              </div>
+
+              <div class="mt-3 flex items-center justify-between gap-2">
+                <span class="text-xs text-ocean-700/45">
+                  ${cell.rowId ? esc(AT['dispo.existing']) : esc(AT['dispo.newMonth'])}
+                </span>
+                <button type="submit" class="${CLS.btnPrimary} ${CLS.btnSmall}" ${cell.dirty ? '' : 'disabled'}>
+                  ${esc(AT['dispo.saveOne'])}
+                </button>
+              </div>
+            </form>`;
+          })
+          .join('');
+
+        // Compteurs
+        const filled = cells.filter((c) => c.rowId).length;
+        if (countLine) countLine.textContent = `${filled} ${AT['dispo.filled']}`;
+        const dirty = cells.filter((c) => c.dirty).length;
+        if (pendingBox) {
+          pendingBox.classList.toggle('hidden', dirty === 0);
+          pendingBox.textContent = dirty
+            ? `${dirty} ${AT['dispo.pending']}`
+            : '';
+        }
+        if (saveAllBtn) saveAllBtn.disabled = dirty === 0;
+      }
+
+      // -----------------------------------------------------------------
+      // Écriture : update si la ligne existe, insert sinon
+      // -----------------------------------------------------------------
+      async function saveCell(cell: MonthCell): Promise<boolean> {
+        const payload = {
+          statut: cell.statut,
+          note: cell.note.trim() || null,
+          updated_at: new Date().toISOString(),
+        };
+
+        let error: unknown = null;
+        if (cell.rowId) {
+          const res = await sb().from('availability').update(payload).eq('id', cell.rowId);
+          error = res.error;
+        } else {
+          const res = await sb()
+            .from('availability')
+            .insert({
+              start_date: cell.startDate,
+              end_date: cell.endDate,
+              statut: cell.statut,
+              note: cell.note.trim() || null,
+            })
+            .select('id')
+            .single();
+          error = res.error;
+          if (!res.error && res.data) cell.rowId = res.data.id as string;
+        }
+
+        if (error) {
+          toast(errText(error) || AT['common.errorGeneric'], 'error');
+          return false;
+        }
+        cell.dirty = false;
+        return true;
+      }
+
+      // -----------------------------------------------------------------
+      // Interactions
+      // -----------------------------------------------------------------
+      grid?.addEventListener('input', (event) => {
+        const form = (event.target as HTMLElement).closest<HTMLFormElement>('[data-month]');
+        if (!form) return;
+        const cell = cells[Number(form.dataset.index)];
+        if (!cell) return;
+
+        const select = form.querySelector<HTMLSelectElement>('[data-role="statut"]');
+        const note = form.querySelector<HTMLInputElement>('[data-role="note"]');
+        if (select) cell.statut = select.value as Statut;
+        if (note) cell.note = note.value;
+
+        const wasDirty = cell.dirty;
+        cell.dirty = true;
+        if (!wasDirty) render();
+        else {
+          // Mise à jour légère : badge + état du bouton
+          const badge = form.querySelector<HTMLElement>('span[class*="rounded-full"]');
+          if (badge) {
+            badge.className = `${CLS.badge} ${DISPO_STATUT_CLS[cell.statut] ?? 'bg-sand-100 text-ocean-700 ring-sand-300'}`;
+            badge.textContent = AT[`statut.${cell.statut}`];
+          }
+          form.classList.add('border-sunset-400', 'ring-1', 'ring-sunset-400/40');
+          form.classList.remove('border-sand-200/70');
+          const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+          if (submit) submit.disabled = false;
+          const dirty = cells.filter((c) => c.dirty).length;
+          if (pendingBox) {
+            pendingBox.classList.toggle('hidden', dirty === 0);
+            pendingBox.textContent = dirty ? `${dirty} ${AT['dispo.pending']}` : '';
+          }
+          if (saveAllBtn) saveAllBtn.disabled = dirty === 0;
+        }
+      });
+
+      grid?.addEventListener('submit', async (event) => {
+        const form = (event.target as HTMLElement).closest<HTMLFormElement>('[data-month]');
+        if (!form) return;
+        event.preventDefault();
+        const cell = cells[Number(form.dataset.index)];
+        if (!cell) return;
+
+        const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = AT['common.saving'];
+        }
+        const ok = await saveCell(cell);
+        if (submitBtn) submitBtn.textContent = AT['dispo.saveOne'];
+        render();
+        if (ok) {
+          toast(AT['dispo.savedMonth']);
+          if (statusLine) statusLine.textContent = AT['common.saved'];
+        }
+      });
+
+      saveAllBtn?.addEventListener('click', async () => {
+        const dirty = cells.filter((c) => c.dirty);
+        if (!dirty.length) return;
+        saveAllBtn.disabled = true;
+        saveAllBtn.textContent = AT['common.saving'];
+
+        let okCount = 0;
+        for (const cell of dirty) {
+          if (await saveCell(cell)) okCount++;
+        }
+
+        saveAllBtn.textContent = AT['dispo.saveAll'];
+        render();
+        if (okCount === dirty.length) {
+          toast(AT['dispo.savedAll']);
+          if (statusLine) statusLine.textContent = AT['common.saved'];
+        } else {
+          toast(AT['common.errorGeneric'], 'error');
+        }
+      });
+
+      void load();
+    </script>
+  )
+}

@@ -54,6 +54,40 @@ npm run build      # génère le site dans dist/
 npm run preview    # prévisualise le build
 ```
 
+## Back office (`/admin/`)
+
+Le back office est réservé au propriétaire : il permet de gérer les demandes,
+le calendrier, les options et le guide voyageur **sans toucher au code**.
+
+### Première mise en route (une seule fois)
+
+1. Créez un projet gratuit sur [supabase.com](https://supabase.com).
+2. Dans **SQL Editor**, exécutez le contenu de [`migrations/0001_init.sql`](migrations/0001_init.sql)
+   (crée les tables + les règles de sécurité RLS + les données initiales).
+3. Dans **Authentication → Providers**, activez **Email** et le **Magic Link**.
+   Ajoutez l'URL du site dans **Authentication → URL Configuration → Redirect URLs**
+   (en local : `http://localhost:4321/gruissan-location/admin/`).
+4. Renseignez les variables d'environnement :
+   - en local : copiez `.env.example` en `.env` et remplissez les valeurs ;
+   - sur GitHub : **Settings → Secrets and variables → Actions**, ajoutez
+     `PUBLIC_SUPABASE_URL` et `PUBLIC_SUPABASE_ANON_KEY`.
+
+> La clé « anon » est **publique par conception** : elle est protégée par les
+> politiques RLS. N'utilisez jamais la clé « service_role » côté site.
+
+### Les 5 sections
+
+| Page | Contenu |
+|---|---|
+| `/admin/` | Connexion par lien magique (e-mail, sans mot de passe) + tableau de bord |
+| `/admin/messages/` | Demandes reçues, fil des réponses, statut (nouveau / en cours / répondu / archivé) |
+| `/admin/disponibilites/` | Statut des 12 prochains mois (libre / partiel / réservé) + note interne |
+| `/admin/packs/` | Options proposées à la réservation (4 langues, prix, unité, ordre, actif) |
+| `/admin/guide/` | Guide d'accueil numérique (titre + contenu HTML en 4 langues) |
+
+Si les variables Supabase ne sont pas définies, chaque page du back office
+affiche un message explicite au lieu d'un écran vide.
+
 ## Déploiement sur GitHub Pages
 
 1. Créez un repo GitHub (vide), puis :
