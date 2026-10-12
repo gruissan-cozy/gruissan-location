@@ -53,3 +53,100 @@
     letter-spacing: -0.01em;
   }
 }
+
+/*
+ * Styles d'impression — guide d'accueil numérique.
+ * Objectif : une feuille A4 lisible (check-in, numéros d'urgence,
+ * règles du logement), sans navigation ni décoration.
+ */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #072836;
+  }
+
+  /* On masque tout ce qui n'a pas de sens sur papier */
+  header,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Pas de marge réservée au header fixe, pas d'escaliers de couleurs */
+  main {
+    padding-top: 0 !important;
+  }
+
+  .guide-section {
+    padding: 8mm 0 !important;
+    background: #ffffff !important;
+    break-inside: avoid;
+    border-bottom: 1px solid #e9dcc3;
+  }
+
+  .guide-section h2 {
+    font-size: 14pt !important;
+  }
+
+  .guide-section h3 {
+    font-size: 11.5pt !important;
+  }
+
+  .guide-content,
+  .guide-content p,
+  .guide-content li {
+    font-size: 10.5pt !important;
+    line-height: 1.45 !important;
+  }
+
+  .guide-content ul,
+  .guide-content ol {
+    margin: 0 0 4mm 4mm !important;
+  }
+
+  /* Les ancrages du sommaire sont inutiles à l'impression */
+  .guide-toc a {
+    text-decoration: none !important;
+  }
+
+  /* Le bandeau urgences doit rester, mais sobre */
+  .guide-urgence-banner {
+    break-inside: avoid;
+  }
+
+  /* En-tête sombre → équivalent clair sur papier */
+  .guide-header {
+    background: #ffffff !important;
+    color: #072836;
+    padding: 0 0 8mm !important;
+  }
+
+  .guide-header h1 {
+    color: #072836 !important;
+    font-size: 22pt !important;
+  }
+
+  .guide-header p {
+    color: #104e6e !important;
+  }
+
+  .guide-mentions {
+    padding: 5mm 0 0 !important;
+  }
+
+  .guide-mentions p {
+    font-size: 9pt !important;
+  }
+
+  a[href^="#"]::after {
+    content: '';
+  }
+}

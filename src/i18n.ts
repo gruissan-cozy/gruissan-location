@@ -44,6 +44,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'nav.tarifs': 'Tarifs',
     'nav.dispo': 'Disponibilités',
     'nav.contact': 'Contact',
+    'nav.guide': "Guide d'accueil",
     'hero.badge': 'Gruissan Plage · Occitanie',
     'hero.title': 'Appartement en duplex à Gruissan',
     'hero.subtitle':
@@ -103,6 +104,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'nav.tarifs': 'Rates',
     'nav.dispo': 'Availability',
     'nav.contact': 'Contact',
+    'nav.guide': 'Welcome guide',
     'hero.badge': 'Gruissan Beach · South of France',
     'hero.title': 'Duplex apartment in Gruissan',
     'hero.subtitle':
@@ -162,6 +164,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'nav.tarifs': 'Tarifas',
     'nav.dispo': 'Disponibilidad',
     'nav.contact': 'Contacto',
+    'nav.guide': 'Guía de bienvenida',
     'hero.badge': 'Gruissan Plage · Occitania',
     'hero.title': 'Apartamento dúplex en Gruissan',
     'hero.subtitle':
@@ -221,6 +224,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'nav.tarifs': 'Preise',
     'nav.dispo': 'Verfügbarkeit',
     'nav.contact': 'Kontakt',
+    'nav.guide': 'Gästehandbuch',
     'hero.badge': 'Gruissan Plage · Okzitanien',
     'hero.title': 'Duplex-Wohnung in Gruissan',
     'hero.subtitle':
