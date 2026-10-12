@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /gruissan-location/admin/
 
 Sitemap: https://gruissan-cozy.github.io/gruissan-location/sitemap.xml
