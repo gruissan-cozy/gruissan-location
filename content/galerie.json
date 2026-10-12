@@ -1,10 +1,10 @@
 {
   "photos": [
-    { "src": "/gruissan-location/images/galerie/01-salon.svg", "alt": "Salon lumineux avec vue sur la marina" },
-    { "src": "/gruissan-location/images/galerie/02-chambre.svg", "alt": "Chambre principale avec lit double" },
-    { "src": "/gruissan-location/images/galerie/03-terrasse.svg", "alt": "Terrasse avec mobilier de jardin" },
-    { "src": "/gruissan-location/images/galerie/04-cuisine.svg", "alt": "Cuisine équipée ouverte" },
-    { "src": "/gruissan-location/images/galerie/05-plage.svg", "alt": "Plage de Gruissan à proximité" },
-    { "src": "/gruissan-location/images/galerie/06-chalet.svg", "alt": "Le Chalet, emblème de Gruissan Plage" }
+    { "src": "/gruissan-location/images/galerie/01-sejour.jpg", "alt": "Séjour lumineux avec cuisine ouverte et escalier en colimaçon" },
+    { "src": "/gruissan-location/images/galerie/02-studio.jpg", "alt": "Espace de vie ouvert avec table à manger et canapé" },
+    { "src": "/gruissan-location/images/galerie/03-chambre.jpg", "alt": "Chambre avec lit à tête en rotin et décoration naturelle" },
+    { "src": "/gruissan-location/images/galerie/04-mezzanine.jpg", "alt": "Mezzanine sous plafond voûté avec grande fenêtre cintrée" },
+    { "src": "/gruissan-location/images/galerie/05-cuisine.jpg", "alt": "Cuisine équipée ouverte vue depuis la mezzanine" },
+    { "src": "/gruissan-location/images/galerie/06-vue-ensemble.jpg", "alt": "Vue d'ensemble du studio duplex depuis la mezzanine" }
   ]
 }
