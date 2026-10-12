@@ -1,0 +1,84 @@
+{
+  "packs": [
+    {
+      "id": "velo",
+      "slug": "velo",
+      "nom": {
+        "fr": "Location de vélos",
+        "en": "Bike rental",
+        "es": "Alquiler de bicicletas",
+        "de": "Fahrradverleih"
+      },
+      "description": {
+        "fr": "Vélos tout chemin pour explorer la presqu'île, à retirer au port de Gruissan.",
+        "en": "All-terrain bikes to explore the peninsula, pick-up at Gruissan marina.",
+        "es": "Bicicletas de montaña para explorar la península, recogida en el puerto de Gruissan.",
+        "de": "Trekkingräder für die Erkundung der Halbinsel, Abholung im Hafen von Gruissan."
+      },
+      "prix": 45,
+      "unite": "par_personne",
+      "actif": true,
+      "ordre": 1
+    },
+    {
+      "id": "pack-plage",
+      "slug": "pack-plage",
+      "nom": {
+        "fr": "Pack plage",
+        "en": "Beach pack",
+        "es": "Pack playa",
+        "de": "Strand-Paket"
+      },
+      "description": {
+        "fr": "Parasol et 2 transats installés pour vous sur la plage du Grazel.",
+        "en": "Parasol and 2 sun loungers set up for you on Grazel beach.",
+        "es": "Sombrilla y 2 hamacas instalados para ti en la playa del Grazel.",
+        "de": "Sonnenschirm und 2 Liegestühle, für Sie am Strand Le Grazel aufgebaut."
+      },
+      "prix": 70,
+      "unite": "par_sejour",
+      "actif": true,
+      "ordre": 2
+    },
+    {
+      "id": "pack-bienvenue",
+      "slug": "pack-bienvenue",
+      "nom": {
+        "fr": "Pack bienvenue",
+        "en": "Welcome pack",
+        "es": "Pack bienvenida",
+        "de": "Willkommens-Paket"
+      },
+      "description": {
+        "fr": "Vin du Clape, sel de Gruissan et tapenade maison pour vos premiers instants.",
+        "en": "Clape wine, Gruissan salt and homemade tapenade for your first moments.",
+        "es": "Vino del Clape, sal de Gruissan y tapenade casera para tus primeros instantes.",
+        "de": "Clape-Wein, Salz aus Gruissan und hausgemachte Tapenade für Ihre ersten Momente."
+      },
+      "prix": 35,
+      "unite": "par_sejour",
+      "actif": true,
+      "ordre": 3
+    },
+    {
+      "id": "menage",
+      "slug": "menage",
+      "nom": {
+        "fr": "Ménage fin de séjour",
+        "en": "End-of-stay cleaning",
+        "es": "Limpieza de fin de estancia",
+        "de": "Endreinigung"
+      },
+      "description": {
+        "fr": "Ménage complet après votre départ — sans cette option, merci de laisser l'appartement propre.",
+        "en": "Full cleaning after your departure — without this option, please leave the apartment clean.",
+        "es": "Limpieza completa después de tu salida — sin esta opción, deja el apartamento limpio.",
+        "de": "Komplette Reinigung nach Ihrer Abreise — ohne diese Option hinterlassen Sie die Wohnung bitte sauber."
+      },
+      "prix": 65,
+      "unite": "par_sejour",
+      "actif": true,
+      "ordre": 4
+    }
+  ]
+}
