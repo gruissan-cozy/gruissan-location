@@ -1,0 +1,624 @@
+---
+import Layout from '../layouts/Layout.astro';
+import site from '../../content/site.json';
+import tarifsData from '../../content/tarifs.json';
+import packsFallback from '../../content/packs.json';
+import { t } from '../i18n';
+import type { Lang } from '../i18n';
+import { booking as bt } from '../i18n/booking';
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
+import type { Pack } from '../lib/supabase';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props as Props;
+const b = bt[lang];
+
+// --- Packs : Supabase (table packs, actifs, triés) ou content/packs.json ------
+let packs: Pack[] = [];
+if (isSupabaseConfigured) {
+  const sb = getSupabase();
+  if (sb) {
+    const { data, error } = await sb
+      .from('packs')
+      .select('*')
+      .eq('actif', true)
+      .order('ordre', { ascending: true });
+    if (!error && data) packs = data as Pack[];
+  }
+}
+if (!packs.length) {
+  packs = (packsFallback.packs as Pack[])
+    .filter((p) => p.actif)
+    .sort((a, z) => a.ordre - z.ordre);
+}
+
+// --- Configuration passée au script client -----------------------------------
+const cfg = {
+  lang,
+  supabaseUrl: isSupabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_URL) : '',
+  supabaseKey: isSupabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY) : '',
+  supabaseConfigured: isSupabaseConfigured,
+  email: site.email,
+  caution: tarifsData.caution,
+  saisons: tarifsData.saisons.map((s) => ({
+    id: s.id,
+    periode: s.periode,
+    prix_semaine: s.prix_semaine,
+    nuits_min: s.nuits_min,
+  })),
+  packs: packs.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    nom: p.nom,
+    description: p.description,
+    prix: Number(p.prix),
+    unite: p.unite,
+    ordre: p.ordre,
+  })),
+  s: {
+    pickDates: b['booking.pickDates'],
+    checking: b['booking.checking'],
+    available: b['booking.available'],
+    unavailable: b['booking.unavailable'],
+    toConfirm: b['booking.toConfirm'],
+    minNights: b['booking.minNights'],
+    dateError: b['booking.dateError'],
+    sending: b['booking.sending'],
+    submit: b['booking.submit'],
+    error: b['booking.error'],
+    packsChosen: b['booking.packsChosen'],
+    none: b['booking.none'],
+    seasonHaute: b['booking.season.haute'],
+    seasonMoyenne: b['booking.season.moyenne'],
+    seasonBasse: b['booking.season.basse'],
+    nights: b['booking.nights'],
+    weeks: b['booking.weeks'],
+    season: b['booking.season'],
+    stayPrice: b['booking.stayPrice'],
+    packsPrice: b['booking.packsPrice'],
+    total: b['booking.total'],
+    totalNote: b['booking.totalNote'],
+  },
+};
+---
+
+<Layout lang={lang} title={b['booking.title']}>
+  <section class="max-w-6xl mx-auto px-4 py-16 md:py-24 scroll-mt-16">
+    <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+      {b['booking.badge']}
+    </p>
+    <h1 class="font-display text-4xl md:text-5xl font-semibold text-ocean-900 leading-tight">
+      {b['booking.title']}
+    </h1>
+    <p class="mt-5 max-w-2xl text-ocean-700/80 text-lg leading-relaxed">
+      {b['booking.subtitle']}
+    </p>
+
+    <form
+      id="booking-form"
+      action={`https://formsubmit.co/${site.email}`}
+      method="POST"
+      class="mt-12 grid lg:grid-cols-[1fr_380px] gap-8 items-start"
+    >
+      <div class="space-y-8">
+        <!-- Dates & voyageurs -->
+        <div class="bg-white rounded-2xl p-8 shadow-card border border-sand-200">
+          <h2 class="font-display text-2xl font-semibold text-ocean-800 mb-6">
+            {b['booking.datesTitle']}
+          </h2>
+          <div class="grid sm:grid-cols-3 gap-5">
+            <div>
+              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="check_in">
+                {b['booking.checkin']}
+              </label>
+              <input
+                id="check_in"
+                name="check_in"
+                type="date"
+                required
+                class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="check_out">
+                {b['booking.checkout']}
+              </label>
+              <input
+                id="check_out"
+                name="check_out"
+                type="date"
+                required
+                class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="guests">
+                {b['booking.guests']}
+              </label>
+              <select
+                id="guests"
+                name="guests"
+                class="w-full rounded-xl border border-sand-200 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
+              >
+                {[1, 2, 3, 4].map((n) => <option value={n} selected={n === 2}>{n}</option>)}
+              </select>
+            </div>
+          </div>
+          <p
+            id="availability-msg"
+            role="status"
+            aria-live="polite"
+            class="mt-5 text-sm hidden rounded-xl px-4 py-3"
+          >
+          </p>
+          <p id="min-nights-msg" class="mt-3 text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-3 hidden">
+          </p>
+        </div>
+
+        <!-- Packs / options -->
+        <div class="bg-white rounded-2xl p-8 shadow-card border border-sand-200">
+          <h2 class="font-display text-2xl font-semibold text-ocean-800 mb-1">
+            {b['booking.packsTitle']}
+          </h2>
+          <p class="text-sm text-ocean-700/70 mb-6">{b['booking.packsSubtitle']}</p>
+          <div class="space-y-4">
+            {
+              packs.map((pack) => (
+                <label
+                  class="flex items-start gap-4 rounded-xl border border-sand-200 p-5 hover:border-ocean-300 transition-colors cursor-pointer has-[:checked]:border-ocean-500 has-[:checked]:bg-ocean-50/50"
+                  data-pack-slug={pack.slug}
+                >
+                  <input
+                    type="checkbox"
+                    class="pack-check mt-1 w-5 h-5 rounded border-sand-300 text-ocean-600 focus:ring-ocean-400 shrink-0"
+                    data-slug={pack.slug}
+                    data-prix={pack.prix}
+                    data-unite={pack.unite}
+                    data-nom={pack.nom[lang]}
+                  />
+                  <span class="flex-1">
+                    <span class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <span class="font-semibold text-ocean-800">{pack.nom[lang]}</span>
+                      <span class="font-display text-lg font-semibold text-ocean-600 whitespace-nowrap">
+                        {pack.prix} €{' '}
+                        <span class="text-xs font-normal text-ocean-700/60">
+                          {pack.unite === 'par_personne' ? b['booking.perPerson'] : b['booking.perStay']}
+                        </span>
+                      </span>
+                    </span>
+                    <span class="block mt-1 text-sm text-ocean-700/70">{pack.description[lang]}</span>
+                    {pack.unite === 'par_personne' && (
+                      <span class="mt-3 inline-flex items-center gap-2 text-sm">
+                        <span class="text-ocean-700/70">{b['booking.quantity']}</span>
+                        <select
+                          class="pack-qty rounded-lg border border-sand-200 px-2 py-1 bg-white disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-ocean-400"
+                          data-slug={pack.slug}
+                          disabled
+                        >
+                          {[1, 2, 3, 4].map((n) => <option value={n}>{n}</option>)}
+                        </select>
+                      </span>
+                    )}
+                  </span>
+                </label>
+              ))
+            }
+          </div>
+        </div>
+
+        <!-- Coordonnées -->
+        <div class="bg-white rounded-2xl p-8 shadow-card border border-sand-200 space-y-5">
+          <h2 class="font-display text-2xl font-semibold text-ocean-800 mb-1">
+            {b['booking.infoTitle']}
+          </h2>
+          <div>
+            <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="nom">
+              {b['booking.nom']}
+            </label>
+            <input
+              id="nom"
+              name="nom"
+              required
+              class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
+            />
+          </div>
+          <div class="grid sm:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="email">
+                {b['booking.email']}
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="telephone">
+                {b['booking.telephone']}
+              </label>
+              <input
+                id="telephone"
+                name="telephone"
+                type="tel"
+                class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
+              />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="message">
+              {b['booking.message']}
+            </label>
+            <textarea
+              id="message"
+              name="message"
+              rows="4"
+              placeholder={b['booking.messagePlaceholder']}
+              class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
+            ></textarea>
+          </div>
+          <p id="form-error" class="text-sm text-rose-700 bg-rose-50 rounded-xl px-4 py-3 hidden" role="alert">
+          </p>
+        </div>
+      </div>
+
+      <!-- Récapitulatif -->
+      <aside class="bg-ocean-800 text-white rounded-2xl p-8 shadow-card lg:sticky lg:top-24 space-y-5">
+        <h2 class="font-display text-2xl font-semibold">{b['booking.recapTitle']}</h2>
+        <p id="recap-hint" class="text-sm text-ocean-100/70">{b['booking.pickDates']}</p>
+        <div id="recap-details" class="space-y-3 text-sm hidden">
+          <p class="flex justify-between gap-4 text-ocean-100/80">
+            <span>{b['booking.nights']}</span>
+            <span id="recap-nights" class="font-semibold text-white tabular-nums"></span>
+          </p>
+          <p class="flex justify-between gap-4 text-ocean-100/80">
+            <span>{b['booking.season']}</span>
+            <span id="recap-season" class="font-semibold text-white text-right"></span>
+          </p>
+          <p class="flex justify-between gap-4 text-ocean-100/80">
+            <span>{b['booking.stayPrice']}</span>
+            <span id="recap-base" class="font-semibold text-white tabular-nums"></span>
+          </p>
+          <p class="flex justify-between gap-4 text-ocean-100/80">
+            <span>{b['booking.packsPrice']}</span>
+            <span id="recap-packs" class="font-semibold text-white tabular-nums"></span>
+          </p>
+          <p class="flex justify-between items-baseline gap-4 pt-4 border-t border-ocean-700">
+            <span class="font-semibold">{b['booking.total']}</span>
+            <span class="text-right">
+              <span id="recap-total" class="font-display text-3xl font-semibold tabular-nums"></span>
+              <span class="block text-xs text-ocean-200/60 italic">{b['booking.totalNote']}</span>
+            </span>
+          </p>
+        </div>
+        <p class="text-xs text-ocean-200/70 leading-relaxed pt-1">
+          {b['booking.cautionNote'].replace('{montant}', String(tarifsData.caution))}
+        </p>
+        <button
+          type="submit"
+          id="booking-submit"
+          class="w-full bg-sunset-500 hover:bg-sunset-600 text-white font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {b['booking.submit']}
+        </button>
+        <p class="text-xs text-ocean-100/60 italic">{b['booking.confirmNote']}</p>
+      </aside>
+
+      <!-- Champs cachés FormSubmit (fallback) + packs/total pour l'email -->
+      <input type="hidden" name="_captcha" value="false" />
+      <input type="hidden" name="_subject" value={`Réservation — ${site.nom}`} />
+      <input type="hidden" name="_template" value="table" />
+      <input type="hidden" id="packs-field" name="packs" value="" />
+      <input type="hidden" id="total-field" name="total_estime" value="" />
+    </form>
+
+    <!-- Écran de confirmation (soumission Supabase) -->
+    <div
+      id="booking-confirmation"
+      class="hidden mt-12 bg-emerald-50 border border-emerald-200 rounded-2xl p-10 text-center"
+      role="status"
+    >
+      <h2 class="font-display text-3xl font-semibold text-emerald-800">{b['booking.confirmTitle']}</h2>
+      <p class="mt-4 text-emerald-900/80 max-w-xl mx-auto">{b['booking.confirmText']}</p>
+      <a
+        href={`/gruissan-location/${lang === 'fr' ? '' : lang + '/'}`}
+        class="inline-block mt-8 bg-sunset-500 hover:bg-sunset-600 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
+      >
+        {b['booking.again']}
+      </a>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ cfg }}>
+  const {
+    supabaseUrl,
+    supabaseKey,
+    supabaseConfigured,
+    email,
+    caution,
+    saisons,
+    packs,
+    s,
+    lang,
+  } = cfg;
+
+  const form = document.getElementById('booking-form');
+  const checkIn = document.getElementById('check_in');
+  const checkOut = document.getElementById('check_out');
+  const guests = document.getElementById('guests');
+  const availMsg = document.getElementById('availability-msg');
+  const minMsg = document.getElementById('min-nights-msg');
+  const recapHint = document.getElementById('recap-hint');
+  const recapDetails = document.getElementById('recap-details');
+  const recapNights = document.getElementById('recap-nights');
+  const recapSeason = document.getElementById('recap-season');
+  const recapBase = document.getElementById('recap-base');
+  const recapPacks = document.getElementById('recap-packs');
+  const recapTotal = document.getElementById('recap-total');
+  const packsField = document.getElementById('packs-field');
+  const totalField = document.getElementById('total-field');
+  const submitBtn = document.getElementById('booking-submit');
+  const formError = document.getElementById('form-error');
+  const confirmation = document.getElementById('booking-confirmation');
+
+  // supabase-js chargé uniquement si configuré (import dynamique)
+  let sb = null;
+  if (supabaseConfigured) {
+    import('@supabase/supabase-js').then(({ createClient }) => {
+      sb = createClient(supabaseUrl, supabaseKey);
+      if (checkIn.value && checkOut.value) checkAvailability();
+    });
+  }
+
+  let blocked = false; // dates réservées → soumission refusée
+  let availabilityTimer = null;
+
+  const seasonLabels = {
+    haute: s.seasonHaute,
+    moyenne: s.seasonMoyenne,
+    basse: s.seasonBasse,
+  };
+
+  function nightsBetween(a, b) {
+    const d1 = Date.parse(a + 'T00:00:00Z');
+    const d2 = Date.parse(b + 'T00:00:00Z');
+    if (Number.isNaN(d1) || Number.isNaN(d2)) return 0;
+    return Math.round((d2 - d1) / 86400000);
+  }
+
+  function monthsOfStay(a, b) {
+    const months = [];
+    const cur = new Date(Date.parse(a + 'T00:00:00Z'));
+    const end = new Date(Date.parse(b + 'T00:00:00Z'));
+    if (Number.isNaN(cur) || Number.isNaN(end)) return months;
+    while (cur <= end && months.length < 24) {
+      const m = cur.getUTCMonth() + 1;
+      if (!months.includes(m)) months.push(m);
+      cur.setUTCMonth(cur.getUTCMonth() + 1, 1);
+    }
+    return months;
+  }
+
+  function seasonFor(a, b) {
+    const months = monthsOfStay(a, b);
+    let id = 'basse';
+    if (months.some((m) => m === 7 || m === 8)) id = 'haute';
+    else if (months.some((m) => m === 6 || m === 9)) id = 'moyenne';
+    return saisons.find((x) => x.id === id) ?? saisons[saisons.length - 1];
+  }
+
+  function chosenPacks() {
+    const list = [];
+    document.querySelectorAll('.pack-check').forEach((cb) => {
+      if (!cb.checked) return;
+      const slug = cb.dataset.slug;
+      const pack = packs.find((p) => p.slug === slug);
+      if (!pack) return;
+      let quantite = 1;
+      if (pack.unite === 'par_personne') {
+        const sel = document.querySelector(`.pack-qty[data-slug="${slug}"]`);
+        quantite = sel ? Math.max(1, Number(sel.value) || 1) : 1;
+      }
+      list.push({
+        id: pack.id,
+        slug: pack.slug,
+        nom: pack.nom[lang],
+        prix: pack.prix,
+        unite: pack.unite,
+        quantite,
+      });
+    });
+    return list;
+  }
+
+  function packsTotal(list) {
+    return list.reduce((sum, p) => sum + p.prix * p.quantite, 0);
+  }
+
+  function show(el, text, ok) {
+    el.textContent = text;
+    el.className =
+      'mt-5 text-sm rounded-xl px-4 py-3 ' +
+      (ok
+        ? 'text-emerald-800 bg-emerald-50 border border-emerald-200'
+        : 'text-rose-800 bg-rose-50 border border-rose-200');
+    el.classList.remove('hidden');
+  }
+
+  function hide(el) {
+    el.classList.add('hidden');
+  }
+
+  async function checkAvailability() {
+    if (!checkIn.value || !checkOut.value) return;
+    if (!sb) {
+      // Sans Supabase : on accepte, mention "à confirmer"
+      blocked = false;
+      show(availMsg, s.toConfirm, true);
+      return;
+    }
+    show(availMsg, s.checking, true);
+    const { data, error } = await sb
+      .from('availability')
+      .select('start_date, end_date, statut')
+      .eq('statut', 'reserve')
+      .lte('start_date', checkOut.value)
+      .gte('end_date', checkIn.value);
+    if (error) {
+      // En cas d'erreur de lecture on ne bloque pas la demande
+      blocked = false;
+      show(availMsg, s.toConfirm, true);
+      return;
+    }
+    const conflict = (data ?? []).some(
+      (row) => row.start_date <= checkOut.value && row.end_date >= checkIn.value
+    );
+    blocked = conflict;
+    if (conflict) {
+      show(availMsg, s.unavailable, false);
+      submitBtn.disabled = true;
+    } else {
+      show(availMsg, s.available, true);
+      submitBtn.disabled = false;
+    }
+  }
+
+  function updateEstimate() {
+    const ci = checkIn.value;
+    const co = checkOut.value;
+    const valid = ci && co && nightsBetween(ci, co) > 0;
+
+    // Minimum de nuits par saison (avertissement non bloquant)
+    if (valid) {
+      const saison = seasonFor(ci, co);
+      const nights = nightsBetween(ci, co);
+      if (nights < saison.nuits_min) {
+        minMsg.textContent = s.minNights
+          .replace('{saison}', seasonLabels[saison.id] ?? saison.periode)
+          .replace('{n}', String(saison.nuits_min));
+        minMsg.classList.remove('hidden');
+      } else {
+        hide(minMsg);
+      }
+    } else {
+      hide(minMsg);
+    }
+
+    if (!valid) {
+      recapHint.classList.remove('hidden');
+      recapDetails.classList.add('hidden');
+      packsField.value = '';
+      totalField.value = '';
+      return;
+    }
+    recapHint.classList.add('hidden');
+    recapDetails.classList.remove('hidden');
+
+    const nights = nightsBetween(ci, co);
+    const saison = seasonFor(ci, co);
+    const weeks = Math.ceil(nights / 7);
+    const base = saison.prix_semaine * weeks;
+    const list = chosenPacks();
+    const pt = packsTotal(list);
+    const total = base + pt;
+
+    recapNights.textContent = `${nights} ${s.nights} · ${weeks} ${s.weeks}`;
+    recapSeason.textContent = seasonLabels[saison.id] ?? saison.periode;
+    recapBase.textContent = `${base} €`;
+    recapPacks.textContent = `${pt} €`;
+    recapTotal.textContent = `${total} €`;
+
+    // Champs cachés pour le fallback FormSubmit
+    packsField.value = list.length
+      ? `${s.packsChosen} : ${list
+          .map((p) => `${p.nom}${p.unite === 'par_personne' ? ` × ${p.quantite}` : ''} — ${p.prix * p.quantite} €`)
+          .join(' | ')}`
+      : s.none;
+    totalField.value = `${total} €`;
+  }
+
+  function scheduleAvailability() {
+    if (availabilityTimer) clearTimeout(availabilityTimer);
+    availabilityTimer = setTimeout(checkAvailability, 400);
+  }
+
+  [checkIn, checkOut].forEach((el) => {
+    el.addEventListener('change', () => {
+      if (checkIn.value && checkOut.value && checkOut.value <= checkIn.value) {
+        submitBtn.disabled = true;
+        show(availMsg, s.dateError, false);
+        return;
+      }
+      if (sb) submitBtn.disabled = false;
+      updateEstimate();
+      scheduleAvailability();
+    });
+  });
+  guests.addEventListener('change', updateEstimate);
+
+  document.querySelectorAll('.pack-check').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      const sel = document.querySelector(`.pack-qty[data-slug="${cb.dataset.slug}"]`);
+      if (sel) sel.disabled = !cb.checked;
+      updateEstimate();
+    });
+  });
+  document.querySelectorAll('.pack-qty').forEach((sel) => {
+    sel.addEventListener('change', updateEstimate);
+  });
+
+  form.addEventListener('submit', async (e) => {
+    if (!supabaseConfigured) return; // fallback FormSubmit (POST natif)
+    e.preventDefault();
+
+    formError.classList.add('hidden');
+    if (!checkIn.value || !checkOut.value || nightsBetween(checkIn.value, checkOut.value) <= 0) {
+      formError.textContent = s.dateError;
+      formError.classList.remove('hidden');
+      return;
+    }
+    if (blocked) {
+      formError.textContent = s.unavailable;
+      formError.classList.remove('hidden');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = s.sending;
+    try {
+      const list = chosenPacks();
+      const nights = nightsBetween(checkIn.value, checkOut.value);
+      const saison = seasonFor(checkIn.value, checkOut.value);
+      const base = saison.prix_semaine * Math.ceil(nights / 7);
+      const { error } = await sb.from('bookings').insert({
+        check_in: checkIn.value,
+        check_out: checkOut.value,
+        guests: Number(guests.value),
+        nom: document.getElementById('nom').value,
+        email: document.getElementById('email').value,
+        telephone: document.getElementById('telephone').value || null,
+        message: document.getElementById('message').value || null,
+        packs: list,
+        total_estime: base + packsTotal(list),
+        statut: 'demande',
+        lang,
+      });
+      if (error) throw error;
+      form.classList.add('hidden');
+      confirmation.classList.remove('hidden');
+      confirmation.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (err) {
+      formError.textContent = s.error.replace('{email}', email);
+      formError.classList.remove('hidden');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = s.submit;
+    }
+  });
+</script>
