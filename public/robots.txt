@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gruissan-cozy.github.io/gruissan-location/sitemap.xml

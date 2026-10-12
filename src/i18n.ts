@@ -8,6 +8,34 @@ export const langNames: Record<Lang, string> = {
   de: 'Deutsch',
 };
 
+/** Métadonnées SEO traduites (title, description, OG locale) */
+export const seo: Record<Lang, { title: string; description: string; ogLocale: string }> = {
+  fr: {
+    title: 'Location saisonnière Gruissan — Appartement vue mer',
+    description:
+      "Appartement vue mer à Gruissan Plage, à 150 m de la plage et du Chalet. 4 personnes, 2 chambres, terrasse. Réservation directe, sans commission.",
+    ogLocale: 'fr_FR',
+  },
+  en: {
+    title: 'Seasonal rental Gruissan — Sea-view apartment',
+    description:
+      'Sea-view apartment in Gruissan Plage, 150 m from the beach and the Chalet. Sleeps 4, 2 bedrooms, terrace. Direct booking, no commission.',
+    ogLocale: 'en_US',
+  },
+  es: {
+    title: 'Alquiler de temporada Gruissan — Apartamento con vistas al mar',
+    description:
+      'Apartamento con vistas al mar en Gruissan Plage, a 150 m de la playa y del Chalet. Para 4 personas, 2 habitaciones, terraza. Reserva directa, sin comisiones.',
+    ogLocale: 'es_ES',
+  },
+  de: {
+    title: 'Saisonvermietung Gruissan — Ferienwohnung mit Meerblick',
+    description:
+      'Ferienwohnung mit Meerblick in Gruissan Plage, 150 m vom Strand und dem Chalet entfernt. Für 4 Personen, 2 Schlafzimmer, Terrasse. Direktbuchung, ohne Provision.',
+    ogLocale: 'de_DE',
+  },
+};
+
 export const t: Record<Lang, Record<string, string>> = {
   fr: {
     'nav.accueil': 'Accueil',

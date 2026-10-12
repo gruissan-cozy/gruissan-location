@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 import site from '../../content/site.json';
-import { LANGUAGES, langNames, t } from '../i18n';
+import { LANGUAGES, langNames, t, seo } from '../i18n';
 import type { Lang } from '../i18n';
 
 interface Props {
@@ -13,6 +13,13 @@ const { lang = 'fr', title } = Astro.props as Props;
 const tr = t[lang];
 const year = new Date().getFullYear();
 const href = (l: Lang) => `/gruissan-location/${l === 'fr' ? '' : l + '/'}`;
+
+// --- SEO ---
+const siteUrl = 'https://gruissan-cozy.github.io';
+const pageUrl = `${siteUrl}/gruissan-location/${lang === 'fr' ? '' : lang + '/'}`;
+const ogImage = `${siteUrl}/gruissan-location/images/hero.svg`;
+const metaTitle = seo[lang].title;
+const metaDesc = seo[lang].description;
 ---
 
 <!doctype html>
@@ -20,18 +27,68 @@ const href = (l: Lang) => `/gruissan-location/${l === 'fr' ? '' : l + '/'}`;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{title} · Gruissan Cozy</title>
-    <meta
-      name="description"
-      content="Location saisonnière à Gruissan Plage — appartement vue mer pour 4 personnes, proche plage et Chalet."
-    />
+    <title>{metaTitle}</title>
+    <meta name="description" content={metaDesc} />
+    <link rel="canonical" href={pageUrl} />
+    <link rel="alternate" hreflang="fr" href={`${siteUrl}/gruissan-location/`} />
+    <link rel="alternate" hreflang="en" href={`${siteUrl}/gruissan-location/en/`} />
+    <link rel="alternate" hreflang="es" href={`${siteUrl}/gruissan-location/es/`} />
+    <link rel="alternate" hreflang="de" href={`${siteUrl}/gruissan-location/de/`} />
+    <link rel="alternate" hreflang="x-default" href={`${siteUrl}/gruissan-location/`} />
     <link rel="icon" type="image/svg+xml" href="/gruissan-location/favicon.svg" />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content={seo[lang].ogLocale} />
+    <meta property="og:site_name" content="Gruissan Cozy" />
+    <meta property="og:title" content={metaTitle} />
+    <meta property="og:description" content={metaDesc} />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:image" content={ogImage} />
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={metaTitle} />
+    <meta name="twitter:description" content={metaDesc} />
+    <meta name="twitter:image" content={ogImage} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"
       rel="stylesheet"
     />
+    <!-- Données structurées schema.org (résultats enrichis Google) -->
+    <script type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'LodgingBusiness',
+      name: 'Gruissan Cozy',
+      description: seo.fr.description,
+      url: 'https://gruissan-cozy.github.io/gruissan-location/',
+      telephone: site.telephone,
+      email: site.email,
+      image: ogImage,
+      priceRange: '€€',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: site.adresse_ligne,
+        postalCode: site.code_postal,
+        addressLocality: site.ville,
+        addressRegion: site.region,
+        addressCountry: 'FR',
+      },
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: site.latitude,
+        longitude: site.longitude,
+      },
+      numberOfRooms: site.chambres,
+      occupancy: { '@type': 'QuantitativeValue', maxValue: site.capacite },
+      amenityFeature: [
+        'Wi-Fi', 'Parking', 'Climatisation', 'Terrasse', 'Lave-linge', 'Plage à proximité',
+      ].map((name) => ({ '@type': 'LocationFeatureSpecification', name, value: true })),
+      potentialAction: {
+        '@type': 'ReserveAction',
+        target: 'https://gruissan-cozy.github.io/gruissan-location/#contact',
+      },
+    })} />
   </head>
   <body class="bg-sand-50 text-ocean-900 font-sans antialiased">
     <!-- Header -->
