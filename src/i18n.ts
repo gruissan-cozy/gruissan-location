@@ -49,7 +49,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'hero.subtitle':
       "Charmant duplex avec mezzanine, à deux pas de la plage et du célèbre Chalet. Idéal pour 4 personnes, à la semaine ou en escapade courte.",
     'proxi.title': 'À proximité',
-    'proxi.subtitle': 'Tout à pied depuis la résidence Les Régates',
+    'proxi.subtitle': 'Tout à pied depuis la résidence Les Régates · itinéraires Google Maps',
     'hero.cta1': 'Voir les tarifs',
     'hero.cta2': 'Nous contacter',
     'appart.title': "L'appartement",
@@ -108,7 +108,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'hero.subtitle':
       'Charming duplex with mezzanine, steps from the beach and the iconic Chalet. Perfect for 4, weekly or short-stay.',
     'proxi.title': 'Nearby',
-    'proxi.subtitle': 'Everything within walking distance from Les Régates residence',
+    'proxi.subtitle': 'Everything within walking distance from Les Régates residence · routes via Google Maps',
     'hero.cta1': 'See rates',
     'hero.cta2': 'Contact us',
     'appart.title': 'The apartment',
@@ -167,7 +167,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'hero.subtitle':
       'Encantador dúplex con entreplanta, a dos pasos de la playa y del famoso Chalet. Para 4 personas, por semanas o escapadas cortas.',
     'proxi.title': 'Cerca',
-    'proxi.subtitle': 'Todo a pie desde la residencia Les Régates',
+    'proxi.subtitle': 'Todo a pie desde la residencia Les Régates · rutas de Google Maps',
     'hero.cta1': 'Ver tarifas',
     'hero.cta2': 'Contactar',
     'appart.title': 'El apartamento',
@@ -226,7 +226,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'hero.subtitle':
       'Charmante Duplex-Wohnung mit Zwischenebene, wenige Schritte vom Strand und vom berühmten Chalet entfernt. Für 4 Personen, wochenweise oder kurzfristig.',
     'proxi.title': 'In der Umgebung',
-    'proxi.subtitle': 'Alles zu Fuß von der Wohnanlage Les Régates erreichbar',
+    'proxi.subtitle': 'Alles zu Fuß von der Wohnanlage Les Régates erreichbar · Routen via Google Maps',
     'hero.cta1': 'Preise ansehen',
     'hero.cta2': 'Kontakt aufnehmen',
     'appart.title': 'Die Wohnung',

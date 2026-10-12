@@ -24,6 +24,10 @@ function fmtMonth(iso: string): string {
   return `${monthNames[lang][Number(m) - 1]} ${y}`;
 }
 
+function fmtDist(m: number): string {
+  return m >= 1000 ? `${(m / 1000).toFixed(m % 1000 === 0 ? 0 : 1)} km` : `${m} m`;
+}
+
 const statutClass: Record<string, string> = {
   libre: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
   reserve: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200',
@@ -109,11 +113,25 @@ const statutClass: Record<string, string> = {
       <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {proxiData.points.map((p) => (
           <div class="bg-white rounded-xl p-6 shadow-card flex flex-col">
-            <p class="font-display text-3xl font-semibold text-ocean-600">
-              {p.distance_m >= 1000 ? `${(p.distance_m / 1000).toFixed(p.distance_m % 1000 === 0 ? 0 : 1)} km` : `${p.distance_m} m`}
-            </p>
-            <p class="mt-2 font-medium text-ocean-800">{p.nom[lang]}</p>
-            <p class="mt-1 text-sm text-ocean-700/70">{p.detail[lang]}</p>
+            <p class="font-display text-2xl font-semibold text-ocean-800">{p.nom[lang]}</p>
+            <p class="mt-1 text-sm text-ocean-700/70 mb-4">{p.detail[lang]}</p>
+            <div class="mt-auto space-y-1.5 text-sm">
+              <p class="flex items-center gap-2">
+                <span aria-hidden="true">🚶</span>
+                <span class="text-ocean-600 font-semibold tabular-nums">{p.routes.walking.duration_min} min</span>
+                <span class="text-ocean-700/50">{fmtDist(p.routes.walking.distance_m)}</span>
+              </p>
+              <p class="flex items-center gap-2">
+                <span aria-hidden="true">🚲</span>
+                <span class="text-ocean-600 font-semibold tabular-nums">{p.routes.cycling.duration_min} min</span>
+                <span class="text-ocean-700/50">{fmtDist(p.routes.cycling.distance_m)}</span>
+              </p>
+              <p class="flex items-center gap-2">
+                <span aria-hidden="true">🚗</span>
+                <span class="text-ocean-600 font-semibold tabular-nums">{p.routes.driving.duration_min} min</span>
+                <span class="text-ocean-700/50">{fmtDist(p.routes.driving.distance_m)}</span>
+              </p>
+            </div>
           </div>
         ))}
       </div>

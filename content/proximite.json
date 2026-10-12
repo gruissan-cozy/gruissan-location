@@ -1,24 +1,8 @@
 {
+  "origine": "Résidence Les Régates, Gruissan Plage",
   "points": [
     {
-      "id": "plage-grazel",
-      "distance_m": 100,
-      "nom": {
-        "fr": "Plage du Grazel",
-        "en": "Grazel beach",
-        "es": "Playa del Grazel",
-        "de": "Strand Le Grazel"
-      },
-      "detail": {
-        "fr": "Grande plage de sable fin, surveillée en été",
-        "en": "Wide fine-sand beach, lifeguarded in summer",
-        "es": "Amplia playa de arena fina, vigilada en verano",
-        "de": "Breiter Feinsandstrand, im Sommer bewacht"
-      }
-    },
-    {
       "id": "cadran-solaire",
-      "distance_m": 150,
       "nom": {
         "fr": "Place du Cadran Solaire",
         "en": "Cadran Solaire square",
@@ -26,31 +10,39 @@
         "de": "Place du Cadran Solaire"
       },
       "detail": {
-        "fr": "Restaurants, glacier et animations estivales",
-        "en": "Restaurants, ice cream and summer events",
-        "es": "Restaurantes, heladería y animación estival",
-        "de": "Restaurants, Eisdiele und Sommerveranstaltungen"
+        "fr": "Cœur animé de Gruissan Plage : restaurants, glacier, animations estivales",
+        "en": "Lively heart of Gruissan Plage: restaurants, ice cream, summer events",
+        "es": "Corazón animado de Gruissan Plage: restaurantes, heladería, animación estival",
+        "de": "Lebendiges Herz von Gruissan Plage: Restaurants, Eisdiele, Sommerveranstaltungen"
+      },
+      "routes": {
+        "walking": { "distance_m": 180, "duration_min": 2 },
+        "cycling": { "distance_m": 180, "duration_min": 1 },
+        "driving": { "distance_m": 750, "duration_min": 4 }
       }
     },
     {
-      "id": "commerces",
-      "distance_m": 200,
+      "id": "plage-grazel",
       "nom": {
-        "fr": "Commerces & marché",
-        "en": "Shops & market",
-        "es": "Comercios y mercado",
-        "de": "Geschäfte & Markt"
+        "fr": "Plage du Grazel",
+        "en": "Grazel beach",
+        "es": "Playa del Grazel",
+        "de": "Strand Le Grazel"
       },
       "detail": {
-        "fr": "Supermarché, boulangerie, marché estival sur la place",
-        "en": "Supermarket, bakery, summer market on the square",
-        "es": "Supermercado, panadería, mercado de verano en la plaza",
-        "de": "Supermarkt, Bäckerei, Sommermarkt am Platz"
+        "fr": "Grande plage de sable fin, surveillée en été — la plage de la résidence",
+        "en": "Wide fine-sand beach, lifeguarded in summer — the residence's beach",
+        "es": "Amplia playa de arena fina, vigilada en verano — la playa de la residencia",
+        "de": "Breiter Feinsandstrand, im Sommer bewacht — der Strand der Wohnanlage"
+      },
+      "routes": {
+        "walking": { "distance_m": 450, "duration_min": 6 },
+        "cycling": { "distance_m": 450, "duration_min": 1 },
+        "driving": { "distance_m": 650, "duration_min": 3 }
       }
     },
     {
       "id": "chalet",
-      "distance_m": 250,
       "nom": {
         "fr": "Le Chalet",
         "en": "The Chalet",
@@ -58,47 +50,19 @@
         "de": "Das Chalet"
       },
       "detail": {
-        "fr": "Monument emblématique de Gruissan Plage",
-        "en": "Iconic landmark of Gruissan Plage",
-        "es": "Monumento emblemático de Gruissan Plage",
-        "de": "Wahrzeichen von Gruissan Plage"
-      }
-    },
-    {
-      "id": "plage-chalets",
-      "distance_m": 400,
-      "nom": {
-        "fr": "Plage des Chalets",
-        "en": "Chalets beach",
-        "es": "Playa de los Chalets",
-        "de": "Chalets-Strand"
+        "fr": "Le monument emblématique de Gruissan Plage, sur pilotis au bord de l'eau",
+        "en": "The iconic landmark of Gruissan Plage, on stilts by the water",
+        "es": "El monumento emblemático de Gruissan Plage, sobre pilotes junto al agua",
+        "de": "Das Wahrzeichen von Gruissan Plage, auf Stelzen am Wasser"
       },
-      "detail": {
-        "fr": "Plage familiale au pied du Chalet",
-        "en": "Family beach at the foot of the Chalet",
-        "es": "Playa familiar a los pies del Chalet",
-        "de": "Familienstrand am Fuße des Chalet"
-      }
-    },
-    {
-      "id": "ayrolle",
-      "distance_m": 500,
-      "nom": {
-        "fr": "Étang de l'Ayrolle",
-        "en": "Ayrolle pond",
-        "es": "Estanque de l'Ayrolle",
-        "de": "Étang de l'Ayrolle"
-      },
-      "detail": {
-        "fr": "Nature, observation des oiseaux, pistes cyclables",
-        "en": "Nature, birdwatching, cycle paths",
-        "es": "Naturaleza, observación de aves, carriles bici",
-        "de": "Natur, Vogelbeobachtung, Radwege"
+      "routes": {
+        "walking": { "distance_m": 700, "duration_min": 9 },
+        "cycling": { "distance_m": 700, "duration_min": 2 },
+        "driving": { "distance_m": 950, "duration_min": 4 }
       }
     },
     {
       "id": "port",
-      "distance_m": 600,
       "nom": {
         "fr": "Port de plaisance",
         "en": "Marina",
@@ -110,11 +74,15 @@
         "en": "Seafront promenade, bars and boats",
         "es": "Paseo marítimo, bares y barcos",
         "de": "Hafenpromenade, Bars und Boote"
+      },
+      "routes": {
+        "walking": { "distance_m": 1700, "duration_min": 23 },
+        "cycling": { "distance_m": 1800, "duration_min": 7 },
+        "driving": { "distance_m": 2200, "duration_min": 7 }
       }
     },
     {
       "id": "village",
-      "distance_m": 2000,
       "nom": {
         "fr": "Village circulant de Gruissan",
         "en": "Circulade village of Gruissan",
@@ -122,10 +90,55 @@
         "de": "Runddorf von Gruissan"
       },
       "detail": {
-        "fr": "Le vieux village médiéval et son château",
-        "en": "The medieval old village and its castle",
-        "es": "El antiguo pueblo medieval y su castillo",
-        "de": "Das mittelalterliche Altdorf und seine Burg"
+        "fr": "Le vieux village médiéval et son château, ruelles et marché",
+        "en": "The medieval old village and its castle, lanes and market",
+        "es": "El antiguo pueblo medieval y su castillo, callejuelas y mercado",
+        "de": "Das mittelalterliche Altdorf und seine Burg, Gassen und Markt"
+      },
+      "routes": {
+        "walking": { "distance_m": 2000, "duration_min": 27 },
+        "cycling": { "distance_m": 2400, "duration_min": 9 },
+        "driving": { "distance_m": 2200, "duration_min": 7 }
+      }
+    },
+    {
+      "id": "ayrolle",
+      "nom": {
+        "fr": "Étang de l'Ayrolle",
+        "en": "Ayrolle pond",
+        "es": "Estanque de l'Ayrolle",
+        "de": "Étang de l'Ayrolle"
+      },
+      "detail": {
+        "fr": "Réserve naturelle : observation des oiseaux, pistes cyclables",
+        "en": "Nature reserve: birdwatching, cycle paths",
+        "es": "Reserva natural: observación de aves, carriles bici",
+        "de": "Naturschutzgebiet: Vogelbeobachtung, Radwege"
+      },
+      "routes": {
+        "walking": { "distance_m": 7100, "duration_min": 36 },
+        "cycling": { "distance_m": 7900, "duration_min": 26 },
+        "driving": { "distance_m": 7700, "duration_min": 20 }
+      }
+    },
+    {
+      "id": "plage-chalets",
+      "nom": {
+        "fr": "Plage des Chalets",
+        "en": "Chalets beach",
+        "es": "Playa de los Chalets",
+        "de": "Chalets-Strand"
+      },
+      "detail": {
+        "fr": "Plage familiale de l'autre côté de la pointe, spot de kitesurf",
+        "en": "Family beach on the other side of the point, kitesurf spot",
+        "es": "Playa familiar al otro lado de la punta, spot de kitesurf",
+        "de": "Familienstrand auf der anderen Seite der Landzunge, Kitesurf-Spot"
+      },
+      "routes": {
+        "walking": { "distance_m": 4600, "duration_min": 52 },
+        "cycling": { "distance_m": 5000, "duration_min": 18 },
+        "driving": { "distance_m": 5000, "duration_min": 13 }
       }
     }
   ]
