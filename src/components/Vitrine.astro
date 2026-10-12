@@ -110,12 +110,12 @@ const statutClass: Record<string, string> = {
           <figure class="group relative rounded-2xl overflow-hidden aspect-[4/3]">
             <img
               src={photo.src}
-              alt={photo.alt}
+              alt={photo.alt[lang]}
               loading="lazy"
               class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <figcaption class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ocean-900/90 to-transparent p-5 pt-12">
-              <p class="text-sm text-sand-100">{photo.alt}</p>
+              <p class="text-sm text-sand-100">{photo.alt[lang]}</p>
             </figcaption>
           </figure>
         ))}

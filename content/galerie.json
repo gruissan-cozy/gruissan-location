@@ -1,10 +1,58 @@
 {
   "photos": [
-    { "src": "/gruissan-location/images/galerie/01-sejour.jpg", "alt": "Séjour lumineux avec cuisine ouverte et escalier en colimaçon" },
-    { "src": "/gruissan-location/images/galerie/02-studio.jpg", "alt": "Espace de vie ouvert avec table à manger et canapé" },
-    { "src": "/gruissan-location/images/galerie/03-chambre.jpg", "alt": "Chambre avec lit à tête en rotin et décoration naturelle" },
-    { "src": "/gruissan-location/images/galerie/04-mezzanine.jpg", "alt": "Mezzanine sous plafond voûté avec grande fenêtre cintrée" },
-    { "src": "/gruissan-location/images/galerie/05-cuisine.jpg", "alt": "Cuisine équipée ouverte vue depuis la mezzanine" },
-    { "src": "/gruissan-location/images/galerie/06-vue-ensemble.jpg", "alt": "Vue d'ensemble du studio duplex depuis la mezzanine" }
+    {
+      "src": "/gruissan-location/images/galerie/01-sejour.jpg",
+      "alt": {
+        "fr": "Séjour lumineux avec cuisine ouverte et escalier en colimaçon",
+        "en": "Bright living room with open kitchen and spiral staircase",
+        "es": "Salón luminoso con cocina abierta y escalera de caracol",
+        "de": "Heller Wohnraum mit offener Küche und Wendeltreppe"
+      }
+    },
+    {
+      "src": "/gruissan-location/images/galerie/02-chambre-bas.jpg",
+      "alt": {
+        "fr": "Chambre du rez-de-chaussée avec lit double et penderie",
+        "en": "Ground-floor bedroom with double bed and wardrobe",
+        "es": "Dormitorio de la planta baja con cama doble y armario",
+        "de": "Schlafzimmer im Erdgeschoss mit Doppelbett und Schrank"
+      }
+    },
+    {
+      "src": "/gruissan-location/images/galerie/03-chambre-mezzanine.jpg",
+      "alt": {
+        "fr": "Chambre de la mezzanine sous plafond voûté",
+        "en": "Mezzanine bedroom under a vaulted ceiling",
+        "es": "Dormitorio de la entreplanta bajo techo abovedado",
+        "de": "Schlafzimmer auf der Zwischenebene unter Gewölbedecke"
+      }
+    },
+    {
+      "src": "/gruissan-location/images/galerie/04-studio.jpg",
+      "alt": {
+        "fr": "Espace de vie ouvert avec table à manger et canapé",
+        "en": "Open living space with dining table and sofa",
+        "es": "Espacio abierto con mesa de comedor y sofá",
+        "de": "Offener Wohnbereich mit Esstisch und Sofa"
+      }
+    },
+    {
+      "src": "/gruissan-location/images/galerie/05-cuisine.jpg",
+      "alt": {
+        "fr": "Cuisine équipée ouverte",
+        "en": "Fitted open kitchen",
+        "es": "Cocina equipada abierta",
+        "de": "Offene Einbauküche"
+      }
+    },
+    {
+      "src": "/gruissan-location/images/galerie/06-vue-ensemble.jpg",
+      "alt": {
+        "fr": "Vue d'ensemble du duplex depuis la mezzanine",
+        "en": "Overview of the duplex from the mezzanine",
+        "es": "Vista general del dúplex desde la entreplanta",
+        "de": "Gesamtansicht des Duplex von der Zwischenebene"
+      }
+    }
   ]
 }
