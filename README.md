@@ -54,39 +54,44 @@ npm run build      # génère le site dans dist/
 npm run preview    # prévisualise le build
 ```
 
-## Back office (`/admin/`)
+## Espace propriétaire (`/admin/`)
 
-Le back office est réservé au propriétaire : il permet de gérer les demandes,
-le calendrier, les options et le guide voyageur **sans toucher au code**.
+Le site fonctionne **sans aucun service externe** : les contenus (tarifs,
+disponibilités, packs, guide, photos) sont des fichiers JSON dans le dossier
+[`content/`](content/), et les demandes de contact/réservation arrivent
+**par email** via FormSubmit. La page `/admin/` est un mode d'emploi qui
+explique comment tout mettre à jour en éditant les fichiers sur GitHub.
 
-### Première mise en route (une seule fois)
+### Mettre à jour le site (1 à 2 minutes)
 
-1. Créez un projet gratuit sur [supabase.com](https://supabase.com).
-2. Dans **SQL Editor**, exécutez le contenu de [`migrations/0001_init.sql`](migrations/0001_init.sql)
-   (crée les tables + les règles de sécurité RLS + les données initiales).
-3. Dans **Authentication → Providers**, activez **Email** et le **Magic Link**.
-   Ajoutez l'URL du site dans **Authentication → URL Configuration → Redirect URLs**
-   (en local : `http://localhost:4321/gruissan-location/admin/`).
-4. Renseignez les variables d'environnement :
-   - en local : copiez `.env.example` en `.env` et remplissez les valeurs ;
-   - sur GitHub : **Settings → Secrets and variables → Actions**, ajoutez
-     `PUBLIC_SUPABASE_URL` et `PUBLIC_SUPABASE_ANON_KEY`.
+1. Ouvrez le dépôt : https://github.com/gruissan-cozy/gruissan-location
+2. Entrez dans le dossier `content/` et cliquez sur le fichier à modifier
+3. Cliquez sur le crayon (✏️) en haut à droite
+4. Faites vos modifications, puis « Commit changes »
+5. Le site se met à jour automatiquement (workflow GitHub Actions)
 
-> La clé « anon » est **publique par conception** : elle est protégée par les
-> politiques RLS. N'utilisez jamais la clé « service_role » côté site.
-
-### Les 5 sections
-
-| Page | Contenu |
+| Fichier | Ce qu'il contient |
 |---|---|
-| `/admin/` | Connexion par lien magique (e-mail, sans mot de passe) + tableau de bord |
-| `/admin/messages/` | Demandes reçues, fil des réponses, statut (nouveau / en cours / répondu / archivé) |
-| `/admin/disponibilites/` | Statut des 12 prochains mois (libre / partiel / réservé) + note interne |
-| `/admin/packs/` | Options proposées à la réservation (4 langues, prix, unité, ordre, actif) |
-| `/admin/guide/` | Guide d'accueil numérique (titre + contenu HTML en 4 langues) |
+| `content/site.json` | Identité du bien, coordonnées, liens plateformes |
+| `content/tarifs.json` | Tarifs par saison, options, caution |
+| `content/disponibilites.json` | Disponibilités mois par mois |
+| `content/packs.json` | Options proposées à la réservation |
+| `content/galerie.json` | Liste des photos |
+| `content/guide.json` | Contenu du guide d'accueil |
+| `content/proximite.json` | Lieux à proximité + durées |
 
-Si les variables Supabase ne sont pas définies, chaque page du back office
-affiche un message explicite au lieu d'un écran vide.
+### Messages et réservations
+
+Ils arrivent par email à l'adresse de `content/site.json`. Votre boîte mail
+est votre historique.
+
+### Option : brancher Supabase (plus tard)
+
+Si vous souhaitez un jour un back office avec base de données (boîte de
+réception unifiée, édition en interface), le code est dormant dans le dépôt :
+il suffit de créer un projet [supabase.com](https://supabase.com), d'exécuter
+[`migrations/0001_init.sql`](migrations/0001_init.sql) et de passer
+`SUPABASE_ENABLED = true` dans `src/lib/supabase.ts`.
 
 ## Déploiement sur GitHub Pages
 
