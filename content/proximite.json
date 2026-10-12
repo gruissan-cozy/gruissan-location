@@ -1,0 +1,132 @@
+{
+  "points": [
+    {
+      "id": "plage-grazel",
+      "distance_m": 100,
+      "nom": {
+        "fr": "Plage du Grazel",
+        "en": "Grazel beach",
+        "es": "Playa del Grazel",
+        "de": "Strand Le Grazel"
+      },
+      "detail": {
+        "fr": "Grande plage de sable fin, surveillée en été",
+        "en": "Wide fine-sand beach, lifeguarded in summer",
+        "es": "Amplia playa de arena fina, vigilada en verano",
+        "de": "Breiter Feinsandstrand, im Sommer bewacht"
+      }
+    },
+    {
+      "id": "cadran-solaire",
+      "distance_m": 150,
+      "nom": {
+        "fr": "Place du Cadran Solaire",
+        "en": "Cadran Solaire square",
+        "es": "Plaza del Cadran Solaire",
+        "de": "Place du Cadran Solaire"
+      },
+      "detail": {
+        "fr": "Restaurants, glacier et animations estivales",
+        "en": "Restaurants, ice cream and summer events",
+        "es": "Restaurantes, heladería y animación estival",
+        "de": "Restaurants, Eisdiele und Sommerveranstaltungen"
+      }
+    },
+    {
+      "id": "commerces",
+      "distance_m": 200,
+      "nom": {
+        "fr": "Commerces & marché",
+        "en": "Shops & market",
+        "es": "Comercios y mercado",
+        "de": "Geschäfte & Markt"
+      },
+      "detail": {
+        "fr": "Supermarché, boulangerie, marché estival sur la place",
+        "en": "Supermarket, bakery, summer market on the square",
+        "es": "Supermercado, panadería, mercado de verano en la plaza",
+        "de": "Supermarkt, Bäckerei, Sommermarkt am Platz"
+      }
+    },
+    {
+      "id": "chalet",
+      "distance_m": 250,
+      "nom": {
+        "fr": "Le Chalet",
+        "en": "The Chalet",
+        "es": "El Chalet",
+        "de": "Das Chalet"
+      },
+      "detail": {
+        "fr": "Monument emblématique de Gruissan Plage",
+        "en": "Iconic landmark of Gruissan Plage",
+        "es": "Monumento emblemático de Gruissan Plage",
+        "de": "Wahrzeichen von Gruissan Plage"
+      }
+    },
+    {
+      "id": "plage-chalets",
+      "distance_m": 400,
+      "nom": {
+        "fr": "Plage des Chalets",
+        "en": "Chalets beach",
+        "es": "Playa de los Chalets",
+        "de": "Chalets-Strand"
+      },
+      "detail": {
+        "fr": "Plage familiale au pied du Chalet",
+        "en": "Family beach at the foot of the Chalet",
+        "es": "Playa familiar a los pies del Chalet",
+        "de": "Familienstrand am Fuße des Chalet"
+      }
+    },
+    {
+      "id": "ayrolle",
+      "distance_m": 500,
+      "nom": {
+        "fr": "Étang de l'Ayrolle",
+        "en": "Ayrolle pond",
+        "es": "Estanque de l'Ayrolle",
+        "de": "Étang de l'Ayrolle"
+      },
+      "detail": {
+        "fr": "Nature, observation des oiseaux, pistes cyclables",
+        "en": "Nature, birdwatching, cycle paths",
+        "es": "Naturaleza, observación de aves, carriles bici",
+        "de": "Natur, Vogelbeobachtung, Radwege"
+      }
+    },
+    {
+      "id": "port",
+      "distance_m": 600,
+      "nom": {
+        "fr": "Port de plaisance",
+        "en": "Marina",
+        "es": "Puerto deportivo",
+        "de": "Jachthafen"
+      },
+      "detail": {
+        "fr": "Promenade en bord de mer, bars et bateaux",
+        "en": "Seafront promenade, bars and boats",
+        "es": "Paseo marítimo, bares y barcos",
+        "de": "Hafenpromenade, Bars und Boote"
+      }
+    },
+    {
+      "id": "village",
+      "distance_m": 2000,
+      "nom": {
+        "fr": "Village circulant de Gruissan",
+        "en": "Circulade village of Gruissan",
+        "es": "Pueblo circulante de Gruissan",
+        "de": "Runddorf von Gruissan"
+      },
+      "detail": {
+        "fr": "Le vieux village médiéval et son château",
+        "en": "The medieval old village and its castle",
+        "es": "El antiguo pueblo medieval y su castillo",
+        "de": "Das mittelalterliche Altdorf und seine Burg"
+      }
+    }
+  ]
+}

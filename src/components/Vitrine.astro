@@ -4,6 +4,7 @@ import site from '../../content/site.json';
 import tarifsData from '../../content/tarifs.json';
 import dispoData from '../../content/disponibilites.json';
 import galerieData from '../../content/galerie.json';
+import proxiData from '../../content/proximite.json';
 import { t } from '../i18n';
 import type { Lang } from '../i18n';
 
@@ -94,6 +95,27 @@ const statutClass: Record<string, string> = {
       <div class="bg-sand-50 p-8 text-center">
         <p class="font-display text-5xl font-semibold text-ocean-600">{site.terrasse_m2}<span class="text-2xl font-normal"> m²</span></p>
         <p class="text-xs text-ocean-700/60 mt-2 uppercase tracking-wider">{tr['appart.terrasse']}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- À proximité -->
+  <section id="proxi" class="bg-sand-100 py-24 scroll-mt-16">
+    <div class="max-w-6xl mx-auto px-4">
+      <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+        {tr['proxi.subtitle']}
+      </p>
+      <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['proxi.title']}</h2>
+      <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {proxiData.points.map((p) => (
+          <div class="bg-white rounded-xl p-6 shadow-card flex flex-col">
+            <p class="font-display text-3xl font-semibold text-ocean-600">
+              {p.distance_m >= 1000 ? `${(p.distance_m / 1000).toFixed(p.distance_m % 1000 === 0 ? 0 : 1)} km` : `${p.distance_m} m`}
+            </p>
+            <p class="mt-2 font-medium text-ocean-800">{p.nom[lang]}</p>
+            <p class="mt-1 text-sm text-ocean-700/70">{p.detail[lang]}</p>
+          </div>
+        ))}
       </div>
     </div>
   </section>
