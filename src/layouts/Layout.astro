@@ -108,6 +108,10 @@ const metaDesc = seo[lang].description;
           <a href="#galerie" class="text-ocean-700/80 hover:text-ocean-600 transition-colors">{tr['nav.galerie']}</a>
           <a href="#tarifs" class="text-ocean-700/80 hover:text-ocean-600 transition-colors">{tr['nav.tarifs']}</a>
           <a href="#dispo" class="text-ocean-700/80 hover:text-ocean-600 transition-colors">{tr['nav.dispo']}</a>
+          <a
+            href={`/gruissan-location/${lang === 'fr' ? '' : lang + '/'}reserver/`}
+            class="text-ocean-700/80 hover:text-ocean-600 transition-colors font-semibold"
+          >{tr['nav.reserver']}</a>
         </div>
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-1 text-xs" aria-label={tr['footer.langue']}>

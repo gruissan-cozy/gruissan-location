@@ -17,47 +17,78 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const LANGS = ['fr', 'en', 'es', 'de'];
 const errors = [];
 const warnings = [];
+const refLang = 'fr';
 
 // --- 1. Parité des clés ----------------------------------------------------
-const src = readFileSync(join(ROOT, 'src/i18n.ts'), 'utf8');
-const dicts = {};
+// Fichiers de dictionnaires : src/i18n.ts (vitrine) + src/i18n/*.ts (features).
+const DICT_FILES = [
+  join(ROOT, 'src/i18n.ts'),
+  ...listDictFiles(join(ROOT, 'src/i18n')),
+];
 
-for (const lang of LANGS) {
-  const re = new RegExp(`\\b${lang}: \\{([\\s\\S]*?)\\n  \\},`, 'm');
-  const m = src.match(re);
-  if (!m) {
-    errors.push(`Dictionnaire manquant pour la langue « ${lang} » dans src/i18n.ts`);
+function listDictFiles(dir) {
+  try {
+    return readdirSync(dir)
+      .filter((f) => f.endsWith('.ts'))
+      .map((f) => join(dir, f))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+for (const dictFile of DICT_FILES) {
+  const src = readFileSync(dictFile, 'utf8');
+  const rel = dictFile.replace(ROOT, '');
+  const dicts = {};
+
+  for (const lang of LANGS) {
+    // Tous les blocs `lang: { ... },` du fichier (seo, t, booking…),
+    // fusionnés : le premier bloc ne doit pas masquer les suivants.
+    const re = new RegExp(`\\b${lang}: \\{([\\s\\S]*?)\\n  \\},`, 'gm');
+    const entries = {};
+    let found = false;
+    for (const m of src.matchAll(re)) {
+      found = true;
+      // Valeurs sur une ou plusieurs lignes, en guillemets simples OU doubles :
+      //   'clé': 'valeur'   ou   'clé':\n      "valeur"
+      for (const [, key, dq, sq] of m[1].matchAll(
+        /'([^']+)':\s*\n?\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/gs
+      )) {
+        entries[key] = dq ?? sq;
+      }
+    }
+    if (!found) {
+      errors.push(`Dictionnaire manquant pour la langue « ${lang} » dans ${rel}`);
+      continue;
+    }
+    dicts[lang] = entries;
+  }
+
+  const refKeys = Object.keys(dicts[refLang] ?? {}).sort();
+  if (!refKeys.length) {
+    errors.push(`Aucune clé extraite de ${rel}`);
     continue;
   }
-  const entries = {};
-  // Valeurs sur une ou plusieurs lignes, en guillemets simples OU doubles :
-  //   'clé': 'valeur'   ou   'clé':\n      "valeur"
-  for (const [, key, dq, sq] of m[1].matchAll(
-    /'([^']+)':\s*\n?\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/gs
-  )) {
-    entries[key] = dq ?? sq;
+
+  for (const lang of LANGS.filter((l) => l !== refLang)) {
+    const keys = Object.keys(dicts[lang] ?? {});
+    const missing = refKeys.filter((k) => !keys.includes(k));
+    const extra = keys.filter((k) => !refKeys.includes(k));
+    if (missing.length) errors.push(`[${lang}] clés manquantes dans ${rel} : ${missing.join(', ')}`);
+    if (extra.length) errors.push(`[${lang}] clés en trop dans ${rel} : ${extra.join(', ')}`);
   }
-  dicts[lang] = entries;
-}
 
-const refLang = 'fr';
-const refKeys = Object.keys(dicts[refLang] ?? {}).sort();
-
-for (const lang of LANGS.filter((l) => l !== refLang)) {
-  const keys = Object.keys(dicts[lang] ?? {});
-  const missing = refKeys.filter((k) => !keys.includes(k));
-  const extra = keys.filter((k) => !refKeys.includes(k));
-  if (missing.length) errors.push(`[${lang}] clés manquantes : ${missing.join(', ')}`);
-  if (extra.length) errors.push(`[${lang}] clés en trop : ${extra.join(', ')}`);
-}
-
-// --- 2. Valeurs vides ------------------------------------------------------
-for (const lang of LANGS) {
-  for (const [key, value] of Object.entries(dicts[lang] ?? {})) {
-    if (!value || !value.trim()) {
-      errors.push(`[${lang}] valeur vide pour la clé « ${key} »`);
+  // --- 2. Valeurs vides ------------------------------------------------------
+  for (const lang of LANGS) {
+    for (const [key, value] of Object.entries(dicts[lang] ?? {})) {
+      if (!value || !value.trim()) {
+        errors.push(`[${lang}] valeur vide pour la clé « ${key} » dans ${rel}`);
+      }
     }
   }
+
+  console.log(`\n${rel} — ${refKeys.length} clés × ${LANGS.length} langues`);
 }
 
 // --- 3. Texte visible codé en dur dans les .astro ---------------------------
@@ -99,7 +130,7 @@ function walk(dir) {
 walk(join(ROOT, 'src'));
 
 // --- Rapport ---------------------------------------------------------------
-console.log(`\nValidation i18n — ${refKeys.length} clés × ${LANGS.length} langues`);
+console.log(`\nValidation i18n — ${DICT_FILES.length} fichier(s) de dictionnaire × ${LANGS.length} langues`);
 if (warnings.length) {
   console.log(`\n⚠️  ${warnings.length} avertissement(s) :`);
   for (const w of warnings) console.log(`   - ${w}`);

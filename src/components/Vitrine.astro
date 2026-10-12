@@ -7,10 +7,14 @@ import galerieData from '../../content/galerie.json';
 import proxiData from '../../content/proximite.json';
 import { t } from '../i18n';
 import type { Lang } from '../i18n';
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props as Props;
 const tr = t[lang];
+const supabaseConfigured = isSupabaseConfigured;
+const supabaseUrl = supabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_URL) : '';
+const supabaseKey = supabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY) : '';
 
 const monthNames: Record<Lang, string[]> = {
   fr: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
@@ -64,6 +68,10 @@ const statutClass: Record<string, string> = {
           href="#contact"
           class="border border-white/40 hover:bg-white/10 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
         >{tr['hero.cta2']}</a>
+        <a
+          href={`/gruissan-location/${lang === 'fr' ? '' : lang + '/'}reserver/`}
+          class="bg-white/10 border border-white/40 hover:bg-white/20 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
+        >{tr['nav.reserver']}</a>
       </div>
     </div>
     <!-- Indicateur de scroll -->
@@ -264,6 +272,7 @@ const statutClass: Record<string, string> = {
     <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['contact.title']}</h2>
     <div class="mt-14 grid md:grid-cols-2 gap-10">
       <form
+        id="contact-form"
         action={`https://formsubmit.co/${site.email}`}
         method="POST"
         class="bg-white rounded-2xl p-8 shadow-card border border-sand-200 space-y-5"
@@ -292,6 +301,13 @@ const statutClass: Record<string, string> = {
         >
           {tr['contact.envoyer']}
         </button>
+        <p
+          id="contact-msg"
+          role="status"
+          aria-live="polite"
+          class="hidden text-sm rounded-xl px-4 py-3"
+        >
+        </p>
       </form>
       <div class="space-y-6 md:pt-2">
         <p class="text-ocean-700/70">{tr['contact.ou']}</p>
@@ -324,3 +340,37 @@ const statutClass: Record<string, string> = {
     </div>
   </section>
 </Layout>
+
+{
+  supabaseConfigured && (
+    <script define:vars={{ supabaseUrl, supabaseKey, sentMsg: tr['contact.sent'], errorMsg: tr['contact.error'] }}>
+      // Formulaire de contact : insert dans Supabase (table messages).
+      // Sans configuration Supabase, le POST FormSubmit natif reste actif.
+      import('@supabase/supabase-js').then(({ createClient }) => {
+        const sb = createClient(supabaseUrl, supabaseKey);
+        const form = document.getElementById('contact-form');
+        if (!form) return;
+        const msg = document.getElementById('contact-msg');
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          msg.className = 'hidden text-sm rounded-xl px-4 py-3';
+          const { error } = await sb.from('messages').insert({
+            nom: document.getElementById('nom').value,
+            email: document.getElementById('email').value,
+            telephone: null,
+            dates: document.getElementById('dates').value || null,
+            message: document.getElementById('message').value,
+          });
+          if (error) {
+            msg.textContent = errorMsg;
+            msg.className = 'text-sm text-rose-700 bg-rose-50 rounded-xl px-4 py-3';
+            return;
+          }
+          msg.textContent = sentMsg;
+          msg.className = 'text-sm text-emerald-800 bg-emerald-50 rounded-xl px-4 py-3';
+          form.reset();
+        });
+      });
+    </script>
+  )
+}
