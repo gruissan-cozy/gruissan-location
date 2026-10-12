@@ -1,0 +1,151 @@
+---
+import Layout from '../layouts/Layout.astro';
+import guideData from '../../content/guide.json';
+import { getSupabase, isSupabaseConfigured, type GuideSection } from '../lib/supabase';
+import { guideT } from '../i18n/guide';
+import type { Lang } from '../i18n';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props as Props;
+const tr = guideT[lang];
+
+type GuideSectionLike = Pick<
+  GuideSection,
+  'slug' | 'titre' | 'contenu' | 'icone' | 'ordre'
+>;
+
+// --- Source des sections : Supabase si configuré, sinon content/guide.json ---
+let sections: GuideSectionLike[] = guideData.sections.map((s) => ({
+  slug: s.slug,
+  titre: s.titre,
+  contenu: s.contenu,
+  icone: s.icone,
+  ordre: s.ordre,
+}));
+
+if (isSupabaseConfigured) {
+  const supabase = getSupabase();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('guide_sections')
+        .select('slug, titre, contenu, icone, ordre, actif')
+        .eq('actif', true)
+        .order('ordre');
+      if (!error && data && data.length > 0) {
+        sections = data.map((row) => ({
+          slug: row.slug as string,
+          titre: row.titre as Record<string, string>,
+          contenu: row.contenu as Record<string, string>,
+          icone: (row.icone as string | null) ?? null,
+          ordre: row.ordre as number,
+        }));
+      }
+    } catch {
+      // Repli silencieux sur le contenu statique en cas d'erreur réseau/Supabase
+    }
+  }
+}
+
+sections.sort((a, b) => a.ordre - b.ordre);
+
+/** Titre d'une section dans la langue courante, repli sur le français. */
+const titre = (s: GuideSectionLike) => s.titre[lang] || s.titre.fr || s.slug;
+/** Contenu HTML d'une section, repli sur le français. */
+const contenu = (s: GuideSectionLike) => s.contenu[lang] || s.contenu.fr || '';
+---
+
+<Layout lang={lang} title={tr['guide.title']}>
+  <!-- En-tête du guide -->
+  <section class="guide-header bg-ocean-900 text-white">
+    <div class="max-w-4xl mx-auto px-4 pt-16 pb-14 sm:pt-20 sm:pb-16">
+      <p class="text-sunset-400 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+        Gruissan Plage
+      </p>
+      <h1 class="font-display text-4xl sm:text-5xl font-semibold leading-tight">
+        {tr['guide.title']}
+      </h1>
+      <p class="mt-5 text-lg text-sand-100/90 max-w-2xl leading-relaxed">
+        {tr['guide.subtitle']}
+      </p>
+      <button
+        type="button"
+        class="guide-print-btn no-print mt-8 inline-flex items-center gap-2 bg-sunset-500 hover:bg-sunset-600 text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
+      >
+        🖨️ {tr['guide.imprimer']}
+      </button>
+    </div>
+  </section>
+
+  <!-- Bandeau urgences -->
+  <div class="guide-urgence-banner no-print bg-sunset-500/10 border-y border-sunset-500/30">
+    <p class="max-w-4xl mx-auto px-4 py-4 text-sm text-sunset-600 font-medium">
+      🆘 {tr['guide.urgence']}
+    </p>
+  </div>
+
+  <!-- Sommaire cliquable -->
+  <nav
+    class="guide-toc no-print max-w-4xl mx-auto px-4 py-10"
+    aria-label={tr['guide.sommaire']}
+  >
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-5">
+      {tr['guide.sommaire']}
+    </h2>
+    <ol class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      {sections.map((s) => (
+        <li>
+          <a
+            href={`#${s.slug}`}
+            class="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-sand-200 shadow-card hover:shadow-card-hover transition-shadow text-ocean-800 font-medium"
+          >
+            <span aria-hidden="true" class="text-lg">{s.icone ?? '📄'}</span>
+            {titre(s)}
+          </a>
+        </li>
+      ))}
+    </ol>
+  </nav>
+
+  <!-- Sections du guide -->
+  {sections.map((s, i) => (
+    <section
+      id={s.slug}
+      class:list={[
+        'guide-section scroll-mt-20 py-12 sm:py-14',
+        i % 2 === 0 ? 'bg-white' : 'bg-sand-50',
+      ]}
+    >
+      <div class="max-w-4xl mx-auto px-4">
+        <div class="flex items-center gap-4 mb-5">
+          <span
+            aria-hidden="true"
+            class="shrink-0 w-12 h-12 rounded-2xl bg-ocean-50 flex items-center justify-center text-2xl"
+          >{s.icone ?? '📄'}</span>
+          <h2 class="font-display text-2xl sm:text-3xl font-semibold text-ocean-900">
+            {titre(s)}
+          </h2>
+        </div>
+        {/* Contenu HTML saisi par l'hôte dans le back office — contenu de confiance */}
+        <div
+          class="guide-content text-ocean-800/90 text-base sm:text-lg leading-relaxed space-y-3"
+          set:html={contenu(s)}
+        />
+      </div>
+    </section>
+  ))}
+
+  <!-- Mentions -->
+  <div class="guide-mentions bg-white border-t border-sand-200">
+    <p class="max-w-4xl mx-auto px-4 py-8 text-sm text-ocean-700/70">
+      {tr['guide.mentions']}
+    </p>
+  </div>
+</Layout>
+
+<script>
+  // Bouton « Imprimer ce guide » (masqué à l'impression via @media print)
+  document
+    .querySelector('.guide-print-btn')
+    ?.addEventListener('click', () => window.print());
+</script>

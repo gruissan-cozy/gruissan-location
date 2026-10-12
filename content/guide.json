@@ -1,0 +1,208 @@
+{
+  "sections": [
+    {
+      "slug": "bienvenue",
+      "titre": {
+        "fr": "Bienvenue & check-in",
+        "en": "Welcome & check-in",
+        "es": "Bienvenida y check-in",
+        "de": "Willkommen & Check-in"
+      },
+      "contenu": {
+        "fr": "<p>Bienvenue à Gruissan Plage ! Votre studio duplex est dans la résidence Les Régates, à deux pas de la plage du Grazel.</p><p><strong>Check-in</strong> : à partir de 16h (à ajuster selon vos horaires d'arrivée — appelez-moi).</p><p><em>À compléter dans le back office : digicode, étage, remise des clés.</em></p>",
+        "en": "<p>Welcome to Gruissan Plage! Your duplex studio is in the Les Régates residence, steps from Grazel beach.</p><p><strong>Check-in</strong>: from 4 pm (adjusted to your arrival time — just give me a call).</p><p><em>To be completed in the back office: door code, floor, key handover.</em></p>",
+        "es": "<p>¡Bienvenido a Gruissan Plage! Tu estudio dúplex está en la residencia Les Régates, a dos pasos de la playa del Grazel.</p><p><strong>Check-in</strong>: a partir de las 16 h (ajustable a tu hora de llegada — llámame).</p><p><em>Por completar en el back office: código de la puerta, piso, entrega de llaves.</em></p>",
+        "de": "<p>Willkommen in Gruissan Plage! Ihr Duplex-Studio befindet sich in der Wohnanlage Les Régates, wenige Schritte vom Strand Le Grazel entfernt.</p><p><strong>Check-in</strong>: ab 16 Uhr (an Ihre Ankunftszeit anpassbar — rufen Sie mich einfach an).</p><p><em>Im Back Office zu ergänzen: Türcode, Etage, Schlüsselübergabe.</em></p>"
+      },
+      "icone": "👋",
+      "ordre": 1
+    },
+    {
+      "slug": "wifi",
+      "titre": {
+        "fr": "Wi-Fi",
+        "en": "Wi-Fi",
+        "es": "Wi-Fi",
+        "de": "WLAN"
+      },
+      "contenu": {
+        "fr": "<p>La box internet se trouve dans le placard de l'entrée.</p><p><em>À compléter : nom du réseau et mot de passe.</em></p>",
+        "en": "<p>The internet router is in the entrance cupboard.</p><p><em>To be completed: network name and password.</em></p>",
+        "es": "<p>El router de internet está en el armario de la entrada.</p><p><em>Por completar: nombre de la red y contraseña.</em></p>",
+        "de": "<p>Der Internet-Router befindet sich im Schrank im Eingangsbereich.</p><p><em>Zu ergänzen: Netzwerkname und Passwort.</em></p>"
+      },
+      "icone": "📶",
+      "ordre": 2
+    },
+    {
+      "slug": "climatisation",
+      "titre": {
+        "fr": "Climatisation & chauffage",
+        "en": "Air conditioning & heating",
+        "es": "Aire acondicionado y calefacción",
+        "de": "Klimaanlage & Heizung"
+      },
+      "contenu": {
+        "fr": "<p>Le studio est équipé d'une climatisation réversible (télécommande sur la table de chevet).</p><ul><li>Mode <strong>cool</strong> l'été, <strong>heat</strong> l'hiver — bouton MODE de la télécommande</li><li>Température conseillée : 22-25 °C</li><li>Fenêtres fermées pendant le fonctionnement</li><li>Éteindre en quittant l'appartement</li></ul>",
+        "en": "<p>The studio has reversible air conditioning (remote control on the bedside table).</p><ul><li><strong>cool</strong> mode in summer, <strong>heat</strong> mode in winter — MODE button on the remote</li><li>Recommended temperature: 22-25 °C</li><li>Keep windows closed while running</li><li>Turn it off when leaving the apartment</li></ul>",
+        "es": "<p>El estudio dispone de aire acondicionado reversible (mando en la mesilla de noche).</p><ul><li>Modo <strong>cool</strong> en verano, <strong>heat</strong> en invierno — botón MODE del mando</li><li>Temperatura recomendada: 22-25 °C</li><li>Ventanas cerradas mientras funciona</li><li>Apagarlo al salir del apartamento</li></ul>",
+        "de": "<p>Das Studio ist mit einer reversiblen Klimaanlage ausgestattet (Fernbedienung auf dem Nachttisch).</p><ul><li>Modus <strong>cool</strong> im Sommer, <strong>heat</strong> im Winter — MODE-Taste auf der Fernbedienung</li><li>Empfohlene Temperatur: 22-25 °C</li><li>Fenster während des Betriebs geschlossen halten</li><li>Beim Verlassen der Wohnung ausschalten</li></ul>"
+      },
+      "icone": "❄️",
+      "ordre": 3
+    },
+    {
+      "slug": "electricite",
+      "titre": {
+        "fr": "Électricité & compteur",
+        "en": "Electricity & meter",
+        "es": "Electricidad y contador",
+        "de": "Strom & Zähler"
+      },
+      "contenu": {
+        "fr": "<p>Le compteur électrique et le disjoncteur général sont dans le placard du couloir du rez-de-chaussée.</p><p>Si le courant saute : vérifiez qu'un appareil n'est pas en surcharge (plaques + climatiseur + four en même temps), puis réarmez l'interrupteur basculé sur le tableau.</p><p><em>À compléter : emplacement exact du tableau.</em></p>",
+        "en": "<p>The electricity meter and main breaker are in the cupboard in the ground-floor hallway.</p><p>If the power cuts out: check that no appliance is overloaded (hob + air conditioner + oven at the same time), then reset the tripped switch on the panel.</p><p><em>To be completed: exact location of the panel.</em></p>",
+        "es": "<p>El contador eléctrico y el interruptor general están en el armario del pasillo de la planta baja.</p><p>Si se corta la corriente: comprueba que ningún aparato esté en sobrecarga (placas + aire acondicionado + horno a la vez) y luego rearma el interruptor que ha saltado en el cuadro.</p><p><em>Por completar: ubicación exacta del cuadro eléctrico.</em></p>",
+        "de": "<p>Der Stromzähler und der Hauptschalter befinden sich im Schrank im Flur im Erdgeschoss.</p><p>Wenn der Strom ausfällt: Prüfen Sie, ob kein Gerät überlastet ist (Kochfeld + Klimaanlage + Backen gleichzeitig), und legen Sie dann den ausgelösten Schalter am Sicherungskasten wieder ein.</p><p><em>Zu ergänzen: genaue Lage des Sicherungskastens.</em></p>"
+      },
+      "icone": "⚡",
+      "ordre": 4
+    },
+    {
+      "slug": "eau",
+      "titre": {
+        "fr": "Eau",
+        "en": "Water",
+        "es": "Agua",
+        "de": "Wasser"
+      },
+      "contenu": {
+        "fr": "<p>Eau chaude sanitaire par cumulus : prévoir environ 30 min après une douche pour le suivant.</p><p>Ne rien jeter dans les WC hormis le papier toilette.</p>",
+        "en": "<p>Hot water comes from a boiler: allow about 30 minutes after one shower before the next.</p><p>Never flush anything other than toilet paper down the toilet.</p>",
+        "es": "<p>El agua caliente proviene de un termo: deja unos 30 minutos entre una ducha y la siguiente.</p><p>No eches nada por el WC aparte del papel higiénico.</p>",
+        "de": "<p>Warmwasser kommt aus dem Boiler: rechnen Sie nach einer Dusche mit etwa 30 Minuten bis zur nächsten.</p><p>Werfen Sie nichts außer Toilettenpapier in die Toilette.</p>"
+      },
+      "icone": "🚿",
+      "ordre": 5
+    },
+    {
+      "slug": "cuisine",
+      "titre": {
+        "fr": "Cuisine & équipements",
+        "en": "Kitchen & equipment",
+        "es": "Cocina y equipamiento",
+        "de": "Küche & Ausstattung"
+      },
+      "contenu": {
+        "fr": "<p>Cuisine ouverte équipée : réfrigérateur, micro-ondes, plaques de cuisson, évier, cafetière et bouilloire. Vaisselle et couverts pour 4 personnes.</p><p>Merci de laisser la vaisselle lavée et rangée au départ.</p>",
+        "en": "<p>Fitted open kitchen: fridge, microwave, hob, sink, coffee maker and kettle. Crockery and cutlery for 4 people.</p><p>Please leave the dishes washed and put away when you leave.</p>",
+        "es": "<p>Cocina abierta equipada: nevera, microondas, placas de cocción, fregadero, cafetera y hervidor. Vajilla y cubiertos para 4 personas.</p><p>Por favor, deja la vajilla lavada y recogida al marcharte.</p>",
+        "de": "<p>Ausgestattete offene Küche: Kühlschrank, Mikrowelle, Kochfeld, Spüle, Kaffeemaschine und Wasserkocher. Geschirr und Besteck für 4 Personen.</p><p>Bitte hinterlassen Sie das Geschirr gespült und weggeräumt.</p>"
+      },
+      "icone": "🍳",
+      "ordre": 6
+    },
+    {
+      "slug": "accessoires",
+      "titre": {
+        "fr": "Accessoires disponibles",
+        "en": "Available accessories",
+        "es": "Accesorios disponibles",
+        "de": "Verfügbares Zubehör"
+      },
+      "contenu": {
+        "fr": "<p>Dans l'appartement : sèche-cheveux, fer et planche à repasser, étendoir à linge, produits de nettoyage de base, papier toilette et sacs poubelle.</p><p>En option à la réservation : pack plage (parasol + transats), location de vélos.</p>",
+        "en": "<p>In the apartment: hairdryer, iron and ironing board, clothes drying rack, basic cleaning supplies, toilet paper and bin bags.</p><p>Optional when booking: beach pack (parasol + sun loungers), bike rental.</p>",
+        "es": "<p>En el apartamento: secador de pelo, plancha y tabla de planchar, tendedero, productos de limpieza básicos, papel higiénico y bolsas de basura.</p><p>Opcionales al reservar: pack playa (sombrilla + hamacas), alquiler de bicicletas.</p>",
+        "de": "<p>In der Wohnung: Haartrockner, Bügeleisen und Bügelbrett, Wäscheständer, einfache Reinigungsmittel, Toilettenpapier und Müllbeutel.</p><p>Optional bei der Buchung: Strand-Paket (Sonnenschirm + Liegestühle), Fahrradverleih.</p>"
+      },
+      "icone": "🧺",
+      "ordre": 7
+    },
+    {
+      "slug": "dechets",
+      "titre": {
+        "fr": "Poubelles & tri",
+        "en": "Bins & recycling",
+        "es": "Basura y reciclaje",
+        "de": "Müll & Trennung"
+      },
+      "contenu": {
+        "fr": "<p>Bacs de tri dans la résidence. Sortez les poubelles le soir (passage tôt le matin).</p><p><em>À compléter : emplacement du local à poubelles.</em></p>",
+        "en": "<p>Recycling bins in the residence. Take the bins out in the evening (collection early in the morning).</p><p><em>To be completed: location of the bin store.</em></p>",
+        "es": "<p>Contenedores de reciclaje en la residencia. Saca la basura por la tarde-noche (recogida temprano por la mañana).</p><p><em>Por completar: ubicación del cuarto de basuras.</em></p>",
+        "de": "<p>Mülltonnen mit Trennung in der Wohnanlage. Stellen Sie den Müll abends raus (Abholung früh am Morgen).</p><p><em>Zu ergänzen: Lage des Müllraums.</em></p>"
+      },
+      "icone": "🗑️",
+      "ordre": 8
+    },
+    {
+      "slug": "checkout",
+      "titre": {
+        "fr": "Check-out & ménage",
+        "en": "Check-out & cleaning",
+        "es": "Check-out y limpieza",
+        "de": "Check-out & Reinigung"
+      },
+      "contenu": {
+        "fr": "<p>Départ avant 11h.</p><ul><li>Vaisselle lavée et rangée</li><li>Poubelles sorties</li><li>Fenêtres fermées, climatiseur éteint</li><li>Clés laissées sur la table / dans la boîte à clés</li></ul><p>Option ménage fin de séjour disponible à la réservation (65 €) — sinon l'appartement doit être laissé propre.</p>",
+        "en": "<p>Departure before 11 am.</p><ul><li>Dishes washed and put away</li><li>Bins taken out</li><li>Windows closed, air conditioner off</li><li>Keys left on the table / in the key box</li></ul><p>End-of-stay cleaning option available when booking (€65) — otherwise the apartment must be left clean.</p>",
+        "es": "<p>Salida antes de las 11 h.</p><ul><li>Vajilla lavada y recogida</li><li>Basura sacada</li><li>Ventanas cerradas, aire acondicionado apagado</li><li>Llaves dejadas en la mesa / en la caja de llaves</li></ul><p>Opción de limpieza de fin de estancia disponible al reservar (65 €) — si no, el apartamento debe dejarse limpio.</p>",
+        "de": "<p>Abreise vor 11 Uhr.</p><ul><li>Geschirr gespült und weggeräumt</li><li>Müll rausgestellt</li><li>Fenster geschlossen, Klimaanlage aus</li><li>Schlüssel auf dem Tisch / im Schlüsselkasten hinterlassen</li></ul><p>Endreinigungs-Option bei der Buchung möglich (65 €) — andernfalls ist die Wohnung sauber zu hinterlassen.</p>"
+      },
+      "icone": "🧹",
+      "ordre": 9
+    },
+    {
+      "slug": "reglement",
+      "titre": {
+        "fr": "Règlement de la résidence",
+        "en": "Residence rules",
+        "es": "Normas de la residencia",
+        "de": "Hausordnung"
+      },
+      "contenu": {
+        "fr": "<ul><li>Calme après 22h — résidence familiale</li><li>Capacité maximale : 4 personnes</li><li>Animaux : à convenir avant la réservation</li><li>Appartement non-fumeur</li></ul>",
+        "en": "<ul><li>Quiet after 10 pm — family residence</li><li>Maximum capacity: 4 people</li><li>Pets: to be agreed before booking</li><li>Non-smoking apartment</li></ul>",
+        "es": "<ul><li>Silencio después de las 22 h — residencia familiar</li><li>Capacidad máxima: 4 personas</li><li>Animales: a acordar antes de la reserva</li><li>Apartamento para no fumadores</li></ul>",
+        "de": "<ul><li>Ruhe nach 22 Uhr — Familienwohnanlage</li><li>Maximale Belegung: 4 Personen</li><li>Haustiere: vor der Buchung zu vereinbaren</li><li>Nichtraucher-Wohnung</li></ul>"
+      },
+      "icone": "📋",
+      "ordre": 10
+    },
+    {
+      "slug": "urgences",
+      "titre": {
+        "fr": "Urgences & numéros utiles",
+        "en": "Emergencies & useful numbers",
+        "es": "Urgencias y números útiles",
+        "de": "Notfälle & nützliche Nummern"
+      },
+      "contenu": {
+        "fr": "<ul><li>Urgences : 112 (européen) ou 18 (pompiers)</li><li>Médecin le plus proche / pharmacie de garde : 3237</li><li>Office de tourisme de Gruissan : 04 68 75 41 10</li><li>Propriétaire : à compléter</li></ul>",
+        "en": "<ul><li>Emergencies: 112 (Europe-wide) or 18 (fire brigade)</li><li>Nearest doctor / on-call pharmacy: 3237</li><li>Gruissan tourist office: +33 4 68 75 41 10</li><li>Owner: to be completed</li></ul>",
+        "es": "<ul><li>Urgencias: 112 (europeo) o 18 (bomberos)</li><li>Médico más cercano / farmacia de guardia: 3237</li><li>Oficina de turismo de Gruissan: 04 68 75 41 10</li><li>Propietario: por completar</li></ul>",
+        "de": "<ul><li>Notfälle: 112 (europäisch) oder 18 (Feuerwehr)</li><li>Nächster Arzt / Apotheken-Notdienst: 3237</li><li>Touristeninformation Gruissan: 04 68 75 41 10</li><li>Vermieter: zu ergänzen</li></ul>"
+      },
+      "icone": "🆘",
+      "ordre": 11
+    },
+    {
+      "slug": "adresses",
+      "titre": {
+        "fr": "Bonnes adresses",
+        "en": "Good addresses",
+        "es": "Buenas direcciones",
+        "de": "Gute Adressen"
+      },
+      "contenu": {
+        "fr": "<ul><li>Marché estival sur la place du Cadran Solaire (juillet-août)</li><li>Supérette et boulangerie à 200 m</li><li>Restaurants et glacier autour du Chalet</li><li>Village circulant et son château à 2 km</li></ul>",
+        "en": "<ul><li>Summer market on Cadran Solaire square (July-August)</li><li>Corner shop and bakery 200 m away</li><li>Restaurants and ice-cream parlour around the Chalet</li><li>The circular village and its castle 2 km away</li></ul>",
+        "es": "<ul><li>Mercado de verano en la plaza del Cadran Solaire (julio-agosto)</li><li>Supermercado y panadería a 200 m</li><li>Restaurantes y heladería alrededor del Chalet</li><li>Pueblo circulante y su castillo a 2 km</li></ul>",
+        "de": "<ul><li>Sommermarkt auf der Place du Cadran Solaire (Juli-August)</li><li>Lebensmittelladen und Bäckerei in 200 m Entfernung</li><li>Restaurants und Eisdiele rund um das Chalet</li><li>Runddorf und Schloss in 2 km Entfernung</li></ul>"
+      },
+      "icone": "📍",
+      "ordre": 12
+    }
+  ]
+}
