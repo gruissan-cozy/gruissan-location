@@ -1,0 +1,36 @@
+name: CI — tests et build
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Valider les traductions (i18n)
+        run: npm run validate:i18n
+
+      - name: Lancer les tests
+        run: npm test
+
+      - name: Construire le site
+        run: npm run build
