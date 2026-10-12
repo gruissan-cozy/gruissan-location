@@ -53,7 +53,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'appart.title': "Le studio",
     'appart.subtitle': 'Tout le confort pour des vacances les pieds dans le sable.',
     'appart.desc':
-      "Situé dans une résidence calme de Gruissan Plage, ce studio duplex lumineux offre un espace de vie ouvert avec cuisine équipée et une mezzanine sous plafond voûté pour la nuit. Décoration bohème et chaleureuse, climatisation réversible. À 150 m de la grande plage de sable fin et à 5 minutes à pied du Chalet, cœur animé de la station.",
+      "Situé dans la résidence Les Régates à Gruissan Plage, ce studio duplex lumineux offre un espace de vie ouvert avec cuisine équipée et une mezzanine sous plafond voûté pour la nuit. Décoration bohème et chaleureuse, climatisation réversible. À 150 m de la grande plage de sable fin et à 5 minutes à pied du Chalet, cœur animé de la station.",
     'appart.capacite': 'capacité',
     'appart.chambres': 'chambre (mezzanine)',
     'appart.surface': 'surface',
@@ -110,7 +110,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'appart.title': 'The studio',
     'appart.subtitle': 'Every comfort for a holiday with your toes in the sand.',
     'appart.desc':
-      'Set in a quiet residence on Gruissan Plage, this bright duplex studio offers an open living space with a fitted kitchen and a mezzanine under a vaulted ceiling for the night. Warm bohemian decor, reversible air conditioning. 150 m from the fine sandy beach and a 5-minute walk from the Chalet, the lively heart of the resort.',
+      'Set in the Les Régates residence on Gruissan Plage, this bright duplex studio offers an open living space with a fitted kitchen and a mezzanine under a vaulted ceiling for the night. Warm bohemian decor, reversible air conditioning. 150 m from the fine sandy beach and a 5-minute walk from the Chalet, the lively heart of the resort.',
     'appart.capacite': 'guests',
     'appart.chambres': 'bedroom (mezzanine)',
     'appart.surface': 'area',
@@ -167,7 +167,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'appart.title': 'El estudio',
     'appart.subtitle': 'Todo el confort para unas vacaciones con los pies en la arena.',
     'appart.desc':
-      'En una residencia tranquila de Gruissan Plage, este luminoso estudio dúplex ofrece un espacio abierto con cocina equipada y una entreplanta bajo techo abovedado para la noche. Decoración bohemia y acogedora, aire acondicionado reversible. A 150 m de la playa de arena fina y a 5 minutos a pie del Chalet, el animado corazón de la estación.',
+      'En la residencia Les Régates de Gruissan Plage, este luminoso estudio dúplex ofrece un espacio abierto con cocina equipada y una entreplanta bajo techo abovedado para la noche. Decoración bohemia y acogedora, aire acondicionado reversible. A 150 m de la playa de arena fina y a 5 minutos a pie del Chalet, el animado corazón de la estación.',
     'appart.capacite': 'huéspedes',
     'appart.chambres': 'dormitorio (entreplanta)',
     'appart.surface': 'superficie',
@@ -224,7 +224,7 @@ export const t: Record<Lang, Record<string, string>> = {
     'appart.title': 'Das Studio',
     'appart.subtitle': 'Jeder Komfort für einen Urlaub mit den Füßen im Sand.',
     'appart.desc':
-      'In einer ruhigen Wohnanlage an der Gruissan Plage bietet dieses helle Duplex-Studio einen offenen Wohnraum mit Einbauküche und eine Zwischenebene unter Gewölbedecke für die Nacht. Warme Boho-Dekoration, reversible Klimaanlage. 150 m vom feinen Sandstrand und 5 Gehminuten vom Chalet entfernt, dem lebendigen Herzen des Ortes.',
+      'In der Wohnanlage Les Régates an der Gruissan Plage bietet dieses helle Duplex-Studio einen offenen Wohnraum mit Einbauküche und eine Zwischenebene unter Gewölbedecke für die Nacht. Warme Boho-Dekoration, reversible Klimaanlage. 150 m vom feinen Sandstrand und 5 Gehminuten vom Chalet entfernt, dem lebendigen Herzen des Ortes.',
     'appart.capacite': 'Gäste',
     'appart.chambres': 'Schlafzimmer (Zwischenebene)',
     'appart.surface': 'Fläche',
