@@ -3,15 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 const url = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
 
-// Le site fonctionne en JSON seul (fichiers content/ + FormSubmit par email).
-// Supabase reste disponible en option : pour l'activer, créer un projet,
-// exécuter migrations/0001_init.sql et définir les deux variables d'env.
-// En parallèle du build CI (GitHub Actions → Settings → Secrets), les
-// variables doivent être définies AVANT le build (import.meta.env est
-// remplacé à la compilation).
-const SUPABASE_ENABLED = false;
-
-export const isSupabaseConfigured = Boolean(url && anonKey) && SUPABASE_ENABLED;
+export const isSupabaseConfigured = Boolean(url && anonKey);
 
 let client: SupabaseClient | null = null;
 

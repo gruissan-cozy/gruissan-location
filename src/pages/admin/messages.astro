@@ -1,0 +1,421 @@
+---
+/**
+ * /admin/messages — liste des demandes, fil par statut, vue détail,
+ * fil des réponses (colonne `replies`) et changement de statut.
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { AT } from '../../i18n/admin';
+import type { Message } from '../../lib/supabase';
+
+const configured = isSupabaseConfigured;
+
+const STATUTS = ['nouveau', 'en_cours', 'repondu', 'archive'] as const;
+
+const FILTERS = [
+  { value: 'tous', label: AT['common.all'] },
+  ...STATUTS.map((s) => ({ value: s, label: AT[`statut.${s}`] })),
+] as const;
+
+---
+
+<AdminLayout title={AT['msg.title']} section="messages">
+  {
+    configured && (
+      <>
+        <header class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 class="font-display text-2xl font-semibold text-ocean-900 sm:text-3xl">
+              {AT['msg.title']}
+            </h1>
+            <p class="mt-1.5 text-sm text-ocean-700/80">{AT['msg.subtitle']}</p>
+          </div>
+          <p id="msg-count" class="text-sm text-ocean-700/70"></p>
+        </header>
+
+        <!-- Filtres par statut -->
+        <div class="mb-5 flex flex-wrap gap-2" role="group" aria-label={AT['common.status']}>
+          {
+            FILTERS.map((f) => (
+              <button
+                type="button"
+                data-filter={f.value}
+                class="msg-filter rounded-full border border-sand-300 bg-white px-3.5 py-1.5 text-sm font-medium text-ocean-800 transition-colors hover:bg-sand-50"
+              >
+                {f.label}
+                <span data-count={f.value} class="ml-1.5 text-xs text-ocean-700/50"></span>
+              </button>
+            ))
+          }
+        </div>
+
+        <div class="grid gap-5 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+          <!-- ===== Liste ===== -->
+          <div class="rounded-2xl border border-sand-200/70 bg-white shadow-card">
+            <div id="msg-list" class="divide-y divide-sand-200/70">
+              <p class="p-6 text-sm text-ocean-700/60">{AT['common.loading']}</p>
+            </div>
+          </div>
+
+          <!-- ===== Détail ===== -->
+          <div id="msg-detail" class="rounded-2xl border border-sand-200/70 bg-white shadow-card">
+            <div id="msg-detail-empty" class="p-8 text-center text-sm text-ocean-700/60">
+              {AT['msg.selectHint']}
+            </div>
+            <div id="msg-detail-body" class="hidden"></div>
+          </div>
+        </div>
+      </>
+    )
+  }
+</AdminLayout>
+
+{
+  configured && (
+    <script>
+      import { sb, CLS, MESSAGE_STATUT_CLS, esc, fmtDate, fmtDateTime, toast, errText } from '../../lib/admin-runtime';
+      import { AT } from '../../i18n/admin';
+      import type { Message } from '../../lib/supabase';
+
+      const STATUTS = ['nouveau', 'en_cours', 'repondu', 'archive'] as const;
+      type Statut = (typeof STATUTS)[number];
+
+      let messages: Message[] = [];
+      let activeFilter = 'tous';
+      let selectedId: string | null = null;
+
+      const listEl = document.getElementById('msg-list');
+      const detailEl = document.getElementById('msg-detail-body');
+      const emptyEl = document.getElementById('msg-detail-empty');
+      const countEl = document.getElementById('msg-count');
+
+      const statutLabel = (s: string) => AT[`statut.${s}`] ?? s;
+      const badge = (s: string) =>
+        `<span class="${CLS.badge} ${MESSAGE_STATUT_CLS[s] ?? 'bg-sand-100 text-ocean-700 ring-sand-300'}">${esc(statutLabel(s))}</span>`;
+
+      // -----------------------------------------------------------------
+      // Chargement
+      // -----------------------------------------------------------------
+      async function load() {
+        const { data, error } = await sb()
+          .from('messages')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          toast(errText(error) || AT['common.errorGeneric'], 'error');
+          return;
+        }
+        messages = (data ?? []) as Message[];
+        renderCounts();
+        renderList();
+        if (selectedId && !messages.some((m) => m.id === selectedId)) selectedId = null;
+        renderDetail();
+      }
+
+      function renderCounts() {
+        for (const f of ['tous', ...STATUTS]) {
+          const el = document.querySelector(`[data-count="${f}"]`);
+          if (!el) continue;
+          const n = f === 'tous' ? messages.length : messages.filter((m) => m.statut === f).length;
+          el.textContent = n ? `(${n})` : '';
+        }
+        if (countEl) {
+          countEl.textContent = messages.length
+            ? `${messages.length} message${messages.length > 1 ? 's' : ''}`
+            : '';
+        }
+        for (const btn of document.querySelectorAll<HTMLButtonElement>('.msg-filter')) {
+          const value = btn.dataset.filter ?? 'tous';
+          const on = value === activeFilter;
+          btn.classList.toggle('bg-ocean-600', on);
+          btn.classList.toggle('text-white', on);
+          btn.classList.toggle('border-ocean-600', on);
+          btn.classList.toggle('font-semibold', on);
+          btn.classList.toggle('bg-white', !on);
+          btn.classList.toggle('text-ocean-800', !on);
+          btn.classList.toggle('border-sand-300', !on);
+        }
+      }
+
+      function visibleMessages(): Message[] {
+        const list = activeFilter === 'tous' ? messages : messages.filter((m) => m.statut === activeFilter);
+        return list;
+      }
+
+      // -----------------------------------------------------------------
+      // Rendu de la liste
+      // -----------------------------------------------------------------
+      function renderList() {
+        if (!listEl) return;
+        const list = visibleMessages();
+
+        if (!list.length) {
+          listEl.innerHTML = `<p class="p-6 text-sm text-ocean-700/60">${
+            messages.length ? esc(AT['msg.emptyFiltered']) : esc(AT['msg.empty'])
+          }</p>`;
+          return;
+        }
+
+        listEl.innerHTML = list
+          .map((m) => {
+            const isNew = m.statut === 'nouveau';
+            const selected = m.id === selectedId;
+            return `
+            <button
+              type="button"
+              data-msg-id="${esc(m.id)}"
+              class="block w-full px-4 py-3.5 text-left transition-colors ${
+                selected ? 'bg-ocean-50' : 'hover:bg-sand-50'
+              }"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <span class="min-w-0">
+                  <span class="flex items-center gap-1.5">
+                    ${
+                      isNew
+                        ? '<span class="h-2 w-2 shrink-0 rounded-full bg-sunset-500" aria-hidden="true"></span>'
+                        : ''
+                    }
+                    <span class="truncate text-sm font-semibold text-ocean-900">${esc(m.nom)}</span>
+                  </span>
+                  <span class="mt-0.5 block truncate text-xs text-ocean-700/60">${esc(m.email)}</span>
+                </span>
+                ${badge(m.statut)}
+              </div>
+              <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-ocean-700/70">${esc(m.message)}</p>
+              <p class="mt-2 flex items-center gap-2 text-xs text-ocean-700/45">
+                <span>${esc(fmtDate(m.created_at))}</span>
+                ${
+                  Array.isArray(m.replies) && m.replies.length
+                    ? `<span>· ${m.replies.length} ${esc(AT['msg.replyCount'])}</span>`
+                    : ''
+                }
+              </p>
+            </button>`;
+          })
+          .join('');
+      }
+
+      // -----------------------------------------------------------------
+      // Rendu du détail
+      // -----------------------------------------------------------------
+      function current(): Message | undefined {
+        return messages.find((m) => m.id === selectedId);
+      }
+
+      function renderDetail() {
+        if (!detailEl || !emptyEl) return;
+        const m = current();
+        if (!m) {
+          detailEl.classList.add('hidden');
+          detailEl.innerHTML = '';
+          emptyEl.classList.remove('hidden');
+          emptyEl.textContent = messages.length ? AT['msg.selectHint'] : AT['msg.empty'];
+          return;
+        }
+        emptyEl.classList.add('hidden');
+        detailEl.classList.remove('hidden');
+
+        const replies = Array.isArray(m.replies) ? m.replies : [];
+        const timeline = replies.length
+          ? replies
+              .slice()
+              .sort((a, b) => String(a.at).localeCompare(String(b.at)))
+              .map(
+                (r) => `
+              <li class="relative pl-6">
+                <span class="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-sunset-400 ring-4 ring-sunset-400/15" aria-hidden="true"></span>
+                <p class="text-xs text-ocean-700/55">
+                  ${esc(fmtDateTime(r.at))} · ${esc(r.by === 'admin' ? AT['msg.byAdmin'] : r.by)}
+                </p>
+                <p class="mt-1 whitespace-pre-line rounded-xl rounded-tl-none bg-sand-50 px-3.5 py-2.5 text-sm leading-relaxed text-ocean-900 ring-1 ring-sand-200/70">${esc(r.body)}</p>
+              </li>`
+              )
+              .join('')
+          : `<li class="pl-6 text-sm text-ocean-700/55">${esc(AT['msg.repliesEmpty'])}</li>`;
+
+        detailEl.innerHTML = `
+          <!-- En-tête -->
+          <div class="flex flex-wrap items-start justify-between gap-3 border-b border-sand-200/70 px-5 py-4 sm:px-6">
+            <div class="min-w-0">
+              <h2 class="font-display text-lg font-semibold text-ocean-900">${esc(m.nom)}</h2>
+              <p class="mt-0.5 text-xs text-ocean-700/60">
+                ${esc(AT['msg.received'])} ${esc(fmtDateTime(m.created_at))}
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              ${badge(m.statut)}
+              <button
+                type="button"
+                id="msg-back"
+                class="${CLS.btnGhost} ${CLS.btnSmall} lg:hidden"
+              >${esc(AT['msg.back'])}</button>
+            </div>
+          </div>
+
+          <div class="space-y-6 px-5 py-5 sm:px-6">
+            <!-- Coordonnées -->
+            <dl class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(AT['auth.email'])}</dt>
+                <dd class="mt-0.5 text-sm break-all">
+                  <a class="text-ocean-600 underline-offset-2 hover:underline" href="mailto:${esc(m.email)}">${esc(m.email)}</a>
+                </dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(AT['msg.phone'])}</dt>
+                <dd class="mt-0.5 text-sm">
+                  ${
+                    m.telephone
+                      ? `<a class="text-ocean-600 underline-offset-2 hover:underline" href="tel:${esc(m.telephone.replace(/\s/g, ''))}">${esc(m.telephone)}</a>`
+                      : esc(AT['common.empty'])
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(AT['msg.dates'])}</dt>
+                <dd class="mt-0.5 text-sm">${esc(m.dates || AT['common.empty'])}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(AT['common.status'])}</dt>
+                <dd class="mt-1">
+                  <select id="msg-statut" class="${CLS.select} sm:max-w-[12rem]">
+                    ${STATUTS.map(
+                      (s) =>
+                        `<option value="${s}" ${s === m.statut ? 'selected' : ''}>${esc(statutLabel(s))}</option>`
+                    ).join('')}
+                  </select>
+                </dd>
+              </div>
+            </dl>
+
+            <!-- Message reçu -->
+            <div>
+              <h3 class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(AT['msg.message'])}</h3>
+              <p class="mt-1.5 whitespace-pre-line rounded-xl bg-sand-50 px-4 py-3 text-sm leading-relaxed text-ocean-900 ring-1 ring-sand-200/70">${esc(m.message)}</p>
+            </div>
+
+            <!-- Fil des réponses -->
+            <div>
+              <h3 class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">
+                ${esc(AT['msg.replies'])} <span class="normal-case tracking-normal">(${replies.length})</span>
+              </h3>
+              <ol class="mt-3 space-y-4 border-l border-sand-200 pl-4">
+                ${timeline}
+              </ol>
+            </div>
+
+            <!-- Composer une réponse -->
+            <form id="reply-form" class="rounded-xl border border-sand-200/70 bg-sand-50/60 p-4">
+              <label class="${CLS.label}" for="reply-body">${esc(AT['msg.replyPlaceholder'])}</label>
+              <textarea
+                id="reply-body"
+                rows="4"
+                class="${CLS.textarea}"
+                placeholder="${esc(AT['msg.replyPlaceholder'])}"
+              ></textarea>
+              <label class="mt-3 flex items-center gap-2 text-sm text-ocean-800">
+                <input id="reply-mark" type="checkbox" checked class="${CLS.checkbox}" />
+                ${esc(AT['msg.replyMark'])}
+              </label>
+              <p id="reply-error" class="mt-2 hidden rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200"></p>
+              <div class="mt-3 flex justify-end">
+                <button type="submit" class="${CLS.btnPrimary}">${esc(AT['msg.replySend'])}</button>
+              </div>
+            </form>
+          </div>
+        `;
+
+        document.getElementById('msg-back')?.addEventListener('click', () => {
+          detailEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        document.getElementById('msg-statut')?.addEventListener('change', async (event) => {
+          const statut = (event.target as HTMLSelectElement).value as Statut;
+          await updateStatut(m.id, statut);
+        });
+
+        document.getElementById('reply-form')?.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const body = (document.getElementById('reply-body') as HTMLTextAreaElement).value.trim();
+          const errorBox = document.getElementById('reply-error');
+          if (!body) {
+            if (errorBox) {
+              errorBox.textContent = AT['msg.replyEmpty'];
+              errorBox.classList.remove('hidden');
+            }
+            return;
+          }
+          if (errorBox) errorBox.classList.add('hidden');
+
+          const markRepondu = (document.getElementById('reply-mark') as HTMLInputElement).checked;
+          const reply = { at: new Date().toISOString(), by: 'admin', body };
+          const nextReplies = [...(Array.isArray(m.replies) ? m.replies : []), reply];
+
+          const { error } = await sb()
+            .from('messages')
+            .update({
+              replies: nextReplies,
+              ...(markRepondu ? { statut: 'repondu' } : {}),
+            })
+            .eq('id', m.id);
+
+          if (error) {
+            toast(errText(error) || AT['common.errorGeneric'], 'error');
+            return;
+          }
+
+          m.replies = nextReplies;
+          if (markRepondu) m.statut = 'repondu';
+          toast(AT['msg.replySent']);
+          renderCounts();
+          renderList();
+          renderDetail();
+        });
+      }
+
+      // -----------------------------------------------------------------
+      // Écritures
+      // -----------------------------------------------------------------
+      async function updateStatut(id: string, statut: Statut) {
+        const { error } = await sb().from('messages').update({ statut }).eq('id', id);
+        if (error) {
+          toast(errText(error) || AT['common.errorGeneric'], 'error');
+          renderDetail();
+          return;
+        }
+        const m = messages.find((x) => x.id === id);
+        if (m) m.statut = statut;
+        toast(AT['msg.statusUpdated']);
+        renderCounts();
+        renderList();
+        renderDetail();
+      }
+
+      // -----------------------------------------------------------------
+      // Interactions
+      // -----------------------------------------------------------------
+      document.querySelectorAll<HTMLButtonElement>('.msg-filter').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          activeFilter = btn.dataset.filter ?? 'tous';
+          renderCounts();
+          renderList();
+        });
+      });
+
+      listEl?.addEventListener('click', (event) => {
+        const target = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-msg-id]');
+        if (!target) return;
+        selectedId = target.dataset.msgId ?? null;
+        renderList();
+        renderDetail();
+        if (window.matchMedia('(max-width: 1023px)').matches) {
+          detailEl?.parentElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+
+      void load();
+    </script>
+  )
+}
