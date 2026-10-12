@@ -96,6 +96,23 @@ Si les variables Supabase ne sont pas définies :
 - les messages et réservations arrivent **par email** (FormSubmit) à l'adresse de `content/site.json` ;
 - les contenus (tarifs, dispos, packs, guide) se modifient en éditant les fichiers JSON du dossier [`content/`](content/) sur GitHub (crayon ✏️ → « Commit changes » → mise à jour auto en 1-2 min).
 
+## Contribuer (workflow PR)
+
+La branche `main` est **protégée** : aucun push direct n'est possible.
+Toute modification passe par une pull request :
+
+1. Créez une branche : `git checkout -b feat/ma-fonctionnalite`
+2. Faites vos modifications, committez, poussez la branche
+3. Ouvrez une PR vers `main` sur GitHub
+4. La CI (`.github/workflows/ci.yml`) se lance automatiquement sur la PR :
+   validation i18n → **45 tests** → build. Le merge n'est possible que
+   lorsque le check **`build`** est vert.
+
+```bash
+npm test        # 45 tests (pricing, i18n, contenu, helpers)
+npm run build   # génère le site dans dist/
+```
+
 ## Déploiement sur GitHub Pages
 
 1. Créez un repo GitHub (vide), puis :
