@@ -118,8 +118,14 @@ create policy "admin_all_packs" on public.packs
 
 create policy "public_read_guide" on public.guide_sections
   for select to anon using (true);
-create policy "admin_all_guide" on public.guide_sections
+create policy "admin_all_guide_sections" on public.guide_sections
   for all to authenticated using (true) with check (true);
+
+-- ============================================================
+-- SÉCURITÉ : accès admin restreint au propriétaire
+-- Les policies admin ci-dessus ont été resserrées sur l'email du
+-- propriétaire (à adapter si besoin) — voir migrations/0002_admin_email.sql
+-- ============================================================
 
 -- ============================================================
 -- Données initiales : packs par défaut
