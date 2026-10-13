@@ -8,6 +8,7 @@
     "start": "astro dev",
     "build": "astro build",
     "test": "vitest run",
+    "security:check": "node scripts/security-check.mjs",
     "validate:i18n": "node scripts/validate-i18n.mjs",
     "prebuild": "npm run validate:i18n",
     "preview": "astro preview",
@@ -16,7 +17,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
     "@tailwindcss/vite": "^4.1.0",
-    "astro": "^5.6.0",
+    "astro": "^7.3.8",
     "tailwindcss": "^4.1.0"
   },
   "devDependencies": {

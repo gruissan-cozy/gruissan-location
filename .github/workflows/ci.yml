@@ -29,6 +29,9 @@ jobs:
       - name: Valider les traductions (i18n)
         run: npm run validate:i18n
 
+      - name: Contrôles de sécurité (OWASP)
+        run: npm run security:check
+
       - name: Lancer les tests
         run: npm test
 
