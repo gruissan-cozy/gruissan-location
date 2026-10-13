@@ -109,9 +109,23 @@ Toute modification passe par une pull request :
    lorsque le check **`build`** est vert.
 
 ```bash
-npm test        # 45 tests (pricing, i18n, contenu, helpers)
-npm run build   # génère le site dans dist/
+npm test              # 45 tests (pricing, i18n, contenu, helpers)
+npm run security:check  # contrôles sécurité OWASP (secrets, RLS, injections, audit)
+npm run build         # génère le site dans dist/
 ```
+
+### Contrôles de sécurité (OWASP Top 10)
+
+Le stage `Contrôles de sécurité` tourne à **chaque pull request** :
+
+| Contrôle | OWASP | Ce qui est vérifié |
+|---|---|---|
+| Fuites de secrets | A02 | Aucun token/clé (Supabase, GitHub, OpenAI) dans le code, `.env` non suivi |
+| Accès admin | A01 | Politiques RLS restreintes à l'email du propriétaire + garde interface |
+| Injections | A03 | Pas d'`eval`/`new Function`, échappement HTML, requêtes paramétrées |
+| Configuration | A05 | `/admin/` exclu de l'indexation, aucune route de debug |
+| Dépendances | A06 | `npm audit` — échec sur toute vulnérabilité high/critical |
+| Authentification | A07 | Lien magique, aucun mot de passe stocké |
 
 ## Déploiement sur GitHub Pages
 
