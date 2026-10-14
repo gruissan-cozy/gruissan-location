@@ -76,8 +76,8 @@ const loginHref = `${base}admin/`;
           >
         </div>
 
-        <!-- Onglets de section -->
-        <nav class="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5" aria-label="Sections du back office">
+        <!-- Onglets de section (masqués jusqu'à authentification + email autorisé) -->
+        <nav id="admin-nav" class="hidden -mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5" aria-label="Sections du back office">
           {
             NAV.map((item) => (
               <a
@@ -142,7 +142,11 @@ const loginHref = `${base}admin/`;
       }
 
       <!-- Contenu de la page (masqué jusqu'à authentification si requireAuth) -->
-      <div id="admin-content" data-require-auth={requireAuth ? 'true' : 'false'}>
+      <div
+        id="admin-content"
+        data-require-auth={requireAuth ? 'true' : 'false'}
+        class={requireAuth ? 'hidden' : ''}
+      >
         <slot />
       </div>
 
@@ -185,6 +189,7 @@ const loginHref = `${base}admin/`;
       const content = document.getElementById('admin-content');
       const authRequired = document.getElementById('admin-auth-required');
       const authForbidden = document.getElementById('admin-auth-forbidden');
+      const nav = document.getElementById('admin-nav');
       const logoutBtn = document.getElementById('admin-logout');
       const userSlot = document.getElementById('admin-user');
       // `requireAuth` est une variable de frontmatter : elle n'est pas
@@ -206,6 +211,8 @@ const loginHref = `${base}admin/`;
             if (authRequired) authRequired.classList.toggle('hidden', authed);
             if (authForbidden) authForbidden.classList.toggle('hidden', !authed || allowed);
           }
+          // La navigation interne n'apparaît que pour la session autorisée.
+          if (nav) nav.classList.toggle('hidden', !(authed && allowed));
           if (logoutBtn) logoutBtn.classList.toggle('hidden', !authed);
           if (userSlot) {
             userSlot.textContent = authed ? `${session?.user?.email ?? ''}` : '';

@@ -103,6 +103,17 @@ if (!layout.includes('ALLOWED_EMAIL')) {
   pass('A01 — garde email côté interface présente');
 }
 
+// La page de connexion doit aussi vérifier l'email avant d'afficher le tableau de bord
+const loginPageFile = join(ROOT, 'src/pages/admin/index.astro');
+if (existsSync(loginPageFile)) {
+  const loginSrc = readFileSync(loginPageFile, 'utf8');
+  if (!loginSrc.includes('ALLOWED_EMAIL') || !/session\?\.user\?\.email === ALLOWED_EMAIL/.test(loginSrc)) {
+    fail('A01', 'page de connexion : la vérification de l\u2019email avant le tableau de bord est absente');
+  } else {
+    pass('A01 — page de connexion : vérification email avant tableau de bord');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // A03 — Injections (HTML, JS)
 // ---------------------------------------------------------------------------

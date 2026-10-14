@@ -216,9 +216,19 @@ const CARDS = [
       loadStats();
     };
 
-    const render = (session: { user?: unknown } | null) => {
-      if (session?.user) showDashboard();
-      else showLogin();
+    // Seul cet email a le droit d'accéder au back office (le verrou
+    // principal est côté base de données : politiques RLS).
+    const ALLOWED_EMAIL = 'gruissancozy@gmail.com';
+
+    const render = (session: { user?: { email?: string | null } | null } | null) => {
+      if (session?.user?.email === ALLOWED_EMAIL) showDashboard();
+      else if (session?.user) {
+        // Session valide mais email non autorisé : on réutilise le panneau
+        // « accès refusé » du layout, et on masque l'écran de connexion.
+        loginView?.classList.add('hidden');
+        dashView?.classList.add('hidden');
+        document.getElementById('admin-auth-forbidden')?.classList.remove('hidden');
+      } else showLogin();
     };
 
     supabase.auth.onAuthStateChange((_event, session) => render(session));
