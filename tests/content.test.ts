@@ -29,8 +29,31 @@ describe('content/site.json', () => {
   const site = loadJson('site.json');
 
   it('a les champs obligatoires remplis', () => {
-    for (const field of ['nom', 'ville', 'region', 'telephone', 'email', 'adresse_ligne', 'code_postal']) {
+    for (const field of ['nom', 'ville', 'region', 'email', 'adresse_ligne', 'code_postal']) {
       expect(site[field], `champ « ${field} » vide`).toBeTruthy();
+    }
+  });
+
+  it('existe pour chaque coordonnée optionnelle (téléphone, WhatsApp)', () => {
+    // Les champs doivent exister pour être éditables par le propriétaire ;
+    // ils peuvent rester vides tant qu’aucune vraie coordonnée n’est fournie.
+    expect(site).toHaveProperty('telephone');
+    expect(site).toHaveProperty('telephone_display');
+    expect(site).toHaveProperty('whatsapp');
+    for (const field of ['telephone', 'telephone_display', 'whatsapp']) {
+      expect(typeof site[field], `champ « ${field } » : chaîne attendue`).toBe('string');
+    }
+  });
+
+  it('n’expose pas de numéro fabriqué', () => {
+    // Un faux numéro (0 répété, séquence triviale) ne doit jamais être publié :
+    // sans coordonnée réelle, les boutons d’appel et WhatsApp sont masqués.
+    for (const field of ['telephone', 'telephone_display', 'whatsapp']) {
+      const valeur = String(site[field] ?? '');
+      if (valeur.trim() === '') continue;
+      const chiffres = valeur.replace(/\D/g, '');
+      expect(chiffres.length, `${field} : numéro trop court pour être réel`).toBeGreaterThanOrEqual(8);
+      expect(new Set(chiffres).size, `${field} : numéro composé d’un chiffre répété`).toBeGreaterThan(2);
     }
   });
 
@@ -86,13 +109,38 @@ describe('content/disponibilites.json', () => {
 
 describe('content/galerie.json', () => {
   const galerie = loadJson('galerie.json');
+  // Les photos sont regroupées par pièce : on lit `categories` (optionnel) et `photos`.
+  const photos: any[] = Array.isArray(galerie.photos) ? galerie.photos : galerie.categories ?? [];
 
-  it('liste des photos avec src et alt multilingues', () => {
-    expect(galerie.photos.length).toBeGreaterThan(0);
-    for (const p of galerie.photos) {
+  it('liste des photos avec src et légende multilingue', () => {
+    expect(photos.length).toBeGreaterThan(0);
+    for (const p of photos) {
       expect(p.src, 'src manquant').toMatch(/^\/gruissan-location\/images\//);
       for (const lang of LANGUAGES) {
-        expect(p.alt[lang], `alt[${lang}] manquant pour ${p.src}`).toBeTruthy();
+        expect(p.alt?.[lang] ?? p.legende?.[lang], `légende[${lang}] manquante pour ${p.src}`).toBeTruthy();
+      }
+    }
+  });
+
+  it('ne perd aucune photo : le nombre de photos est inchangé', () => {
+    // Référence : 6 photos fournies à l’origine (01-sejour … 06-vue-ensemble).
+    expect(photos.length).toBe(6);
+  });
+
+  it('chaque photo est rangée dans une pièce déclarée', () => {
+    const ids = (galerie.categories ?? []).map((c: any) => c.id);
+    for (const p of photos) {
+      expect(p.categorie, `${p.src} : catégorie absente`).toBeTruthy();
+      expect(ids, `${p.src} : catégorie « ${p.categorie} » non déclarée`).toContain(p.categorie);
+    }
+  });
+
+  it('chaque pièce déclarée a un titre dans les 4 langues', () => {
+    expect(galerie.categories.length).toBeGreaterThan(0);
+    for (const c of galerie.categories) {
+      expect(c.id, 'id manquant').toBeTruthy();
+      for (const lang of LANGUAGES) {
+        expect(c.titre[lang], `titre[${lang}] manquant pour ${c.id}`).toBeTruthy();
       }
     }
   });

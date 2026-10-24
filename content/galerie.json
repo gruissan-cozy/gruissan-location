@@ -1,7 +1,24 @@
 {
+  "categories": [
+    { "id": "sejour", "titre": { "fr": "Séjour", "en": "Living room", "es": "Salón", "de": "Wohnraum" } },
+    { "id": "chambres", "titre": { "fr": "Chambres", "en": "Bedrooms", "es": "Dormitorios", "de": "Schlafzimmer" } },
+    { "id": "cuisine", "titre": { "fr": "Cuisine", "en": "Kitchen", "es": "Cocina", "de": "Küche" } },
+    { "id": "salle-de-bain", "titre": { "fr": "Salle de bain", "en": "Bathroom", "es": "Cuarto de baño", "de": "Badezimmer" } },
+    { "id": "terrasse", "titre": { "fr": "Terrasse", "en": "Terrace", "es": "Terraza", "de": "Terrasse" } },
+    { "id": "vue", "titre": { "fr": "Vue", "en": "View", "es": "Vista", "de": "Aussicht" } },
+    { "id": "exterieur", "titre": { "fr": "Extérieur", "en": "Outdoors", "es": "Exterior", "de": "Außenbereich" } },
+    { "id": "autre", "titre": { "fr": "Autres photos", "en": "Other photos", "es": "Otras fotos", "de": "Weitere Fotos" } }
+  ],
   "photos": [
     {
       "src": "/gruissan-location/images/galerie/01-sejour.jpg",
+      "categorie": "sejour",
+      "legende": {
+        "fr": "Séjour lumineux avec cuisine ouverte et escalier en colimaçon",
+        "en": "Bright living room with open kitchen and spiral staircase",
+        "es": "Salón luminoso con cocina abierta y escalera de caracol",
+        "de": "Heller Wohnraum mit offener Küche und Wendeltreppe"
+      },
       "alt": {
         "fr": "Séjour lumineux avec cuisine ouverte et escalier en colimaçon",
         "en": "Bright living room with open kitchen and spiral staircase",
@@ -11,6 +28,13 @@
     },
     {
       "src": "/gruissan-location/images/galerie/02-chambre-bas.jpg",
+      "categorie": "chambres",
+      "legende": {
+        "fr": "Chambre du rez-de-chaussée avec lit double et penderie",
+        "en": "Ground-floor bedroom with double bed and wardrobe",
+        "es": "Dormitorio de la planta baja con cama doble y armario",
+        "de": "Schlafzimmer im Erdgeschoss mit Doppelbett und Schrank"
+      },
       "alt": {
         "fr": "Chambre du rez-de-chaussée avec lit double et penderie",
         "en": "Ground-floor bedroom with double bed and wardrobe",
@@ -20,6 +44,13 @@
     },
     {
       "src": "/gruissan-location/images/galerie/03-chambre-mezzanine.jpg",
+      "categorie": "chambres",
+      "legende": {
+        "fr": "Chambre de la mezzanine sous plafond voûté",
+        "en": "Mezzanine bedroom under a vaulted ceiling",
+        "es": "Dormitorio de la entreplanta bajo techo abovedado",
+        "de": "Schlafzimmer auf der Zwischenebene unter Gewölbedecke"
+      },
       "alt": {
         "fr": "Chambre de la mezzanine sous plafond voûté",
         "en": "Mezzanine bedroom under a vaulted ceiling",
@@ -29,6 +60,13 @@
     },
     {
       "src": "/gruissan-location/images/galerie/04-mezzanine.jpg",
+      "categorie": "chambres",
+      "legende": {
+        "fr": "Mezzanine sous plafond voûté avec grande fenêtre cintrée",
+        "en": "Mezzanine under vaulted ceiling with large arched window",
+        "es": "Entreplanta bajo techo abovedado con gran ventana arqueada",
+        "de": "Zwischenebene unter Gewölbedecke mit großem Bogenfenster"
+      },
       "alt": {
         "fr": "Mezzanine sous plafond voûté avec grande fenêtre cintrée",
         "en": "Mezzanine under vaulted ceiling with large arched window",
@@ -38,6 +76,13 @@
     },
     {
       "src": "/gruissan-location/images/galerie/05-cuisine.jpg",
+      "categorie": "cuisine",
+      "legende": {
+        "fr": "Cuisine équipée ouverte sur le séjour",
+        "en": "Fitted open kitchen onto the living room",
+        "es": "Cocina equipada abierta al salón",
+        "de": "Offene Einbauküche zum Wohnraum"
+      },
       "alt": {
         "fr": "Cuisine équipée ouverte",
         "en": "Fitted open kitchen",
@@ -47,6 +92,13 @@
     },
     {
       "src": "/gruissan-location/images/galerie/06-vue-ensemble.jpg",
+      "categorie": "vue",
+      "legende": {
+        "fr": "Vue d'ensemble du duplex depuis la mezzanine",
+        "en": "Overview of the duplex from the mezzanine",
+        "es": "Vista general del dúplex desde la entreplanta",
+        "de": "Gesamtansicht des Duplex von der Zwischenebene"
+      },
       "alt": {
         "fr": "Vue d'ensemble du duplex depuis la mezzanine",
         "en": "Overview of the duplex from the mezzanine",
