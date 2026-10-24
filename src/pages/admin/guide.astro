@@ -255,6 +255,8 @@ const LANGS = ['fr', 'en', 'es', 'de'] as const;
 
       const val = (id: string) =>
         document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
+      /** Case à cocher typée (les `input[type=checkbox]` ont `.checked`). */
+      const chk = (id: string) => document.getElementById(id) as HTMLInputElement | null;
       const showErr = (id: string, message: string) => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -364,7 +366,7 @@ const LANGS = ['fr', 'en', 'es', 'de'] as const;
         const slug = val('guide-slug');
         const icone = val('guide-icone');
         const ordre = val('guide-ordre');
-        const actif = val('guide-actif');
+        const actif = chk('guide-actif');
         if (id) id.value = section?.id ?? '';
         if (slug) slug.value = section?.slug ?? '';
         if (icone) icone.value = section?.icone ?? '';
@@ -412,7 +414,7 @@ const LANGS = ['fr', 'en', 'es', 'de'] as const;
         }
         const icone = (val('guide-icone')?.value ?? '').trim() || null;
         const ordre = Number(val('guide-ordre')?.value ?? 0);
-        const actif = Boolean(val('guide-actif')?.checked);
+        const actif = Boolean(chk('guide-actif')?.checked);
 
         let invalid = false;
         if (!slug || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {

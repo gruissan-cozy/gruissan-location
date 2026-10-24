@@ -163,7 +163,7 @@ const STATUTS = ['libre', 'partiel', 'reserve'] as const;
       const pendingBox = document.getElementById('dispo-pending');
       const statusLine = document.getElementById('dispo-status');
       const countLine = document.getElementById('dispo-count');
-      const saveAllBtn = document.getElementById('dispo-save-all');
+      const saveAllBtn = document.getElementById('dispo-save-all') as HTMLButtonElement | null;
 
       function render() {
         if (!grid) return;
