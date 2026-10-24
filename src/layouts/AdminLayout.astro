@@ -93,6 +93,18 @@ const loginHref = `${base}admin/`;
               >
                 <span aria-hidden="true" class="text-xs opacity-70">{item.icon}</span>
                 {item.label}
+                {
+                  // Compteur de demandes non lues (chantier 4 — #18) : rempli
+                  // par le script du layout et par les pages /admin/.
+                  item.key === 'messages' ? (
+                    <span
+                      id="nav-non-lus"
+                      data-non-lus-badge
+                      class="ml-0.5 hidden h-5 min-w-5 items-center justify-center rounded-full bg-sunset-500 px-1.5 text-xs font-semibold text-white"
+                      aria-label={AT['dash.statUnread']}
+                    ></span>
+                  ) : null
+                }
               </a>
             ))
           }
@@ -185,7 +197,7 @@ const loginHref = `${base}admin/`;
 
     <script>
       import { getSupabase } from '../lib/supabase';
-      import { resolveAdminReady } from '../lib/admin-runtime';
+      import { resolveAdminReady, majBadgeNonLus, cacherBadgeNonLus } from '../lib/admin-runtime';
 
       const content = document.getElementById('admin-content');
       const authRequired = document.getElementById('admin-auth-required');
@@ -204,6 +216,32 @@ const loginHref = `${base}admin/`;
       if (!supabase) {
         // Panneau « non configuré » déjà affiché côté serveur : rien à faire.
       } else {
+        // Le narrowing du `if (!supabase)` ne traverse pas les fermetures :
+        // on capture le client non nul dans une constante locale.
+        const client = supabase;
+        // -----------------------------------------------------------------
+        // Compteur de demandes non lues (chantier 4 — #18)
+        //
+        // Un badge « N » suit l'onglet Messages dans la navigation du back
+        // office. La colonne `lu_at` n'existe pas tant que la migration
+        // 0005_demandes_lues.sql n'est pas appliquée : l'erreur est alors
+        // ignorée et le badge reste masqué — le reste du back office
+        // continue de fonctionner (les pages /admin/messages et /admin/
+        // affichent un bandeau explicite).
+        // -----------------------------------------------------------------
+        async function chargerNonLus() {
+          const { count, error } = await client
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .is('lu_at', null);
+
+          if (error) {
+            cacherBadgeNonLus();
+            return;
+          }
+          majBadgeNonLus(count ?? 0);
+        }
+
         const applySession = (session: { user?: { email?: string | null } | null } | null) => {
           const authed = Boolean(session?.user);
           const allowed = session?.user?.email === ALLOWED_EMAIL;
@@ -219,7 +257,12 @@ const loginHref = `${base}admin/`;
             userSlot.textContent = authed ? `${session?.user?.email ?? ''}` : '';
             userSlot.classList.toggle('hidden', !authed);
           }
-          if (authed && allowed) resolveAdminReady({ email: session?.user?.email ?? null });
+          if (authed && allowed) {
+            resolveAdminReady({ email: session?.user?.email ?? null });
+            void chargerNonLus();
+          } else {
+            cacherBadgeNonLus();
+          }
         };
 
         // Écoute les changements (magic link, expiration, déconnexion).

@@ -22,6 +22,10 @@ const STATUTS = STATUTS_MESSAGE;
 
 const FILTERS = [
   { value: 'tous', label: AT['common.all'] },
+  // Filtre « non lues » (chantier 4 — #18) : n'apporte rien tant que la
+  // migration 0005 n'est pas appliquée, mais il est toujours affiché —
+  // sa compteur tombe alors à zéro et le marquage affiche un bandeau.
+  { value: 'non_lus', label: AT['msg.filterUnread'] },
   ...STATUTS.map((s) => ({ value: s, label: AT[`statut.${s}`] })),
 ] as const;
 ---
@@ -37,7 +41,17 @@ const FILTERS = [
             </h1>
             <p class="mt-1.5 text-sm text-ocean-700/80">{AT['msg.subtitle']}</p>
           </div>
-          <p id="msg-count" class="text-sm text-ocean-700/70"></p>
+          <div class="flex flex-wrap items-center gap-3">
+            <p id="msg-count" class="text-sm text-ocean-700/70"></p>
+            <!-- Action groupée : tout marquer comme lu (chantier 4 — #18) -->
+            <button
+              id="msg-mark-all"
+              type="button"
+              class="hidden inline-flex items-center justify-center gap-2 rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-medium text-ocean-800 transition-colors hover:bg-sand-50"
+            >
+              {AT['msg.markAllRead']}
+            </button>
+          </div>
         </header>
 
         <!-- Alerte : la migration du pipeline n'est pas encore appliquée -->
@@ -49,7 +63,16 @@ const FILTERS = [
           {AT['msg.migrationMissing']}
         </div>
 
-        <!-- Filtres par statut -->
+        <!-- Alerte : la migration du suivi lu / non lu n'est pas appliquée -->
+        <div
+          id="msg-migration-lu"
+          class="mb-5 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+          role="alert"
+        >
+          {AT['msg.migrationLuMissing']}
+        </div>
+
+        <!-- Filtres par statut + demandes non lues -->
         <div class="mb-5 flex flex-wrap gap-2" role="group" aria-label={AT['common.status']}>
           {
             FILTERS.map((f) => (
@@ -89,7 +112,7 @@ const FILTERS = [
 {
   configured && (
     <script>
-      import { sb, CLS, MESSAGE_STATUT_CLS, esc, fmtDate, fmtDateTime, toast, errText } from '../../lib/admin-runtime';
+      import { sb, CLS, MESSAGE_STATUT_CLS, esc, fmtDate, fmtDateTime, toast, errText, majBadgeNonLus } from '../../lib/admin-runtime';
       import { AT } from '../../i18n/admin';
       import {
         STATUTS_MESSAGE,
@@ -102,6 +125,18 @@ const FILTERS = [
         construireEntreeHistorique,
         avancerSiNecessaire,
       } from '../../lib/pipeline';
+      import {
+        compterNonLus,
+        idsNonLus,
+        appliquerLu,
+        appliquerToutLu,
+        trierParPriorite,
+        estLue,
+        patchLu,
+        maintenantISO,
+        colonneLuAbsente,
+        estErreurColonneLuAbsente,
+      } from '../../lib/lu';
       import type { Message } from '../../lib/supabase';
 
       const STATUTS = STATUTS_MESSAGE;
@@ -115,19 +150,35 @@ const FILTERS = [
       const emptyEl = document.getElementById('msg-detail-empty');
       const countEl = document.getElementById('msg-count');
       const migrationEl = document.getElementById('msg-migration');
+      const migrationLuEl = document.getElementById('msg-migration-lu');
+      const markAllBtn = document.getElementById('msg-mark-all');
 
       const statutLabel = (s: string) => AT[`statut.${s}`] ?? s;
       const badge = (s: string) =>
         `<span class="${CLS.badge} ${MESSAGE_STATUT_CLS[s] ?? 'bg-sand-100 text-ocean-700 ring-sand-300'}">${esc(statutLabel(s))}</span>`;
+      const badgeLu = (lue: boolean) =>
+        lue
+          ? `<span class="${CLS.badge} bg-sand-100 text-ocean-700/70 ring-sand-300">${esc(AT['msg.read'])}</span>`
+          : `<span class="${CLS.badge} bg-sunset-400/15 text-sunset-600 ring-sunset-400/40">${esc(AT['msg.unread'])}</span>`;
 
       /** Statut hérité non converti (ou valeur inconnue) : migration requise. */
       const statutIllisible = (s: string) => estValeurHeritee(s) || !estStatutMessage(s);
 
       // -----------------------------------------------------------------
-      // Alerte « migration requise »
+      // Alertes « migration requise »
       // -----------------------------------------------------------------
       function afficherMigrationRequise() {
         if (migrationEl) migrationEl.classList.remove('hidden');
+      }
+
+      /**
+       * Bandeau spécifique au suivi lu / non lu : la colonne `lu_at` est
+       * absente tant que migrations/0005_demandes_lues.sql n'est pas
+       * appliquée. On le montre dès le chargement (détection sur les
+       * données) ou après une erreur d'écriture.
+       */
+      function afficherMigrationLu() {
+        if (migrationLuEl) migrationLuEl.classList.remove('hidden');
       }
 
       /** Message d'erreur d'écriture : guide vers la migration si besoin. */
@@ -154,6 +205,8 @@ const FILTERS = [
         }
         messages = (data ?? []) as Message[];
         if (messages.some((m) => statutIllisible(m.statut))) afficherMigrationRequise();
+        // Colonne `lu_at` absente → le suivi n'est pas possible.
+        if (colonneLuAbsente(messages)) afficherMigrationLu();
         renderCounts();
         renderList();
         if (selectedId && !messages.some((m) => m.id === selectedId)) selectedId = null;
@@ -162,17 +215,22 @@ const FILTERS = [
 
       function renderCounts() {
         const compteurs = compterParStatut(messages, STATUTS);
+        const nonLus = compterNonLus(messages);
         const afficher = (cle: string, n: number) => {
           const el = document.querySelector(`[data-count="${cle}"]`);
           if (el) el.textContent = n ? `(${n})` : '';
         };
         afficher('tous', messages.length);
+        afficher('non_lus', nonLus);
         for (const s of STATUTS) afficher(s, compteurs[s] ?? 0);
         if (countEl) {
           countEl.textContent = messages.length
-            ? `${messages.length} message${messages.length > 1 ? 's' : ''}`
+            ? `${messages.length} message${messages.length > 1 ? 's' : ''} · ${nonLus} ${AT['msg.unreadCount']}`
             : '';
         }
+        // Le badge de navigation et l'action groupée suivent les non-lus.
+        majBadgeNonLus(nonLus);
+        if (markAllBtn) markAllBtn.classList.toggle('hidden', nonLus === 0);
         for (const btn of document.querySelectorAll<HTMLButtonElement>('.msg-filter')) {
           const value = btn.dataset.filter ?? 'tous';
           const on = value === activeFilter;
@@ -187,9 +245,16 @@ const FILTERS = [
       }
 
       function visibleMessages(): Message[] {
-        return activeFilter === 'tous'
-          ? messages
-          : messages.filter((m) => m.statut === activeFilter);
+        let list: Message[];
+        if (activeFilter === 'non_lus') {
+          list = messages.filter((m) => !estLue(m));
+        } else if (activeFilter === 'tous') {
+          // Ordre de priorité : les demandes non lues d'abord.
+          list = trierParPriorite(messages);
+        } else {
+          list = messages.filter((m) => m.statut === activeFilter);
+        }
+        return list;
       }
 
       // -----------------------------------------------------------------
@@ -209,6 +274,7 @@ const FILTERS = [
         listEl.innerHTML = list
           .map((m) => {
             const isNew = m.statut === 'nouveau';
+            const lue = estLue(m);
             const selected = m.id === selectedId;
             const suivante = etapeSuivante(m.statut);
             const peutRefuser = estTransitionAutorisee(m.statut, 'refuse');
@@ -222,21 +288,27 @@ const FILTERS = [
               >
                 <div class="flex items-start justify-between gap-2">
                   <span class="min-w-0">
-                    <span class="flex items-center gap-1.5">
+                    <span class="flex flex-wrap items-center gap-1.5">
                       ${
-                        isNew
+                        !lue
                           ? '<span class="h-2 w-2 shrink-0 rounded-full bg-sunset-500" aria-hidden="true"></span>'
                           : ''
                       }
                       <span class="truncate text-sm font-semibold text-ocean-900">${esc(m.nom)}</span>
+                      ${badgeLu(lue)}
                     </span>
                     <span class="mt-0.5 block truncate text-xs text-ocean-700/60">${esc(m.email)}</span>
                   </span>
                   ${badge(m.statut)}
                 </div>
                 <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-ocean-700/70">${esc(m.message)}</p>
-                <p class="mt-2 flex items-center gap-2 text-xs text-ocean-700/45">
+                <p class="mt-2 flex flex-wrap items-center gap-2 text-xs text-ocean-700/45">
                   <span>${esc(fmtDate(m.created_at))}</span>
+                  ${
+                    isNew && lue
+                      ? `<span>· ${esc(AT['msg.luAt'])} ${esc(fmtDateTime(m.lu_at))}</span>`
+                      : ''
+                  }
                   ${
                     Array.isArray(m.replies) && m.replies.length
                       ? `<span>· ${m.replies.length} ${esc(AT['msg.replyCount'])}</span>`
@@ -257,6 +329,14 @@ const FILTERS = [
                     ? `<button type="button" data-refuse="${esc(m.id)}" class="${CLS.btnDanger} ${CLS.btnSmall}">${esc(AT['msg.refuse'])}</button>`
                     : ''
                 }
+                <button
+                  type="button"
+                  data-lu="${esc(m.id)}"
+                  data-vers="${lue ? 'non-lu' : 'lu'}"
+                  class="${CLS.btnGhost} ${CLS.btnSmall}"
+                >
+                  ${esc(lue ? AT['msg.markUnread'] : AT['msg.markRead'])}
+                </button>
                 ${
                   illisible
                     ? `<span class="text-xs text-amber-700">${esc(AT['msg.unknownStatut'])}</span>`
@@ -326,6 +406,7 @@ const FILTERS = [
         // Statuts proposés : statut courant + transitions autorisées
         const options = [...new Set([m.statut, ...transitionsAutorisees(m.statut)])];
         const illisible = statutIllisible(m.statut);
+        const lue = estLue(m);
 
         detailEl.innerHTML = `
           <!-- En-tête -->
@@ -335,9 +416,26 @@ const FILTERS = [
               <p class="mt-0.5 text-xs text-ocean-700/60">
                 ${esc(AT['msg.received'])} ${esc(fmtDateTime(m.created_at))}
               </p>
+              <p class="mt-0.5 text-xs text-ocean-700/60">
+                ${
+                  lue
+                    ? `${esc(AT['msg.luAt'])} ${esc(fmtDateTime(m.lu_at))}`
+                    : esc(AT['msg.unread'])
+                }
+              </p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              ${badgeLu(lue)}
               ${badge(m.statut)}
+              <button
+                type="button"
+                id="msg-lu"
+                data-lu="${esc(m.id)}"
+                data-vers="${lue ? 'non-lu' : 'lu'}"
+                class="${CLS.btnGhost} ${CLS.btnSmall}"
+              >
+                ${esc(lue ? AT['msg.markUnread'] : AT['msg.markRead'])}
+              </button>
               <button
                 type="button"
                 id="msg-back"
@@ -440,6 +538,14 @@ const FILTERS = [
           detailEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
 
+        // Marquer lu / non lu depuis la vue détaillée.
+        document.getElementById('msg-lu')?.addEventListener('click', () => {
+          const btn = document.getElementById('msg-lu') as HTMLButtonElement | null;
+          const id = btn?.dataset.lu;
+          const vers = btn?.dataset.vers;
+          if (id && (vers === 'lu' || vers === 'non-lu')) void updateLu(id, vers);
+        });
+
         document.getElementById('msg-statut')?.addEventListener('change', async (event) => {
           const vers = (event.target as HTMLSelectElement).value;
           await updateStatut(m.id, vers);
@@ -470,8 +576,16 @@ const FILTERS = [
             ...(entree ? [entree] : []),
           ];
 
-          const patch: { replies: Message['replies']; statut?: string; historique?: Message['historique'] } = {
+          // Une réponse implique que la demande a été lue : on pose lu_at
+          // en même temps (sans cela, elle resterait « non lue »).
+          const patch: {
+            replies: Message['replies'];
+            statut?: string;
+            historique?: Message['historique'];
+            lu_at?: string | null;
+          } = {
             replies: nextReplies,
+            lu_at: reply.at,
           };
           if (nouveauStatut) {
             patch.statut = nouveauStatut;
@@ -481,12 +595,17 @@ const FILTERS = [
           const { error } = await sb().from('messages').update(patch).eq('id', m.id);
 
           if (error) {
-            toast(erreurEcriture(error), 'error');
+            if (estErreurColonneLuAbsente(error)) afficherMigrationLu();
+            toast(
+              estErreurColonneLuAbsente(error) ? AT['msg.migrationLuMissing'] : erreurEcriture(error),
+              'error',
+            );
             afficherMigrationRequise();
             return;
           }
 
           m.replies = nextReplies;
+          m.lu_at = reply.at;
           if (nouveauStatut) {
             m.statut = nouveauStatut;
             m.historique = nextHistorique;
@@ -530,6 +649,67 @@ const FILTERS = [
         renderDetail();
       }
 
+      /**
+       * Marque une demande lue (`vers = 'lu'`) ou non lue (`vers = 'non-lu'`).
+       * Persiste en base via la colonne `lu_at` (migration 0005). Si la
+       * colonne est absente, on affiche le bandeau « migration requise »
+       * et on laisse l'état local inchangé.
+       */
+      async function updateLu(id: string, vers: 'lu' | 'non-lu') {
+        const m = messages.find((x) => x.id === id);
+        if (!m) return;
+        if (vers === 'lu' && estLue(m)) return;
+        if (vers === 'non-lu' && !estLue(m)) return;
+
+        const at = vers === 'lu' ? maintenantISO() : null;
+        const { error } = await sb().from('messages').update(patchLu(at)).eq('id', id);
+
+        if (error) {
+          if (estErreurColonneLuAbsente(error)) afficherMigrationLu();
+          toast(
+            estErreurColonneLuAbsente(error) ? AT['msg.migrationLuMissing'] : erreurEcriture(error),
+            'error',
+          );
+          renderDetail();
+          return;
+        }
+
+        messages = appliquerLu(messages, id, at);
+        toast(vers === 'lu' ? AT['msg.markedRead'] : AT['msg.markedUnread']);
+        renderCounts();
+        renderList();
+        renderDetail();
+      }
+
+      /** Action groupée : marque toutes les demandes non lues comme lues. */
+      async function toutMarquerLu() {
+        const cibles = idsNonLus(messages);
+        if (!cibles.length) return;
+        if (!window.confirm(AT['msg.markAllReadConfirm'])) return;
+
+        const at = maintenantISO();
+        const { error } = await sb()
+          .from('messages')
+          .update(patchLu(at))
+          .in('id', cibles);
+
+        if (error) {
+          if (estErreurColonneLuAbsente(error)) afficherMigrationLu();
+          toast(
+            estErreurColonneLuAbsente(error) ? AT['msg.migrationLuMissing'] : erreurEcriture(error),
+            'error',
+          );
+          renderDetail();
+          return;
+        }
+
+        messages = appliquerToutLu(messages, at);
+        toast(AT['msg.allMarkedRead']);
+        renderCounts();
+        renderList();
+        renderDetail();
+      }
+
       // -----------------------------------------------------------------
       // Interactions
       // -----------------------------------------------------------------
@@ -541,8 +721,21 @@ const FILTERS = [
         });
       });
 
+      // Action groupée « tout marquer comme lu ».
+      markAllBtn?.addEventListener('click', () => void toutMarquerLu());
+
       listEl?.addEventListener('click', (event) => {
         const target = event.target as HTMLElement;
+
+        // Marquer lu / non lu (chantier 4 — #18) : le bouton porte
+        // data-lu + data-vers, y compris dans la vue détaillée.
+        const luBtn = target.closest<HTMLButtonElement>('[data-lu]');
+        if (luBtn) {
+          const id = luBtn.dataset.lu;
+          const vers = luBtn.dataset.vers;
+          if (id && (vers === 'lu' || vers === 'non-lu')) void updateLu(id, vers);
+          return;
+        }
 
         const advanceBtn = target.closest<HTMLButtonElement>('[data-advance]');
         if (advanceBtn) {
