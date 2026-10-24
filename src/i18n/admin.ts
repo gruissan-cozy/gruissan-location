@@ -11,7 +11,7 @@
  * dash, msg, dispo, packs, guide).
  */
 
-import type { Lang } from './i18n';
+import type { Lang } from '../i18n';
 
 export const adminT: Record<Lang, Record<string, string>> = {
   fr: {

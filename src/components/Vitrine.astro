@@ -7,7 +7,7 @@ import galerieData from '../../content/galerie.json';
 import proxiData from '../../content/proximite.json';
 import { t } from '../i18n';
 import type { Lang } from '../i18n';
-import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props as Props;

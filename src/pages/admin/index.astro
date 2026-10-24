@@ -295,6 +295,9 @@ const CARDS = [
     const loaded = { done: false };
     async function loadStats() {
       if (loaded.done) return;
+      // Le narrowing du `if (!supabase)` ci-dessus ne traverse pas les
+      // fermetures : on revérifie ici pour garantir un client non nul.
+      if (!supabase) return;
       loaded.done = true;
 
       const set = (id: string, value: string) => {

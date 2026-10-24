@@ -3,7 +3,6 @@ import Layout from '../layouts/Layout.astro';
 import site from '../../content/site.json';
 import tarifsData from '../../content/tarifs.json';
 import packsFallback from '../../content/packs.json';
-import { t } from '../i18n';
 import type { Lang } from '../i18n';
 import { booking as bt } from '../i18n/booking';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
@@ -341,7 +340,6 @@ const cfg = {
     supabaseKey,
     supabaseConfigured,
     email,
-    caution,
     saisons,
     packs,
     s,

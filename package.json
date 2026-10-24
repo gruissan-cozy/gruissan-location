@@ -8,8 +8,11 @@
     "start": "astro dev",
     "build": "astro build",
     "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "astro check",
     "security:check": "node scripts/security-check.mjs",
     "validate:i18n": "node scripts/validate-i18n.mjs",
+    "verify": "npm run validate:i18n && npm run security:check && npm run check && npm test && npm run build",
     "prebuild": "npm run validate:i18n",
     "preview": "astro preview",
     "astro": "astro"
@@ -21,7 +24,9 @@
     "tailwindcss": "^4.1.0"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.12",
     "@types/node": "^26.6.5",
+    "typescript": "^6.0.3",
     "vitest": "^5.0.4"
   }
 }

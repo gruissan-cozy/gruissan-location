@@ -242,7 +242,6 @@ const UNITS = ['par_personne', 'par_sejour', 'par_nuit'] as const;
       import type { Pack } from '../../lib/supabase';
 
       const LANGS = ['fr', 'en', 'es', 'de'] as const;
-      const UNITS = ['par_personne', 'par_sejour', 'par_nuit'] as const;
 
       let packs: Pack[] = [];
       let editingId: string | null = null;
@@ -256,6 +255,8 @@ const UNITS = ['par_personne', 'par_sejour', 'par_nuit'] as const;
       const countEl = document.getElementById('packs-count');
 
       const val = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null);
+      /** Case à cocher typée (les `input[type=checkbox]` ont `.checked`). */
+      const chk = (id: string) => document.getElementById(id) as HTMLInputElement | null;
       const showErr = (id: string, message: string) => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -347,7 +348,7 @@ const UNITS = ['par_personne', 'par_sejour', 'par_nuit'] as const;
         const prix = val('pack-prix');
         const unite = val('pack-unite');
         const ordre = val('pack-ordre');
-        const actif = val('pack-actif');
+        const actif = chk('pack-actif');
         if (id) id.value = pack?.id ?? '';
         if (slug) slug.value = pack?.slug ?? '';
         if (prix) prix.value = pack ? String(pack.prix) : '';
@@ -395,7 +396,7 @@ const UNITS = ['par_personne', 'par_sejour', 'par_nuit'] as const;
         const prix = Number(val('pack-prix')?.value);
         const unite = (val('pack-unite')?.value ?? 'par_sejour') as Pack['unite'];
         const ordre = Number(val('pack-ordre')?.value ?? 0);
-        const actif = Boolean(val('pack-actif')?.checked);
+        const actif = Boolean(chk('pack-actif')?.checked);
 
         let invalid = false;
         if (!slug || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
