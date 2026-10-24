@@ -15,7 +15,7 @@ import { AT } from '../i18n/admin';
 interface Props {
   title: string;
   /** Section courante, pour surligner l'onglet de navigation. */
-  section: 'dashboard' | 'messages' | 'disponibilites' | 'packs' | 'guide';
+  section: 'dashboard' | 'sejours' | 'messages' | 'disponibilites' | 'packs' | 'guide';
   /**
    * `true` (défaut) : le contenu est masqué jusqu'à l'ouverture de session.
    * `false` : la page gère elle-même ses états (écran de connexion de /admin/).
@@ -29,6 +29,7 @@ const configured = isSupabaseConfigured;
 
 const NAV = [
   { key: 'dashboard', href: `${base}admin/`, label: AT['nav.dashboard'], icon: '▤' },
+  { key: 'sejours', href: `${base}admin/sejours/`, label: AT['nav.sejours'], icon: '▥' },
   { key: 'messages', href: `${base}admin/messages/`, label: AT['nav.messages'], icon: '✉' },
   { key: 'disponibilites', href: `${base}admin/disponibilites/`, label: AT['nav.dispo'], icon: '▦' },
   { key: 'packs', href: `${base}admin/packs/`, label: AT['nav.packs'], icon: '✚' },
