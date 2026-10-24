@@ -42,6 +42,7 @@ const cfg = {
   supabaseConfigured: isSupabaseConfigured,
   email: site.email,
   caution: tarifsData.caution,
+  taxeSejour: tarifsData.taxe_sejour_par_nuit_personne,
   saisons: tarifsData.saisons.map((s) => ({
     id: s.id,
     periode: s.periode,
@@ -74,12 +75,18 @@ const cfg = {
     seasonMoyenne: b['booking.season.moyenne'],
     seasonBasse: b['booking.season.basse'],
     nights: b['booking.nights'],
-    weeks: b['booking.weeks'],
-    season: b['booking.season'],
     stayPrice: b['booking.stayPrice'],
+    subtotalStay: b['booking.subtotalStay'],
     packsPrice: b['booking.packsPrice'],
+    taxeSejour: b['booking.taxeSejour'],
+    perNight: b['booking.perNight'],
     total: b['booking.total'],
     totalNote: b['booking.totalNote'],
+    checkin: b['booking.checkin'],
+    checkout: b['booking.checkout'],
+    guests: b['booking.guests'],
+    recapRequestTitle: b['booking.recapRequestTitle'],
+    replyDelay: b['booking.replyDelay'],
   },
 };
 ---
@@ -184,7 +191,11 @@ const cfg = {
                       <span class="font-display text-lg font-semibold text-ocean-600 whitespace-nowrap">
                         {pack.prix} €{' '}
                         <span class="text-xs font-normal text-ocean-700/60">
-                          {pack.unite === 'par_personne' ? b['booking.perPerson'] : b['booking.perStay']}
+                          {pack.unite === 'par_personne'
+                            ? b['booking.perPerson']
+                            : pack.unite === 'par_nuit'
+                              ? b['booking.perNight']
+                              : b['booking.perStay']}
                         </span>
                       </span>
                     </span>
@@ -266,27 +277,39 @@ const cfg = {
         </div>
       </div>
 
-      <!-- Récapitulatif -->
+      <!-- Récapitulatif : devis instantané -->
       <aside class="bg-ocean-800 text-white rounded-2xl p-8 shadow-card lg:sticky lg:top-24 space-y-5">
         <h2 class="font-display text-2xl font-semibold">{b['booking.recapTitle']}</h2>
         <p id="recap-hint" class="text-sm text-ocean-100/70">{b['booking.pickDates']}</p>
+
         <div id="recap-details" class="space-y-3 text-sm hidden">
-          <p class="flex justify-between gap-4 text-ocean-100/80">
-            <span>{b['booking.nights']}</span>
-            <span id="recap-nights" class="font-semibold text-white tabular-nums"></span>
-          </p>
-          <p class="flex justify-between gap-4 text-ocean-100/80">
-            <span>{b['booking.season']}</span>
-            <span id="recap-season" class="font-semibold text-white text-right"></span>
-          </p>
-          <p class="flex justify-between gap-4 text-ocean-100/80">
-            <span>{b['booking.stayPrice']}</span>
-            <span id="recap-base" class="font-semibold text-white tabular-nums"></span>
-          </p>
-          <p class="flex justify-between gap-4 text-ocean-100/80">
-            <span>{b['booking.packsPrice']}</span>
+          <!-- Séjour : nombre de nuits + détail par saison -->
+          <div class="space-y-1.5">
+            <p class="flex justify-between gap-4">
+              <span class="text-ocean-100/80">{b['booking.stayPrice']}</span>
+              <span id="recap-nights" class="font-semibold text-white tabular-nums"></span>
+            </p>
+            <div id="recap-seasons" class="space-y-1 pl-3 text-xs text-ocean-100/70"></div>
+            <p class="flex justify-between gap-4 pt-2 border-t border-ocean-700/60">
+              <span class="text-ocean-100/80">{b['booking.subtotalStay']}</span>
+              <span id="recap-base" class="font-semibold text-white tabular-nums"></span>
+            </p>
+          </div>
+
+          <!-- Options (packs) -->
+          <p class="flex justify-between gap-4">
+            <span class="text-ocean-100/80">{b['booking.packsPrice']}</span>
             <span id="recap-packs" class="font-semibold text-white tabular-nums"></span>
           </p>
+          <div id="recap-packs-lines" class="space-y-1 pl-3 text-xs text-ocean-100/70"></div>
+
+          <!-- Taxe de séjour -->
+          <p class="flex justify-between gap-4">
+            <span class="text-ocean-100/80">{b['booking.taxeSejour']}</span>
+            <span id="recap-taxe" class="font-semibold text-white tabular-nums"></span>
+          </p>
+
+          <!-- Total dû -->
           <p class="flex justify-between items-baseline gap-4 pt-4 border-t border-ocean-700">
             <span class="font-semibold">{b['booking.total']}</span>
             <span class="text-right">
@@ -294,7 +317,14 @@ const cfg = {
               <span class="block text-xs text-ocean-200/60 italic">{b['booking.totalNote']}</span>
             </span>
           </p>
+
+          <!-- Caution : remboursable, non incluse dans le total -->
+          <p class="flex justify-between gap-4 text-xs">
+            <span class="text-ocean-100/70">{b['booking.cautionRefundable']}</span>
+            <span id="recap-caution" class="font-semibold text-white tabular-nums"></span>
+          </p>
         </div>
+
         <p class="text-xs text-ocean-200/70 leading-relaxed pt-1">
           {b['booking.cautionNote'].replace('{montant}', String(tarifsData.caution))}
         </p>
@@ -324,6 +354,11 @@ const cfg = {
     >
       <h2 class="font-display text-3xl font-semibold text-emerald-800">{b['booking.confirmTitle']}</h2>
       <p class="mt-4 text-emerald-900/80 max-w-xl mx-auto">{b['booking.confirmText']}</p>
+      <div
+        id="confirmation-details"
+        class="mt-8 max-w-xl mx-auto text-left bg-white/70 rounded-xl p-6 space-y-2 text-sm text-emerald-900/90"
+      >
+      </div>
       <a
         href={`/gruissan-location/${lang === 'fr' ? '' : lang + '/'}`}
         class="inline-block mt-8 bg-sunset-500 hover:bg-sunset-600 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
@@ -335,6 +370,8 @@ const cfg = {
 </Layout>
 
 <script define:vars={{ cfg }}>
+  import { computeQuote } from '../lib/pricing';
+
   const {
     supabaseUrl,
     supabaseKey,
@@ -342,6 +379,8 @@ const cfg = {
     email,
     saisons,
     packs,
+    caution,
+    taxeSejour,
     s,
     lang,
   } = cfg;
@@ -355,15 +394,19 @@ const cfg = {
   const recapHint = document.getElementById('recap-hint');
   const recapDetails = document.getElementById('recap-details');
   const recapNights = document.getElementById('recap-nights');
-  const recapSeason = document.getElementById('recap-season');
+  const recapSeasons = document.getElementById('recap-seasons');
   const recapBase = document.getElementById('recap-base');
   const recapPacks = document.getElementById('recap-packs');
+  const recapPacksLines = document.getElementById('recap-packs-lines');
+  const recapTaxe = document.getElementById('recap-taxe');
   const recapTotal = document.getElementById('recap-total');
+  const recapCaution = document.getElementById('recap-caution');
   const packsField = document.getElementById('packs-field');
   const totalField = document.getElementById('total-field');
   const submitBtn = document.getElementById('booking-submit');
   const formError = document.getElementById('form-error');
   const confirmation = document.getElementById('booking-confirmation');
+  const confirmationDetails = document.getElementById('confirmation-details');
 
   // supabase-js chargé uniquement si configuré (import dynamique)
   let sb = null;
@@ -383,32 +426,18 @@ const cfg = {
     basse: s.seasonBasse,
   };
 
-  function nightsBetween(a, b) {
-    const d1 = Date.parse(a + 'T00:00:00Z');
-    const d2 = Date.parse(b + 'T00:00:00Z');
-    if (Number.isNaN(d1) || Number.isNaN(d2)) return 0;
-    return Math.round((d2 - d1) / 86400000);
-  }
+  // Format monétaire adapté à la langue de la page (ex. « 1 466,08 € » en fr).
+  const money = new Intl.NumberFormat(lang, { style: 'currency', currency: 'EUR' });
 
-  function monthsOfStay(a, b) {
-    const months = [];
-    const cur = new Date(Date.parse(a + 'T00:00:00Z'));
-    const end = new Date(Date.parse(b + 'T00:00:00Z'));
-    if (Number.isNaN(cur) || Number.isNaN(end)) return months;
-    while (cur <= end && months.length < 24) {
-      const m = cur.getUTCMonth() + 1;
-      if (!months.includes(m)) months.push(m);
-      cur.setUTCMonth(cur.getUTCMonth() + 1, 1);
-    }
-    return months;
-  }
-
-  function seasonFor(a, b) {
-    const months = monthsOfStay(a, b);
-    let id = 'basse';
-    if (months.some((m) => m === 7 || m === 8)) id = 'haute';
-    else if (months.some((m) => m === 6 || m === 9)) id = 'moyenne';
-    return saisons.find((x) => x.id === id) ?? saisons[saisons.length - 1];
+  /** Échappe une chaîne avant injection dans innerHTML (noms de packs). */
+  function esc(value) {
+    return String(value).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[c]));
   }
 
   function chosenPacks() {
@@ -435,8 +464,17 @@ const cfg = {
     return list;
   }
 
-  function packsTotal(list) {
-    return list.reduce((sum, p) => sum + p.prix * p.quantite, 0);
+  /** Devis instantané, calculé par la logique pure de src/lib/pricing.ts. */
+  function currentQuote() {
+    return computeQuote({
+      checkIn: checkIn.value,
+      checkOut: checkOut.value,
+      guests: Number(guests.value) || 0,
+      saisons,
+      packs: chosenPacks(),
+      caution,
+      taxeSejourParNuitPersonne: taxeSejour,
+    });
   }
 
   function show(el, text, ok) {
@@ -487,58 +525,83 @@ const cfg = {
     }
   }
 
+  /** Recalcule et réaffiche le devis à chaque changement (dates, voyageurs, packs). */
   function updateEstimate() {
-    const ci = checkIn.value;
-    const co = checkOut.value;
-    const valid = ci && co && nightsBetween(ci, co) > 0;
+    const quote = currentQuote();
 
-    // Minimum de nuits par saison (avertissement non bloquant)
-    if (valid) {
-      const saison = seasonFor(ci, co);
-      const nights = nightsBetween(ci, co);
-      if (nights < saison.nuits_min) {
-        minMsg.textContent = s.minNights
-          .replace('{saison}', seasonLabels[saison.id] ?? saison.periode)
-          .replace('{n}', String(saison.nuits_min));
-        minMsg.classList.remove('hidden');
-      } else {
-        hide(minMsg);
-      }
-    } else {
+    if (!quote) {
       hide(minMsg);
-    }
-
-    if (!valid) {
       recapHint.classList.remove('hidden');
       recapDetails.classList.add('hidden');
       packsField.value = '';
       totalField.value = '';
       return;
     }
+
+    // Minimum de nuits par saison (avertissement non bloquant)
+    if (quote.tooShort) {
+      minMsg.textContent = s.minNights
+        .replace('{saison}', seasonLabels[quote.saisonForte.id] ?? quote.saisonForte.periode)
+        .replace('{n}', String(quote.saisonForte.nuits_min));
+      minMsg.classList.remove('hidden');
+    } else {
+      hide(minMsg);
+    }
+
     recapHint.classList.add('hidden');
     recapDetails.classList.remove('hidden');
 
-    const nights = nightsBetween(ci, co);
-    const saison = seasonFor(ci, co);
-    const weeks = Math.ceil(nights / 7);
-    const base = saison.prix_semaine * weeks;
-    const list = chosenPacks();
-    const pt = packsTotal(list);
-    const total = base + pt;
+    // Séjour : nombre de nuits + détail nuit par nuit, regroupé par saison
+    recapNights.textContent = `${quote.nights} ${s.nights}`;
+    recapSeasons.innerHTML = quote.stayBySeason
+      .map((line) => {
+        const label = seasonLabels[line.saisonId] ?? line.periode;
+        return (
+          '<p class="flex justify-between gap-3">' +
+          `<span>${esc(label)} · ${line.nuits} ${s.nights} × ${money.format(line.prixNuit)}</span>` +
+          `<span class="tabular-nums">${money.format(line.total)}</span>` +
+          '</p>'
+        );
+      })
+      .join('');
+    recapBase.textContent = money.format(quote.stay);
 
-    recapNights.textContent = `${nights} ${s.nights} · ${weeks} ${s.weeks}`;
-    recapSeason.textContent = seasonLabels[saison.id] ?? saison.periode;
-    recapBase.textContent = `${base} €`;
-    recapPacks.textContent = `${pt} €`;
-    recapTotal.textContent = `${total} €`;
+    // Options (packs) : une ligne par pack sélectionné
+    const list = chosenPacks();
+    recapPacks.textContent = money.format(quote.packsTotal);
+    recapPacksLines.innerHTML = quote.packs
+      .map((line) => {
+        const item = list.find((x) => x.slug === line.slug);
+        const name = item ? item.nom : line.slug;
+        const q = line.unite === 'par_personne' ? ` × ${line.quantite}` : '';
+        return (
+          '<p class="flex justify-between gap-3">' +
+          `<span>${esc(name)}${q}</span>` +
+          `<span class="tabular-nums">${money.format(line.total)}</span>` +
+          '</p>'
+        );
+      })
+      .join('');
+
+    // Taxe de séjour
+    recapTaxe.textContent = money.format(quote.taxeSejour);
+
+    // Total dû + caution (remboursable, non incluse)
+    recapTotal.textContent = money.format(quote.total);
+    recapCaution.textContent = money.format(quote.caution);
 
     // Champs cachés pour le fallback FormSubmit
-    packsField.value = list.length
-      ? `${s.packsChosen} : ${list
-          .map((p) => `${p.nom}${p.unite === 'par_personne' ? ` × ${p.quantite}` : ''} — ${p.prix * p.quantite} €`)
+    packsField.value = quote.packs.length
+      ? `${s.packsChosen} : ${quote.packs
+          .map((line) => {
+            const item = list.find((x) => x.slug === line.slug);
+            const name = item ? item.nom : line.slug;
+            const q = line.unite === 'par_personne' ? ` × ${line.quantite}` : '';
+            return `${name}${q} — ${money.format(line.total)}`;
+          })
           .join(' | ')}`
       : s.none;
-    totalField.value = `${total} €`;
+    totalField.value = `${quote.total} €`;
   }
 
   function scheduleAvailability() {
@@ -576,7 +639,8 @@ const cfg = {
     e.preventDefault();
 
     formError.classList.add('hidden');
-    if (!checkIn.value || !checkOut.value || nightsBetween(checkIn.value, checkOut.value) <= 0) {
+    const quote = currentQuote();
+    if (!quote) {
       formError.textContent = s.dateError;
       formError.classList.remove('hidden');
       return;
@@ -591,9 +655,6 @@ const cfg = {
     submitBtn.textContent = s.sending;
     try {
       const list = chosenPacks();
-      const nights = nightsBetween(checkIn.value, checkOut.value);
-      const saison = seasonFor(checkIn.value, checkOut.value);
-      const base = saison.prix_semaine * Math.ceil(nights / 7);
       const { error } = await sb.from('bookings').insert({
         check_in: checkIn.value,
         check_out: checkOut.value,
@@ -603,11 +664,29 @@ const cfg = {
         telephone: document.getElementById('telephone').value || null,
         message: document.getElementById('message').value || null,
         packs: list,
-        total_estime: base + packsTotal(list),
+        total_estime: quote.total,
         statut: 'demande',
         lang,
       });
       if (error) throw error;
+
+      // Récapitulatif après envoi de la demande
+      const row = (label, value) =>
+        '<p class="flex justify-between gap-4">' +
+        `<span>${esc(label)}</span>` +
+        `<span class="font-semibold tabular-nums">${esc(value)}</span>` +
+        '</p>';
+      confirmationDetails.innerHTML =
+        `<p class="font-semibold">${esc(s.recapRequestTitle)}</p>` +
+        row(s.checkin, checkIn.value) +
+        row(s.checkout, checkOut.value) +
+        row(s.nights, `${quote.nights}`) +
+        row(s.guests, `${Number(guests.value)}`) +
+        `<p class="flex justify-between gap-4 pt-2 border-t border-emerald-200">` +
+        `<span>${esc(s.total)}</span>` +
+        `<span class="font-semibold tabular-nums">${money.format(quote.total)}</span></p>` +
+        `<p class="pt-2 text-xs italic text-emerald-800/80">${esc(s.replyDelay)}</p>`;
+
       form.classList.add('hidden');
       confirmation.classList.remove('hidden');
       confirmation.scrollIntoView({ behavior: 'smooth', block: 'center' });
