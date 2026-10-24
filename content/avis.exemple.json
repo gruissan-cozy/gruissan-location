@@ -1,0 +1,16 @@
+[
+  {
+    "_mode_emploi": "EXEMPLE — ne pas publier tel quel. Copiez un bloc dans le tableau « avis » de content/avis.json en remplaçant chaque valeur par un avis réel et vérifiable.",
+    "_rappel": "Aucun avis inventé : pratique commerciale trompeuse, interdite en France (Code de la consommation, art. L121-2 et L132-2).",
+    "note": 5,
+    "auteur": "Camille",
+    "date": "2026-07-18",
+    "source": "direct",
+    "texte": {
+      "fr": "Séjour très agréable, appartement propre et bien placé.",
+      "en": "Very pleasant stay, clean and well-located apartment.",
+      "es": "Estancia muy agradable, apartamento limpio y bien situado.",
+      "de": "Sehr angenehmer Aufenthalt, saubere und gut gelegene Wohnung."
+    }
+  }
+]

@@ -1,0 +1,117 @@
+{
+  "$note_edition": "Questions/réponses factuelles sur le logement. Modifiable sans toucher au code. Chaque entrée a : id, question et reponse traduites dans les 4 langues (fr, en, es, de), et un drapeau « a_valider » tant que le propriétaire n'a pas confirmé le point. Les réponses marquées a_valider: true sont volontairement prudentes et génériques : elles ne doivent pas être présentées comme des règles définitives tant qu'elles ne sont pas confirmées.",
+  "questions": [
+    {
+      "id": "menage",
+      "a_valider": true,
+      "question": {
+        "fr": "Le ménage de fin de séjour est-il inclus dans le tarif ?",
+        "en": "Is the end-of-stay cleaning included in the rate?",
+        "es": "¿Está incluida la limpieza de salida en la tarifa?",
+        "de": "Ist die Endreinigung im Preis enthalten?"
+      },
+      "reponse": {
+        "fr": "Les draps et le linge de maison sont fournis. Le ménage de fin de séjour est proposé en option : le montant en vigueur figure dans la section « Tarifs ». À valider par le propriétaire : confirmer si ce ménage est obligatoire ou facultatif, et rappeler le tarif applicable.",
+        "en": "Bed linen and household linen are provided. End-of-stay cleaning is offered as an option: the current amount is shown in the “Rates” section. To be confirmed by the owner: whether this cleaning is mandatory or optional, and the applicable rate.",
+        "es": "Se proporcionan sábanas y ropa de casa. La limpieza de salida se ofrece como opción: el importe vigente figura en la sección «Tarifas». Pendiente de validar por el propietario: si esta limpieza es obligatoria u opcional, y el precio aplicable.",
+        "de": "Bettwäsche und Hauswäsche werden gestellt. Die Endreinigung wird als Option angeboten: der aktuelle Betrag steht im Abschnitt „Preise“. Vom Eigentümer zu bestätigen: ob diese Reinigung Pflicht oder optional ist, und der geltende Preis."
+      }
+    },
+    {
+      "id": "animaux",
+      "a_valider": true,
+      "question": {
+        "fr": "Les animaux domestiques sont-ils acceptés ?",
+        "en": "Are pets allowed?",
+        "es": "¿Se admiten mascotas?",
+        "de": "Sind Haustiere erlaubt?"
+      },
+      "reponse": {
+        "fr": "Aucune information certaine n'est disponible à ce sujet pour le moment. Merci de nous contacter avant de réserver : nous confirmerons si les animaux sont acceptés, et dans quelles conditions (nombre, taille, supplément éventuel). À valider par le propriétaire.",
+        "en": "No reliable information is available on this point at the moment. Please contact us before booking: we will confirm whether pets are accepted, and under what conditions (number, size, possible extra charge). To be confirmed by the owner.",
+        "es": "De momento no hay información fiable al respecto. Contacta con nosotros antes de reservar: confirmaremos si se admiten mascotas y en qué condiciones (número, tamaño, posible suplemento). Pendiente de validar por el propietario.",
+        "de": "Hierfür liegt noch keine verlässliche Information vor. Bitte kontaktieren Sie uns vor der Buchung: Wir bestätigen dann, ob Haustiere erlaubt sind und zu welchen Bedingungen (Anzahl, Größe, etwaige Aufpreise). Vom Eigentümer zu bestätigen."
+      }
+    },
+    {
+      "id": "arrivee",
+      "a_valider": true,
+      "question": {
+        "fr": "À quelle heure peut-on arriver ?",
+        "en": "What time can I check in?",
+        "es": "¿A qué hora se puede llegar?",
+        "de": "Ab welcher Uhrzeit kann ich anreisen?"
+      },
+      "reponse": {
+        "fr": "L'heure d'arrivée n'est pas encore fixée dans nos informations. Nous proposons en général un créneau dans l'après-midi, à convenir ensemble avant le séjour. À valider par le propriétaire : indiquer l'heure d'arrivée et, le cas échéant, le mode de remise des clés.",
+        "en": "Check-in time is not yet set in our information. We generally suggest an afternoon window, to be agreed together before the stay. To be confirmed by the owner: the check-in time and, where applicable, how the keys are handed over.",
+        "es": "La hora de llegada aún no está fijada en nuestra información. Por lo general proponemos una franja por la tarde, a concertar antes de la estancia. Pendiente de validar por el propietario: la hora de llegada y, en su caso, la forma de entrega de llaves.",
+        "de": "Die Anreisezeit ist in unseren Informationen noch nicht festgelegt. Wir schlagen im Allgemeinen einen Zeitraum am Nachmittag vor, der vor dem Aufenthalt abgesprochen wird. Vom Eigentümer zu bestätigen: die Anreisezeit und gegebenenfalls die Schlüsselübergabe."
+      }
+    },
+    {
+      "id": "depart",
+      "a_valider": true,
+      "question": {
+        "fr": "À quelle heure faut-il libérer l'appartement ?",
+        "en": "What time do I need to leave the apartment?",
+        "es": "¿A qué hora hay que dejar el apartamento?",
+        "de": "Bis welcher Uhrzeit muss die Wohnung geräumt sein?"
+      },
+      "reponse": {
+        "fr": "L'heure de départ n'est pas encore fixée dans nos informations. Nous demandons en général de libérer l'appartement le matin, avant midi, afin de laisser le temps de préparer le logement pour les arrivées suivantes. À valider par le propriétaire.",
+        "en": "Check-out time is not yet set in our information. We generally ask guests to leave in the morning, before noon, so the property can be prepared for the next arrivals. To be confirmed by the owner.",
+        "es": "La hora de salida aún no está fijada en nuestra información. Por lo general pedimos dejar el apartamento por la mañana, antes del mediodía, para dar tiempo a preparar el alojamiento para las siguientes llegadas. Pendiente de validar por el propietario.",
+        "de": "Die Abreisezeit ist in unseren Informationen noch nicht festgelegt. Wir bitten die Gäste im Allgemeinen, die Wohnung am Vormittag, vor 12 Uhr, zu verlassen, damit sie für die nächsten Gäste vorbereitet werden kann. Vom Eigentümer zu bestätigen."
+      }
+    },
+    {
+      "id": "parking",
+      "a_valider": true,
+      "question": {
+        "fr": "Le stationnement est-il possible sur place ?",
+        "en": "Is parking available on site?",
+        "es": "¿Hay aparcamiento en el lugar?",
+        "de": "Ist ein Parkplatz vor Ort vorhanden?"
+      },
+      "reponse": {
+        "fr": "Oui : un parking privatif est inclus dans le tarif. À valider par le propriétaire : préciser s'il s'agit d'une place numérotée ou d'un accès libre, et si le stationnement est gratuit.",
+        "en": "Yes: private parking is included in the rate. To be confirmed by the owner: whether this is a numbered space or free access, and whether parking is free of charge.",
+        "es": "Sí: el estacionamiento privado está incluido en la tarifa. Pendiente de validar por el propietario: si se trata de una plaza numerada o de acceso libre, y si el aparcamiento es gratuito.",
+        "de": "Ja: ein privater Parkplatz ist im Preis enthalten. Vom Eigentümer zu bestätigen: ob es ein nummerierter Stellplatz oder ein freier Zugang ist, und ob das Parken kostenlos ist."
+      }
+    },
+    {
+      "id": "taxe-sejour",
+      "a_valider": true,
+      "question": {
+        "fr": "La taxe de séjour est-elle incluse dans le tarif ?",
+        "en": "Is the tourist tax included in the rate?",
+        "es": "¿Está incluida la tasa turística en la tarifa?",
+        "de": "Ist die Kurtaxe im Preis enthalten?"
+      },
+      "reponse": {
+        "fr": "Non : la taxe de séjour est en sus, fixée par la commune. Le montant indicatif figurant dans nos tarifs est d'environ 1,15 € par nuit et par personne. À valider par le propriétaire : vérifier le barème en vigueur, qui peut être révisé chaque année.",
+        "en": "No: the tourist tax is additional and set by the local authority. The indicative amount shown in our rates is about €1.15 per night and per person. To be confirmed by the owner: check the rate currently in force, which may be revised each year.",
+        "es": "No: la tasa turística se añade a la tarifa y la fija el municipio. El importe indicativo que figura en nuestras tarifas es de unos 1,15 € por noche y por persona. Pendiente de validar por el propietario: comprobar el baremo vigente, que puede revisarse cada año.",
+        "de": "Nein: die Kurtaxe ist gesondert zu zahlen und von der Gemeinde festgelegt. Der in unseren Preisen angegebene Richtwert liegt bei etwa 1,15 € pro Nacht und Person. Vom Eigentümer zu bestätigen: den jeweils gültigen Satz prüfen, der jährlich angepasst werden kann."
+      }
+    },
+    {
+      "id": "wifi",
+      "a_valider": false,
+      "question": {
+        "fr": "Le logement est-il équipé du Wi-Fi ?",
+        "en": "Does the property have Wi-Fi?",
+        "es": "¿El alojamiento dispone de Wi-Fi?",
+        "de": "Ist die Unterkunft mit WLAN ausgestattet?"
+      },
+      "reponse": {
+        "fr": "Oui : la connexion Wi-Fi fibre est incluse dans le tarif. Le réseau est accessible dans l'ensemble de l'appartement.",
+        "en": "Yes: fibre Wi-Fi is included in the rate. The network is available throughout the apartment.",
+        "es": "Sí: la conexión Wi-Fi de fibra está incluida en la tarifa. La red está disponible en todo el apartamento.",
+        "de": "Ja: Fiber-WLAN ist im Preis enthalten. Das Netzwerk ist in der ganzen Wohnung verfügbar."
+      }
+    }
+  ]
+}
