@@ -1,0 +1,541 @@
+---
+/**
+ * /admin/sejours — calendrier de séjours (chantier 1).
+ *
+ * Liste triée par date d'arrivée décroissante, formulaire de création /
+ * édition (dates, coordonnées du client, personnes, statut, prix, note),
+ * suppression avec confirmation.
+ *
+ * La détection des chevauchements s'appuie sur `src/lib/sejours.ts`
+ * (logique pure, testée dans tests/sejours.test.ts) : deux séjours ne
+ * peuvent pas occuper les mêmes nuits, et le jour du départ libère le
+ * logement pour une nouvelle arrivée.
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { AT } from '../../i18n/admin';
+
+const configured = isSupabaseConfigured;
+const STATUTS = ['option', 'confirme', 'annule', 'termine'] as const;
+---
+
+<AdminLayout title={AT['sejours.title']} section="sejours">
+  {
+    configured && (
+      <>
+        <header class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 class="font-display text-2xl font-semibold text-ocean-900 sm:text-3xl">
+              {AT['sejours.title']}
+            </h1>
+            <p class="mt-1.5 text-sm text-ocean-700/80">{AT['sejours.subtitle']}</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <p id="sejours-count" class="text-sm text-ocean-700/70"></p>
+            <button
+              id="sejours-new"
+              type="button"
+              class="rounded-full bg-sunset-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sunset-600"
+            >
+              {AT['sejours.new']}
+            </button>
+          </div>
+        </header>
+
+        <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+          <!-- ===== Liste ===== -->
+          <div class="overflow-hidden rounded-2xl border border-sand-200/70 bg-white shadow-card">
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[40rem] border-collapse">
+                <thead class="bg-sand-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                      {AT['sejours.colDates']}
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                      {AT['sejours.colClient']}
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                      {AT['sejours.colPersonnes']}
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                      {AT['sejours.colPrice']}
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                      {AT['sejours.colStatut']}
+                    </th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                      {AT['sejours.colActions']}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="sejours-list" class="divide-y divide-sand-200/70">
+                  <tr>
+                    <td colspan="6" class="px-4 py-6 text-sm text-ocean-700/60">{AT['common.loading']}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ===== Formulaire ===== -->
+          <div id="sejours-form-panel" class="hidden rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card sm:p-6">
+            <div class="flex items-start justify-between gap-3">
+              <h2 id="sejours-form-title" class="font-display text-lg font-semibold text-ocean-900">
+                {AT['sejours.createTitle']}
+              </h2>
+              <button
+                id="sejours-form-close"
+                type="button"
+                class="rounded-full p-1.5 text-ocean-700/60 transition-colors hover:bg-sand-50 hover:text-ocean-800"
+                aria-label={AT['common.close']}
+              >
+                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
+                </svg>
+              </button>
+            </div>
+
+            <form id="sejours-form" class="mt-4 space-y-4" novalidate>
+              <input type="hidden" id="sejour-id" />
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-arrivee">
+                    {AT['sejours.arrivee']}
+                  </label>
+                  <input
+                    id="sejour-arrivee"
+                    type="date"
+                    required
+                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-depart">
+                    {AT['sejours.depart']}
+                  </label>
+                  <input
+                    id="sejour-depart"
+                    type="date"
+                    required
+                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                  />
+                </div>
+              </div>
+              <p id="err-sejour-dates" class="hidden text-xs text-rose-700"></p>
+
+              <!-- Alerte de chevauchement (affichée par le script) -->
+              <div id="sejour-overlap" class="hidden rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200"></div>
+
+              <div>
+                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-client-nom">
+                  {AT['sejours.clientNom']}
+                </label>
+                <input
+                  id="sejour-client-nom"
+                  type="text"
+                  required
+                  class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                />
+                <p id="err-sejour-nom" class="mt-1 hidden text-xs text-rose-700"></p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-client-email">
+                  {AT['sejours.clientEmail']}
+                </label>
+                <input
+                  id="sejour-client-email"
+                  type="email"
+                  class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-client-telephone">
+                  {AT['sejours.clientTelephone']}
+                </label>
+                <input
+                  id="sejour-client-telephone"
+                  type="tel"
+                  class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                />
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-personnes">
+                    {AT['sejours.personnes']}
+                  </label>
+                  <input
+                    id="sejour-personnes"
+                    type="number"
+                    min="1"
+                    max="8"
+                    step="1"
+                    value="2"
+                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-statut">
+                    {AT['sejours.statut']}
+                  </label>
+                  <select
+                    id="sejour-statut"
+                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                  >
+                    {STATUTS.map((s) => <option value={s}>{AT[`statut.${s}`]}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-prix">
+                  {AT['sejours.prix']}
+                </label>
+                <input
+                  id="sejour-prix"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-note">
+                  {AT['sejours.note']}
+                </label>
+                <textarea
+                  id="sejour-note"
+                  rows="2"
+                  class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                ></textarea>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  id="sejours-form-submit"
+                  type="submit"
+                  class="inline-flex items-center justify-center gap-2 rounded-full bg-sunset-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sunset-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {AT['common.save']}
+                </button>
+                <button
+                  id="sejours-form-cancel"
+                  type="button"
+                  class="inline-flex items-center justify-center gap-2 rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-medium text-ocean-800 transition-colors hover:bg-sand-50"
+                >
+                  {AT['common.cancel']}
+                </button>
+                <button
+                  id="sejours-form-delete"
+                  type="button"
+                  class="ml-auto hidden inline-flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50"
+                >
+                  {AT['common.delete']}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </>
+    )
+  }
+</AdminLayout>
+
+<script>
+  import {
+    sb,
+    CLS,
+    esc,
+    fmtDate,
+    fmtPrice,
+    toast,
+    errText,
+    SEJOUR_STATUT_CLS,
+    onAdminReady,
+  } from '../../lib/admin-runtime';
+  import { AT } from '../../i18n/admin';
+  import type { Sejour } from '../../lib/supabase';
+  import { trouverChevauchements, nuits, plageValide } from '../../lib/sejours';
+
+  let sejours: Sejour[] = [];
+  let editingId: string | null = null;
+
+  const listEl = document.getElementById('sejours-list');
+  const panel = document.getElementById('sejours-form-panel');
+  const formTitle = document.getElementById('sejours-form-title');
+  const form = document.getElementById('sejours-form') as HTMLFormElement | null;
+  const deleteBtn = document.getElementById('sejours-form-delete');
+  const countEl = document.getElementById('sejours-count');
+  const overlapBox = document.getElementById('sejour-overlap');
+
+  const val = (id: string) =>
+    document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+
+  const showErr = (id: string, message: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = message;
+    el.classList.toggle('hidden', !message);
+  };
+
+  // -------------------------------------------------------------------
+  // Chargement
+  // -------------------------------------------------------------------
+  async function load() {
+    const { data, error } = await sb()
+      .from('sejours')
+      .select('*')
+      .order('arrivee', { ascending: false });
+    if (error) {
+      // Cas particulier : la migration n'a pas encore été appliquée sur le
+      // projet Supabase — on l'explique clairement plutôt qu'un code d'erreur.
+      const message = errText(error);
+      const tableAbsente = /does not exist|schema cache|PGRST205|42P01/i.test(message);
+      if (tableAbsente && listEl) {
+        listEl.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-sm leading-relaxed text-amber-800">${esc(
+          AT['sejours.tableMissing'],
+        )}</td></tr>`;
+        if (countEl) countEl.textContent = '';
+        return;
+      }
+      toast(message || AT['common.errorGeneric'], 'error');
+      return;
+    }
+    sejours = (data ?? []) as Sejour[];
+    renderList();
+  }
+
+  function renderList() {
+    if (!listEl) return;
+    if (!sejours.length) {
+      listEl.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-sm text-ocean-700/60">${esc(
+        AT['sejours.empty'],
+      )}</td></tr>`;
+    } else {
+      listEl.innerHTML = sejours
+        .map((s) => {
+          const n = nuits(s.arrivee, s.depart);
+          const contact = s.client_email || s.client_telephone || '';
+          return `
+          <tr class="transition-colors hover:bg-sand-50/70">
+            <td class="px-4 py-3 align-top text-sm whitespace-nowrap text-ocean-900">
+              ${esc(fmtDate(s.arrivee))} → ${esc(fmtDate(s.depart))}
+              <span class="mt-0.5 block text-xs text-ocean-700/50">${n} ${esc(AT['sejours.nuits'])}</span>
+            </td>
+            <td class="px-4 py-3 align-top">
+              <button
+                type="button"
+                data-edit="${esc(s.id)}"
+                class="text-left text-sm font-semibold text-ocean-900 underline-offset-2 hover:text-ocean-600 hover:underline"
+              >${esc(s.client_nom)}</button>
+              ${contact ? `<span class="mt-0.5 block text-xs text-ocean-700/50">${esc(contact)}</span>` : ''}
+            </td>
+            <td class="px-4 py-3 align-top text-sm text-ocean-700/80">${esc(String(s.personnes ?? ''))}</td>
+            <td class="px-4 py-3 align-top text-sm whitespace-nowrap text-ocean-900">${esc(fmtPrice(s.prix_total))}</td>
+            <td class="px-4 py-3 align-top">
+              <span class="${SEJOUR_STATUT_CLS[s.statut] ?? ''} ${CLS.badge}">${esc(
+                AT[`statut.${s.statut}`] ?? s.statut,
+              )}</span>
+            </td>
+            <td class="px-4 py-3 align-top">
+              <div class="flex items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  data-edit="${esc(s.id)}"
+                  class="rounded-full border border-sand-300 bg-white px-3 py-1.5 text-xs font-medium text-ocean-800 transition-colors hover:bg-sand-50"
+                >${esc(AT['common.edit'])}</button>
+                <button
+                  type="button"
+                  data-remove="${esc(s.id)}"
+                  class="rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-50"
+                >${esc(AT['common.delete'])}</button>
+              </div>
+            </td>
+          </tr>`;
+        })
+        .join('');
+    }
+    if (countEl) countEl.textContent = `${sejours.length} ${AT['sejours.count']}`;
+  }
+
+  // -------------------------------------------------------------------
+  // Formulaire
+  // -------------------------------------------------------------------
+  function openForm(sejour?: Sejour) {
+    editingId = sejour?.id ?? null;
+    if (formTitle) formTitle.textContent = sejour ? AT['sejours.editTitle'] : AT['sejours.createTitle'];
+    if (deleteBtn) deleteBtn.classList.toggle('hidden', !sejour);
+    showErr('err-sejour-dates', '');
+    showErr('err-sejour-nom', '');
+    overlapBox?.classList.add('hidden');
+
+    const fields: Array<[string, string]> = [
+      ['sejour-id', sejour?.id ?? ''],
+      ['sejour-arrivee', sejour?.arrivee ?? ''],
+      ['sejour-depart', sejour?.depart ?? ''],
+      ['sejour-client-nom', sejour?.client_nom ?? ''],
+      ['sejour-client-email', sejour?.client_email ?? ''],
+      ['sejour-client-telephone', sejour?.client_telephone ?? ''],
+      ['sejour-personnes', sejour ? String(sejour.personnes) : '2'],
+      ['sejour-statut', sejour?.statut ?? 'confirme'],
+      ['sejour-prix', sejour?.prix_total != null ? String(sejour.prix_total) : ''],
+      ['sejour-note', sejour?.note ?? ''],
+    ];
+    for (const [id, value] of fields) {
+      const el = val(id);
+      if (el) el.value = value;
+    }
+
+    panel?.classList.remove('hidden');
+    panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function closeForm() {
+    editingId = null;
+    panel?.classList.add('hidden');
+    form?.reset();
+  }
+
+  /** Affiche l'alerte de chevauchement et renvoie true si un conflit existe. */
+  function verifierChevauchement(arrivee: string, depart: string): boolean {
+    if (!overlapBox) return false;
+    const conflits = trouverChevauchements({ id: editingId ?? undefined, arrivee, depart }, sejours);
+    if (!conflits.length) {
+      overlapBox.classList.add('hidden');
+      return false;
+    }
+    const detail = conflits
+      .map((c) => `${fmtDate(c.arrivee)} → ${fmtDate(c.depart)}`)
+      .join(', ');
+    overlapBox.textContent = `${AT['sejours.overlap']} ${detail}`;
+    overlapBox.classList.remove('hidden');
+    return true;
+  }
+
+  // Vérification en direct pendant la saisie des dates.
+  ['sejour-arrivee', 'sejour-depart'].forEach((id) => {
+    val(id)?.addEventListener('change', () => {
+      const arrivee = val('sejour-arrivee')?.value ?? '';
+      const depart = val('sejour-depart')?.value ?? '';
+      if (plageValide(arrivee, depart)) verifierChevauchement(arrivee, depart);
+    });
+  });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    showErr('err-sejour-dates', '');
+    showErr('err-sejour-nom', '');
+    overlapBox?.classList.add('hidden');
+
+    const arrivee = val('sejour-arrivee')?.value ?? '';
+    const depart = val('sejour-depart')?.value ?? '';
+    const nom = (val('sejour-client-nom')?.value ?? '').trim();
+
+    let invalid = false;
+    if (!arrivee || !depart) {
+      showErr('err-sejour-dates', AT['sejours.datesRequired']);
+      invalid = true;
+    } else if (!plageValide(arrivee, depart)) {
+      showErr('err-sejour-dates', AT['sejours.invalidRange']);
+      invalid = true;
+    }
+    if (!nom) {
+      showErr('err-sejour-nom', AT['sejours.nameRequired']);
+      invalid = true;
+    }
+    if (invalid) return;
+
+    // Refus des chevauchements : deux séjours ne peuvent pas occuper les mêmes nuits.
+    if (verifierChevauchement(arrivee, depart)) {
+      toast(AT['sejours.overlap'], 'error');
+      return;
+    }
+
+    const prixBrut = val('sejour-prix')?.value ?? '';
+    const personnesBrut = val('sejour-personnes')?.value ?? '2';
+
+    const payload = {
+      arrivee,
+      depart,
+      client_nom: nom,
+      client_email: (val('sejour-client-email')?.value ?? '').trim() || null,
+      client_telephone: (val('sejour-client-telephone')?.value ?? '').trim() || null,
+      personnes: Math.min(8, Math.max(1, Number(personnesBrut) || 2)),
+      statut: (val('sejour-statut')?.value ?? 'confirme') as Sejour['statut'],
+      prix_total: prixBrut === '' ? null : Number(prixBrut),
+      note: (val('sejour-note')?.value ?? '').trim() || null,
+    };
+
+    const submitBtn = document.getElementById('sejours-form-submit') as HTMLButtonElement | null;
+    if (submitBtn) submitBtn.disabled = true;
+
+    const { error } = editingId
+      ? await sb().from('sejours').update(payload).eq('id', editingId)
+      : await sb().from('sejours').insert(payload);
+
+    if (submitBtn) submitBtn.disabled = false;
+
+    if (error) {
+      toast(errText(error) || AT['common.errorGeneric'], 'error');
+      return;
+    }
+
+    toast(AT['sejours.saved']);
+    closeForm();
+    await load();
+  });
+
+  listEl?.addEventListener('click', async (event) => {
+    const target = event.target as HTMLElement;
+    const editId = target.closest<HTMLElement>('[data-edit]')?.dataset.edit;
+    const removeId = target.closest<HTMLElement>('[data-remove]')?.dataset.remove;
+
+    if (editId) {
+      const sejour = sejours.find((s) => s.id === editId);
+      if (sejour) openForm(sejour);
+      return;
+    }
+
+    if (removeId) {
+      const sejour = sejours.find((s) => s.id === removeId);
+      if (!sejour) return;
+      if (!window.confirm(AT['sejours.confirmDelete'])) return;
+      const { error } = await sb().from('sejours').delete().eq('id', sejour.id);
+      if (error) {
+        toast(errText(error) || AT['common.errorGeneric'], 'error');
+        return;
+      }
+      toast(AT['sejours.deleted']);
+      await load();
+    }
+  });
+
+  deleteBtn?.addEventListener('click', async () => {
+    if (!editingId) return;
+    const sejour = sejours.find((s) => s.id === editingId);
+    if (!sejour) return;
+    if (!window.confirm(AT['sejours.confirmDelete'])) return;
+    const { error } = await sb().from('sejours').delete().eq('id', sejour.id);
+    if (error) {
+      toast(errText(error) || AT['common.errorGeneric'], 'error');
+      return;
+    }
+    toast(AT['sejours.deleted']);
+    closeForm();
+    await load();
+  });
+
+  document.getElementById('sejours-new')?.addEventListener('click', () => openForm());
+  document.getElementById('sejours-form-close')?.addEventListener('click', closeForm);
+  document.getElementById('sejours-form-cancel')?.addEventListener('click', closeForm);
+
+  // Chargement des données une fois la session admin confirmée par le layout.
+  onAdminReady(() => {
+    void load();
+  });
+</script>

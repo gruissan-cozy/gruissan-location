@@ -75,3 +75,18 @@ export interface GuideSection {
   ordre: number;
   actif: boolean;
 }
+
+/** Séjour daté du logement (chantier 1 — calendrier). */
+export interface Sejour {
+  id: string;
+  created_at: string;
+  arrivee: string;
+  depart: string;
+  client_nom: string;
+  client_email: string | null;
+  client_telephone: string | null;
+  personnes: number;
+  statut: 'option' | 'confirme' | 'annule' | 'termine';
+  prix_total: number | null;
+  note: string | null;
+}
