@@ -5,9 +5,25 @@ import tarifsData from '../../content/tarifs.json';
 import dispoData from '../../content/disponibilites.json';
 import galerieData from '../../content/galerie.json';
 import proxiData from '../../content/proximite.json';
+import avisData from '../../content/avis.json';
+import faqData from '../../content/faq.json';
+import annulationData from '../../content/annulation.json';
 import { t } from '../i18n';
 import type { Lang } from '../i18n';
 import { isSupabaseConfigured } from '../lib/supabase';
+import {
+  MOIS_PAR_LANGUE,
+  afficherSectionAvis,
+  avisVisibles,
+  cleSourceAvis,
+  dateAffichee,
+  faqJsonLd,
+  avisJsonLd,
+  jsonLd,
+  noteMoyenne,
+  type Avis,
+  type FaqEntree,
+} from '../lib/confiance';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props as Props;
@@ -16,21 +32,29 @@ const supabaseConfigured = isSupabaseConfigured;
 const supabaseUrl = supabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_URL) : '';
 const supabaseKey = supabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY) : '';
 
-const monthNames: Record<Lang, string[]> = {
-  fr: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
-  en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
-  es: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
-  de: ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
-};
-
 function fmtMonth(iso: string): string {
   const [y, m] = iso.split('-');
-  return `${monthNames[lang][Number(m) - 1]} ${y}`;
+  return `${MOIS_PAR_LANGUE[lang][Number(m) - 1]} ${y}`;
 }
 
 function fmtDist(m: number): string {
   return m >= 1000 ? `${(m / 1000).toFixed(m % 1000 === 0 ? 0 : 1)} km` : `${m} m`;
 }
+
+// --- Avis clients : la section entière est masquée si aucun avis n'est publiable ---
+const avisListe: Avis[] = avisData.avis;
+const avisAffiches = avisVisibles(avisListe, lang);
+const montrerAvis = afficherSectionAvis(avisListe, lang);
+const moyenneAvis = noteMoyenne(avisListe, lang);
+const libelleSource = (source: string): string => tr[cleSourceAvis(source) ?? ''] ?? source;
+
+// --- FAQ : balisage structuré et repérage des points encore à valider ---
+const faqEntrees = (faqData.questions ?? []) as FaqEntree[];
+const faqAPValider = faqEntrees.some((e) => e.a_valider === true);
+const faqSchema = faqJsonLd(faqEntrees, lang);
+
+// --- Conditions d'annulation : barème type, explicitement à valider ---
+const annulationAPValider = annulationData.a_valider === true;
 
 const statutClass: Record<string, string> = {
   libre: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
@@ -260,6 +284,152 @@ const statutClass: Record<string, string> = {
         class="inline-block mt-10 bg-sunset-500 hover:bg-sunset-600 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
       >
         {tr['dispo.contact']}
+      </a>
+    </div>
+  </section>
+
+  <!-- Avis clients — totalement masquée tant que content/avis.json ne contient pas d'avis réel -->
+  {montrerAvis && (
+    <section id="avis" class="bg-sand-100 py-24 scroll-mt-16">
+      <div class="max-w-6xl mx-auto px-4">
+        <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+          {tr['avis.title']}
+        </p>
+        <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['avis.title']}</h2>
+        <p class="mt-6 max-w-2xl text-ocean-700/80 text-lg leading-relaxed">{tr['avis.subtitle']}</p>
+        <div class="mt-10 flex items-baseline gap-3">
+          <span class="font-display text-5xl font-semibold text-ocean-800 tabular-nums">{moyenneAvis}</span>
+          <span class="text-ocean-700/60">/ 5 · {avisAffiches.length} {tr['avis.nb']}</span>
+          <span class="sr-only">{tr['avis.moyenne']}</span>
+        </div>
+        <div class="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {avisAffiches.map((avis) => (
+            <figure class="bg-white rounded-2xl p-7 border border-sand-200 shadow-card flex flex-col">
+              <div class="flex items-start justify-between gap-3">
+                <p
+                  class="text-sunset-500 tracking-wider"
+                  role="img"
+                  aria-label={`${tr['avis.note']} : ${avis.note} / 5`}
+                >
+                  {'★'.repeat(avis.note)}{'☆'.repeat(5 - avis.note)}
+                </p>
+                <span class="shrink-0 text-xs font-semibold px-3 py-1 rounded-full bg-sand-100 text-ocean-700">
+                  {libelleSource(avis.source)}
+                </span>
+              </div>
+              <blockquote class="mt-5 flex-1">
+                <p class="text-ocean-800/90 leading-relaxed">{avis.texte[lang]}</p>
+              </blockquote>
+              <figcaption class="mt-6 pt-5 border-t border-sand-200 flex items-baseline justify-between gap-4 text-sm">
+                <span class="font-semibold text-ocean-800">{avis.auteur}</span>
+                <span class="text-ocean-700/60">{dateAffichee(avis.date, lang)}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+      <!-- Balisage structuré des avis : généré depuis les données, absent sans avis -->
+      <script type="application/ld+json" set:html={jsonLd(avisJsonLd(avisListe, lang, site.nom))} />
+    </section>
+  )}
+
+  <!-- Questions fréquentes -->
+  <section id="faq" class="max-w-6xl mx-auto px-4 py-24 scroll-mt-16">
+    <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+      {tr['faq.title']}
+    </p>
+    <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['faq.title']}</h2>
+    <p class="mt-6 max-w-2xl text-ocean-700/80 text-lg leading-relaxed">{tr['faq.subtitle']}</p>
+    {faqAPValider && (
+      <p class="mt-8 inline-flex items-center gap-2 bg-amber-50 text-amber-800 ring-1 ring-amber-200 rounded-full px-4 py-2 text-sm">
+        <span aria-hidden="true">⚠</span>
+        {tr['faq.a_valider_note']}
+      </p>
+    )}
+    <div class="mt-12 space-y-4">
+      {faqEntrees.map((entree) => (
+        <details class="group bg-white rounded-2xl border border-sand-200 shadow-card">
+          <summary class="cursor-pointer list-none px-7 py-5 font-semibold text-ocean-800 flex items-center justify-between gap-4">
+            <span>{entree.question[lang]}</span>
+            <span class="flex items-center gap-3 shrink-0">
+              {entree.a_valider && (
+                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">
+                  {tr['faq.a_valider_badge']}
+                </span>
+              )}
+              <svg
+                class="w-4 h-4 text-ocean-600 transition-transform group-open:rotate-180"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </span>
+          </summary>
+          <p class="px-7 pb-6 pt-5 border-t border-sand-200 text-ocean-700/80 leading-relaxed">
+            {entree.reponse[lang]}
+          </p>
+        </details>
+      ))}
+    </div>
+    <!-- Balisage structuré FAQPage, généré depuis content/faq.json -->
+    <script type="application/ld+json" set:html={jsonLd(faqSchema)} />
+  </section>
+
+  <!-- Conditions d'annulation — barème type, à valider par le propriétaire -->
+  <section id="annulation" class="bg-ocean-900 py-24 scroll-mt-16">
+    <div class="max-w-6xl mx-auto px-4">
+      <p class="text-sunset-400 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+        {tr['annulation.title']}
+      </p>
+      <h2 class="font-display text-3xl md:text-5xl font-semibold text-white">{tr['annulation.title']}</h2>
+      <p class="mt-6 max-w-2xl text-ocean-100/80 text-lg leading-relaxed">{tr['annulation.subtitle']}</p>
+      {annulationAPValider && (
+        <p class="mt-8 inline-flex items-center gap-2 bg-amber-400/15 text-amber-200 ring-1 ring-amber-300/40 rounded-full px-4 py-2 text-sm font-semibold">
+          <span aria-hidden="true">⚠</span>
+          {tr['annulation.modele']}
+        </p>
+      )}
+      <div class="mt-10 overflow-x-auto rounded-2xl border border-ocean-700 shadow-card">
+        <table class="w-full text-left text-sm min-w-[520px]">
+          <caption class="sr-only">{tr['annulation.title']}</caption>
+          <thead class="bg-ocean-800 text-ocean-100/80">
+            <tr>
+              <th scope="col" class="px-6 py-4 text-xs font-semibold uppercase tracking-wider">{tr['annulation.col_delai']}</th>
+              <th scope="col" class="px-6 py-4 text-xs font-semibold uppercase tracking-wider">{tr['annulation.col_remboursement']}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-ocean-700 bg-ocean-900/60">
+            {annulationData.bareme.map((ligne) => (
+              <tr>
+                <td class="px-6 py-5 text-ocean-100/90">{ligne.delai[lang]}</td>
+                <td class="px-6 py-5">
+                  <span class="font-display text-xl font-semibold text-white tabular-nums">
+                    {ligne.remboursement_pct} %
+                  </span>
+                  <span class="ml-2 text-ocean-100/70">{tr['annulation.remboursement']}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {annulationAPValider && (
+        <p class="mt-8 max-w-3xl text-sm text-ocean-100/70 leading-relaxed">
+          {annulationData.note_proprietaire[lang]}
+        </p>
+      )}
+      <p class="mt-4 max-w-3xl text-sm text-ocean-100/70 leading-relaxed">
+        {annulationData.explications[lang]}
+      </p>
+      <a
+        href="#contact"
+        class="inline-block mt-10 bg-sunset-500 hover:bg-sunset-600 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
+      >
+        {tr['annulation.contact']}
       </a>
     </div>
   </section>

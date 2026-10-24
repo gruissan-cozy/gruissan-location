@@ -1,0 +1,33 @@
+{
+  "$schema_note": "Documentation d'édition — voir aussi content/README.md et content/avis.exemple.json.",
+  "mode_emploi": "Liste VIDE par défaut : AUCUN avis affiché au public. La section « Avis clients » du site est entièrement masquée tant que cette liste est vide. N'ajoutez que des avis REELS, collectés avec l'accord écrit de leurs auteurs, et jamais d'avis inventés (interdit par la loi française, articles L121-2 et L132-2 du Code de la consommation : pratique commerciale trompeuse).",
+  "regles": [
+    "Un avis = une entrée dans le tableau « avis », avec note (1 à 5), auteur, date, source et « texte » traduit dans les 4 langues.",
+    "« texte » doit contenir les clés fr, en, es et de. Une langue manquante bloque le build.",
+    "« source » doit être l'une des valeurs : airbnb, booking, abritel, direct, google.",
+    "« note » doit être un entier entre 1 et 5. « date » doit être au format YYYY-MM-DD (date réelle du séjour ou de publication de l'avis).",
+    "Ne jamais publier d'informations permettant d'identifier un client au-delà du prénom (pas de nom de famille complet, pas de coordonnées).",
+    "Pour rester en conformité, ne gardez que des avis datant de moins de 24 mois et retirez ceux que vous ne pouvez pas justifier."
+  ],
+  "format": {
+    "note": "Note moyenne laissée par le client (entier, 1 à 5).",
+    "auteur": "Prénom affiché publiquement. Chaîne simple, sans objet de traduction.",
+    "date": "Date de l'avis au format YYYY-MM-DD.",
+    "source": "Origine de l'avis : airbnb | booking | abritel | direct | google.",
+    "texte": { "fr": "Texte en français", "en": "Text in English", "es": "Texto en español", "de": "Text auf Deutsch" }
+  },
+  "exemple_commente": {
+    "_note": "Copiez ce bloc dans le tableau « avis » en remplaçant les valeurs. Exemple donné à titre pédagogique uniquement : il ne doit PAS être publié tel quel.",
+    "note": 5,
+    "auteur": "Camille",
+    "date": "2026-07-18",
+    "source": "direct",
+    "texte": {
+      "fr": "Séjour très agréable, appartement propre et bien placé.",
+      "en": "Very pleasant stay, clean and well-located apartment.",
+      "es": "Estancia muy agradable, apartamento limpio y bien situado.",
+      "de": "Sehr angenehmer Aufenthalt, saubere und gut gelegene Wohnung."
+    }
+  },
+  "avis": []
+}

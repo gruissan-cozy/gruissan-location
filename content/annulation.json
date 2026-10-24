@@ -1,0 +1,53 @@
+{
+  "a_valider": true,
+  "note_proprietaire": {
+    "fr": "MODÈLE À VALIDER PAR LE PROPRIÉTAIRE — le barème ci-dessous est un exemple de barème dégressif couramment utilisé, fourni à titre indicatif et non contractuel. Il ne devient applicable qu'une fois confirmé par le propriétaire et repris dans le contrat de location. Les délais et pourcentages doivent être adaptés (saisonnalité, durée du séjour, assurance annulation, cas de force majeure).",
+    "en": "TEMPLATE TO BE CONFIRMED BY THE OWNER — the scale below is an example of a commonly used declining scale, provided for information only and not contractual. It only becomes applicable once confirmed by the owner and set out in the rental agreement. Deadlines and percentages should be adjusted (seasonality, length of stay, cancellation insurance, force majeure).",
+    "es": "MODELO PENDIENTE DE VALIDAR POR EL PROPIETARIO — el baremo siguiente es un ejemplo de baremo decreciente de uso habitual, facilitado a título indicativo y no contractual. Solo será aplicable cuando el propietario lo confirme y lo recoja en el contrato de alquiler. Los plazos y porcentajes deben adaptarse (temporada, duración de la estancia, seguro de cancelación, fuerza mayor).",
+    "de": "VOM EIGENTÜMER ZU BESTÄTIGENDES MODELL — die nachstehende Staffelung ist ein Beispiel einer üblichen abgestuften Regelung und dient nur zur Information, sie ist nicht vertraglich verbindlich. Erst nach Bestätigung durch den Eigentümer und Aufnahme in den Mietvertrag wird sie anwendbar. Fristen und Prozentsätze sind anzupassen (Saison, Aufenthaltsdauer, Stornoversicherung, höhere Gewalt)."
+  },
+  "bareme": [
+    {
+      "delai": {
+        "fr": "Plus de 30 jours avant l'arrivée",
+        "en": "More than 30 days before arrival",
+        "es": "Más de 30 días antes de la llegada",
+        "de": "Mehr als 30 Tage vor Anreise"
+      },
+      "remboursement_pct": 100
+    },
+    {
+      "delai": {
+        "fr": "De 30 à 15 jours avant l'arrivée",
+        "en": "Between 30 and 15 days before arrival",
+        "es": "Entre 30 y 15 días antes de la llegada",
+        "de": "Zwischen 30 und 15 Tagen vor Anreise"
+      },
+      "remboursement_pct": 50
+    },
+    {
+      "delai": {
+        "fr": "De 14 à 7 jours avant l'arrivée",
+        "en": "Between 14 and 7 days before arrival",
+        "es": "Entre 14 y 7 días antes de la llegada",
+        "de": "Zwischen 14 und 7 Tagen vor Anreise"
+      },
+      "remboursement_pct": 25
+    },
+    {
+      "delai": {
+        "fr": "Moins de 7 jours avant l'arrivée",
+        "en": "Less than 7 days before arrival",
+        "es": "Menos de 7 días antes de la llegada",
+        "de": "Weniger als 7 Tage vor Anreise"
+      },
+      "remboursement_pct": 0
+    }
+  ],
+  "explications": {
+    "fr": "Le jour de l'arrivée n'est pas compté dans le délai. Les remboursements sont calculés sur le montant du séjour, hors taxe de séjour et hors options. En cas d'annulation par le propriétaire, le montant intégral est restitué. Ce barème ne décrit pas les cas particuliers (arrêt de travail, force majeure) : demandez-nous les conditions applicables avant de réserver.",
+    "en": "The day of arrival is not counted in the deadline. Refunds are calculated on the amount of the stay, excluding tourist tax and options. If the owner cancels, the full amount is refunded. This scale does not cover specific cases (sick leave, force majeure): ask us for the applicable terms before booking.",
+    "es": "El día de llegada no se cuenta en el plazo. Los reembolsos se calculan sobre el importe de la estancia, excluida la tasa turística y las opciones. En caso de cancelación por el propietario, se reembolsa la totalidad. Este baremo no contempla los casos particulares (baja laboral, fuerza mayor): consúltenos las condiciones aplicables antes de reservar.",
+    "de": "Der Anreisetag zählt nicht zur Frist. Die Erstattungen werden auf den Betrag des Aufenthalts ohne Kurtaxe und ohne Optionen berechnet. Storniert der Eigentümer, wird der volle Betrag erstattet. Diese Staffelung deckt keine Sonderfälle ab (Arbeitsunfähigkeit, höhere Gewalt): fragen Sie uns vor der Buchung nach den geltenden Bedingungen."
+  }
+}
