@@ -25,8 +25,16 @@ export interface Message {
   telephone: string | null;
   dates: string | null;
   message: string;
-  statut: 'nouveau' | 'en_cours' | 'repondu' | 'archive';
+  // Pipeline de statuts (chantier 5 — #19) : nouveau, contacte,
+  // devis_envoye, confirme, termine, refuse. Les valeurs héritées
+  // (en_cours, repondu, archive) peuvent encore remonter tant que la
+  // migration 0004 n'est pas appliquée : le statut reste donc `string`.
+  statut: string;
   replies: Array<{ at: string; by: string; body: string }>;
+  // Historique des changements de statut — même motif que
+  // `bookings.historique`. Optionnel : la colonne n'existe pas tant que
+  // la migration 0004_pipeline_statuts.sql n'est pas appliquée.
+  historique?: Array<{ at: string; by: string; action: string; detail?: string }>;
 }
 
 export interface Booking {

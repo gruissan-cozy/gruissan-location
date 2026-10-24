@@ -83,9 +83,16 @@ export const CLS = {
   td: 'px-4 py-3 text-sm text-ocean-900 align-top',
 } as const;
 
-/** Couleurs des badges de statut des messages. */
+/** Couleurs des badges de statut des messages (pipeline, chantier 5). */
 export const MESSAGE_STATUT_CLS: Record<string, string> = {
   nouveau: 'bg-sunset-400/15 text-sunset-600 ring-sunset-400/40',
+  contacte: 'bg-amber-50 text-amber-700 ring-amber-200',
+  devis_envoye: 'bg-sky-50 text-sky-700 ring-sky-200',
+  confirme: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  termine: 'bg-sand-100 text-ocean-700/70 ring-sand-300',
+  refuse: 'bg-rose-50 text-rose-700 ring-rose-200',
+  // Valeurs héritées (affichées telles quelles tant que la migration 0004
+  // n'est pas appliquée) — mêmes couleurs que par le passé.
   en_cours: 'bg-amber-50 text-amber-700 ring-amber-200',
   repondu: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
   archive: 'bg-sand-100 text-ocean-700/70 ring-sand-300',
