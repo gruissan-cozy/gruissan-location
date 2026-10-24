@@ -2,20 +2,28 @@
 /**
  * /admin/messages — liste des demandes, fil par statut, vue détail,
  * fil des réponses (colonne `replies`) et changement de statut.
+ *
+ * Pipeline de statuts (chantier 5 — #19) : nouveau → contacte →
+ * devis_envoye → confirme → termine, plus « refuse ». La logique pure
+ * (transitions autorisées, progression, comptage, historique) vit dans
+ * `src/lib/pipeline.ts` (testée dans tests/pipeline.test.ts).
+ *
+ * Tant que la migration `migrations/0004_pipeline_statuts.sql` n'est pas
+ * appliquée, les valeurs héritées s'affichent telles quelles et un
+ * bandeau demande d'exécuter la migration : l'interface ne plante pas.
  */
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { AT } from '../../i18n/admin';
+import { STATUTS_MESSAGE } from '../../lib/pipeline';
 
 const configured = isSupabaseConfigured;
-
-const STATUTS = ['nouveau', 'en_cours', 'repondu', 'archive'] as const;
+const STATUTS = STATUTS_MESSAGE;
 
 const FILTERS = [
   { value: 'tous', label: AT['common.all'] },
   ...STATUTS.map((s) => ({ value: s, label: AT[`statut.${s}`] })),
 ] as const;
-
 ---
 
 <AdminLayout title={AT['msg.title']} section="messages">
@@ -31,6 +39,15 @@ const FILTERS = [
           </div>
           <p id="msg-count" class="text-sm text-ocean-700/70"></p>
         </header>
+
+        <!-- Alerte : la migration du pipeline n'est pas encore appliquée -->
+        <div
+          id="msg-migration"
+          class="mb-5 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+          role="alert"
+        >
+          {AT['msg.migrationMissing']}
+        </div>
 
         <!-- Filtres par statut -->
         <div class="mb-5 flex flex-wrap gap-2" role="group" aria-label={AT['common.status']}>
@@ -74,10 +91,20 @@ const FILTERS = [
     <script>
       import { sb, CLS, MESSAGE_STATUT_CLS, esc, fmtDate, fmtDateTime, toast, errText } from '../../lib/admin-runtime';
       import { AT } from '../../i18n/admin';
+      import {
+        STATUTS_MESSAGE,
+        transitionsAutorisees,
+        estTransitionAutorisee,
+        etapeSuivante,
+        estStatutMessage,
+        estValeurHeritee,
+        compterParStatut,
+        construireEntreeHistorique,
+        avancerSiNecessaire,
+      } from '../../lib/pipeline';
       import type { Message } from '../../lib/supabase';
 
-      const STATUTS = ['nouveau', 'en_cours', 'repondu', 'archive'] as const;
-      type Statut = (typeof STATUTS)[number];
+      const STATUTS = STATUTS_MESSAGE;
 
       let messages: Message[] = [];
       let activeFilter = 'tous';
@@ -87,10 +114,30 @@ const FILTERS = [
       const detailEl = document.getElementById('msg-detail-body');
       const emptyEl = document.getElementById('msg-detail-empty');
       const countEl = document.getElementById('msg-count');
+      const migrationEl = document.getElementById('msg-migration');
 
       const statutLabel = (s: string) => AT[`statut.${s}`] ?? s;
       const badge = (s: string) =>
         `<span class="${CLS.badge} ${MESSAGE_STATUT_CLS[s] ?? 'bg-sand-100 text-ocean-700 ring-sand-300'}">${esc(statutLabel(s))}</span>`;
+
+      /** Statut hérité non converti (ou valeur inconnue) : migration requise. */
+      const statutIllisible = (s: string) => estValeurHeritee(s) || !estStatutMessage(s);
+
+      // -----------------------------------------------------------------
+      // Alerte « migration requise »
+      // -----------------------------------------------------------------
+      function afficherMigrationRequise() {
+        if (migrationEl) migrationEl.classList.remove('hidden');
+      }
+
+      /** Message d'erreur d'écriture : guide vers la migration si besoin. */
+      function erreurEcriture(error: unknown): string {
+        const brut = errText(error).toLowerCase();
+        if (brut.includes('check') || brut.includes('constraint') || brut.includes('historique') || brut.includes('column')) {
+          return AT['msg.migrationMissing'];
+        }
+        return errText(error) || AT['common.errorGeneric'];
+      }
 
       // -----------------------------------------------------------------
       // Chargement
@@ -106,6 +153,7 @@ const FILTERS = [
           return;
         }
         messages = (data ?? []) as Message[];
+        if (messages.some((m) => statutIllisible(m.statut))) afficherMigrationRequise();
         renderCounts();
         renderList();
         if (selectedId && !messages.some((m) => m.id === selectedId)) selectedId = null;
@@ -113,12 +161,13 @@ const FILTERS = [
       }
 
       function renderCounts() {
-        for (const f of ['tous', ...STATUTS]) {
-          const el = document.querySelector(`[data-count="${f}"]`);
-          if (!el) continue;
-          const n = f === 'tous' ? messages.length : messages.filter((m) => m.statut === f).length;
-          el.textContent = n ? `(${n})` : '';
-        }
+        const compteurs = compterParStatut(messages, STATUTS);
+        const afficher = (cle: string, n: number) => {
+          const el = document.querySelector(`[data-count="${cle}"]`);
+          if (el) el.textContent = n ? `(${n})` : '';
+        };
+        afficher('tous', messages.length);
+        for (const s of STATUTS) afficher(s, compteurs[s] ?? 0);
         if (countEl) {
           countEl.textContent = messages.length
             ? `${messages.length} message${messages.length > 1 ? 's' : ''}`
@@ -138,8 +187,9 @@ const FILTERS = [
       }
 
       function visibleMessages(): Message[] {
-        const list = activeFilter === 'tous' ? messages : messages.filter((m) => m.statut === activeFilter);
-        return list;
+        return activeFilter === 'tous'
+          ? messages
+          : messages.filter((m) => m.statut === activeFilter);
       }
 
       // -----------------------------------------------------------------
@@ -160,38 +210,60 @@ const FILTERS = [
           .map((m) => {
             const isNew = m.statut === 'nouveau';
             const selected = m.id === selectedId;
+            const suivante = etapeSuivante(m.statut);
+            const peutRefuser = estTransitionAutorisee(m.statut, 'refuse');
+            const illisible = statutIllisible(m.statut);
             return `
-            <button
-              type="button"
-              data-msg-id="${esc(m.id)}"
-              class="block w-full px-4 py-3.5 text-left transition-colors ${
-                selected ? 'bg-ocean-50' : 'hover:bg-sand-50'
-              }"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <span class="min-w-0">
-                  <span class="flex items-center gap-1.5">
-                    ${
-                      isNew
-                        ? '<span class="h-2 w-2 shrink-0 rounded-full bg-sunset-500" aria-hidden="true"></span>'
-                        : ''
-                    }
-                    <span class="truncate text-sm font-semibold text-ocean-900">${esc(m.nom)}</span>
+            <div class="px-4 py-3.5 ${selected ? 'bg-ocean-50' : ''}">
+              <button
+                type="button"
+                data-msg-id="${esc(m.id)}"
+                class="block w-full text-left transition-colors ${selected ? '' : 'rounded-xl hover:bg-sand-50'}"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <span class="min-w-0">
+                    <span class="flex items-center gap-1.5">
+                      ${
+                        isNew
+                          ? '<span class="h-2 w-2 shrink-0 rounded-full bg-sunset-500" aria-hidden="true"></span>'
+                          : ''
+                      }
+                      <span class="truncate text-sm font-semibold text-ocean-900">${esc(m.nom)}</span>
+                    </span>
+                    <span class="mt-0.5 block truncate text-xs text-ocean-700/60">${esc(m.email)}</span>
                   </span>
-                  <span class="mt-0.5 block truncate text-xs text-ocean-700/60">${esc(m.email)}</span>
-                </span>
-                ${badge(m.statut)}
-              </div>
-              <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-ocean-700/70">${esc(m.message)}</p>
-              <p class="mt-2 flex items-center gap-2 text-xs text-ocean-700/45">
-                <span>${esc(fmtDate(m.created_at))}</span>
+                  ${badge(m.statut)}
+                </div>
+                <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-ocean-700/70">${esc(m.message)}</p>
+                <p class="mt-2 flex items-center gap-2 text-xs text-ocean-700/45">
+                  <span>${esc(fmtDate(m.created_at))}</span>
+                  ${
+                    Array.isArray(m.replies) && m.replies.length
+                      ? `<span>· ${m.replies.length} ${esc(AT['msg.replyCount'])}</span>`
+                      : ''
+                  }
+                </p>
+              </button>
+
+              <!-- Actions en un clic -->
+              <div class="mt-2 flex flex-wrap items-center gap-2">
                 ${
-                  Array.isArray(m.replies) && m.replies.length
-                    ? `<span>· ${m.replies.length} ${esc(AT['msg.replyCount'])}</span>`
+                  suivante
+                    ? `<button type="button" data-advance="${esc(m.id)}" data-vers="${esc(suivante)}" class="${CLS.btnPrimary} ${CLS.btnSmall}">→ ${esc(statutLabel(suivante))}</button>`
                     : ''
                 }
-              </p>
-            </button>`;
+                ${
+                  peutRefuser
+                    ? `<button type="button" data-refuse="${esc(m.id)}" class="${CLS.btnDanger} ${CLS.btnSmall}">${esc(AT['msg.refuse'])}</button>`
+                    : ''
+                }
+                ${
+                  illisible
+                    ? `<span class="text-xs text-amber-700">${esc(AT['msg.unknownStatut'])}</span>`
+                    : ''
+                }
+              </div>
+            </div>`;
           })
           .join('');
       }
@@ -229,10 +301,31 @@ const FILTERS = [
                   ${esc(fmtDateTime(r.at))} · ${esc(r.by === 'admin' ? AT['msg.byAdmin'] : r.by)}
                 </p>
                 <p class="mt-1 whitespace-pre-line rounded-xl rounded-tl-none bg-sand-50 px-3.5 py-2.5 text-sm leading-relaxed text-ocean-900 ring-1 ring-sand-200/70">${esc(r.body)}</p>
-              </li>`
+              </li>`,
               )
               .join('')
           : `<li class="pl-6 text-sm text-ocean-700/55">${esc(AT['msg.repliesEmpty'])}</li>`;
+
+        // Historique des changements de statut (colonne `historique`)
+        const historique = Array.isArray(m.historique) ? m.historique : [];
+        const history = historique.length
+          ? historique
+              .slice()
+              .sort((a, b) => String(a.at).localeCompare(String(b.at)))
+              .map(
+                (h) => `
+              <li class="relative pl-6">
+                <span class="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-ocean-400 ring-4 ring-ocean-400/15" aria-hidden="true"></span>
+                <p class="text-xs text-ocean-700/55">${esc(fmtDateTime(h.at))}</p>
+                <p class="mt-0.5 text-sm font-medium text-ocean-900">${esc(h.detail ?? h.action)}</p>
+              </li>`,
+              )
+              .join('')
+          : `<li class="pl-6 text-sm text-ocean-700/55">${esc(AT['msg.historyEmpty'])}</li>`;
+
+        // Statuts proposés : statut courant + transitions autorisées
+        const options = [...new Set([m.statut, ...transitionsAutorisees(m.statut)])];
+        const illisible = statutIllisible(m.statut);
 
         detailEl.innerHTML = `
           <!-- En-tête -->
@@ -280,11 +373,18 @@ const FILTERS = [
                 <dt class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(AT['common.status'])}</dt>
                 <dd class="mt-1">
                   <select id="msg-statut" class="${CLS.select} sm:max-w-[12rem]">
-                    ${STATUTS.map(
-                      (s) =>
-                        `<option value="${s}" ${s === m.statut ? 'selected' : ''}>${esc(statutLabel(s))}</option>`
-                    ).join('')}
+                    ${options
+                      .map(
+                        (s) =>
+                          `<option value="${esc(s)}" ${s === m.statut ? 'selected' : ''}>${esc(statutLabel(s))}</option>`,
+                      )
+                      .join('')}
                   </select>
+                  ${
+                    illisible
+                      ? `<p class="mt-1.5 text-xs text-amber-700">${esc(AT['msg.unknownStatut'])}</p>`
+                      : ''
+                  }
                 </dd>
               </div>
             </dl>
@@ -293,6 +393,16 @@ const FILTERS = [
             <div>
               <h3 class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(AT['msg.message'])}</h3>
               <p class="mt-1.5 whitespace-pre-line rounded-xl bg-sand-50 px-4 py-3 text-sm leading-relaxed text-ocean-900 ring-1 ring-sand-200/70">${esc(m.message)}</p>
+            </div>
+
+            <!-- Historique du pipeline -->
+            <div>
+              <h3 class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">
+                ${esc(AT['msg.historyTitle'])} <span class="normal-case tracking-normal">(${historique.length})</span>
+              </h3>
+              <ol class="mt-3 space-y-4 border-l border-sand-200 pl-4">
+                ${history}
+              </ol>
             </div>
 
             <!-- Fil des réponses -->
@@ -331,8 +441,8 @@ const FILTERS = [
         });
 
         document.getElementById('msg-statut')?.addEventListener('change', async (event) => {
-          const statut = (event.target as HTMLSelectElement).value as Statut;
-          await updateStatut(m.id, statut);
+          const vers = (event.target as HTMLSelectElement).value;
+          await updateStatut(m.id, vers);
         });
 
         document.getElementById('reply-form')?.addEventListener('submit', async (event) => {
@@ -352,21 +462,35 @@ const FILTERS = [
           const reply = { at: new Date().toISOString(), by: 'admin', body };
           const nextReplies = [...(Array.isArray(m.replies) ? m.replies : []), reply];
 
-          const { error } = await sb()
-            .from('messages')
-            .update({
-              replies: nextReplies,
-              ...(markRepondu ? { statut: 'repondu' } : {}),
-            })
-            .eq('id', m.id);
+          // « Marqué comme contacté » : avance à `contacte` sans jamais régresser.
+          const nouveauStatut = markRepondu ? avancerSiNecessaire(m.statut, 'contacte') : null;
+          const entree = nouveauStatut ? construireEntreeHistorique(m.statut, nouveauStatut, reply.at) : null;
+          const nextHistorique = [
+            ...(Array.isArray(m.historique) ? m.historique : []),
+            ...(entree ? [entree] : []),
+          ];
+
+          const patch: { replies: Message['replies']; statut?: string; historique?: Message['historique'] } = {
+            replies: nextReplies,
+          };
+          if (nouveauStatut) {
+            patch.statut = nouveauStatut;
+            patch.historique = nextHistorique;
+          }
+
+          const { error } = await sb().from('messages').update(patch).eq('id', m.id);
 
           if (error) {
-            toast(errText(error) || AT['common.errorGeneric'], 'error');
+            toast(erreurEcriture(error), 'error');
+            afficherMigrationRequise();
             return;
           }
 
           m.replies = nextReplies;
-          if (markRepondu) m.statut = 'repondu';
+          if (nouveauStatut) {
+            m.statut = nouveauStatut;
+            m.historique = nextHistorique;
+          }
           toast(AT['msg.replySent']);
           renderCounts();
           renderList();
@@ -377,15 +501,29 @@ const FILTERS = [
       // -----------------------------------------------------------------
       // Écritures
       // -----------------------------------------------------------------
-      async function updateStatut(id: string, statut: Statut) {
-        const { error } = await sb().from('messages').update({ statut }).eq('id', id);
+      async function updateStatut(id: string, vers: string) {
+        const m = messages.find((x) => x.id === id);
+        if (!m) return;
+        const depuis = m.statut;
+        if (depuis === vers) return;
+
+        const entree = construireEntreeHistorique(depuis, vers, new Date().toISOString());
+        const nextHistorique = [...(Array.isArray(m.historique) ? m.historique : []), entree];
+
+        const { error } = await sb()
+          .from('messages')
+          .update({ statut: vers, historique: nextHistorique })
+          .eq('id', id);
+
         if (error) {
-          toast(errText(error) || AT['common.errorGeneric'], 'error');
+          toast(erreurEcriture(error), 'error');
+          afficherMigrationRequise();
           renderDetail();
           return;
         }
-        const m = messages.find((x) => x.id === id);
-        if (m) m.statut = statut;
+
+        m.statut = vers;
+        m.historique = nextHistorique;
         toast(AT['msg.statusUpdated']);
         renderCounts();
         renderList();
@@ -404,9 +542,26 @@ const FILTERS = [
       });
 
       listEl?.addEventListener('click', (event) => {
-        const target = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-msg-id]');
-        if (!target) return;
-        selectedId = target.dataset.msgId ?? null;
+        const target = event.target as HTMLElement;
+
+        const advanceBtn = target.closest<HTMLButtonElement>('[data-advance]');
+        if (advanceBtn) {
+          const id = advanceBtn.dataset.advance;
+          const vers = advanceBtn.dataset.vers;
+          if (id && vers) void updateStatut(id, vers);
+          return;
+        }
+
+        const refuseBtn = target.closest<HTMLButtonElement>('[data-refuse]');
+        if (refuseBtn) {
+          const id = refuseBtn.dataset.refuse;
+          if (id) void updateStatut(id, 'refuse');
+          return;
+        }
+
+        const info = target.closest<HTMLButtonElement>('[data-msg-id]');
+        if (!info) return;
+        selectedId = info.dataset.msgId ?? null;
         renderList();
         renderDetail();
         if (window.matchMedia('(max-width: 1023px)').matches) {
