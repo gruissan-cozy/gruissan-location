@@ -12,6 +12,18 @@ import { t } from '../i18n';
 import type { Lang } from '../i18n';
 import { isSupabaseConfigured } from '../lib/supabase';
 import {
+  chargerGalerie,
+  extraitNumeroAppel,
+  legendePhoto,
+  lienWhatsApp,
+  libelleNumero,
+  numeroAppel,
+  peutAppeler,
+  peutUtiliserWhatsApp,
+  visionneuseTraductions,
+  type Photo,
+} from '../lib/contact';
+import {
   MOIS_PAR_LANGUE,
   afficherSectionAvis,
   avisVisibles,
@@ -31,6 +43,31 @@ const tr = t[lang];
 const supabaseConfigured = isSupabaseConfigured;
 const supabaseUrl = supabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_URL) : '';
 const supabaseKey = supabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY) : '';
+
+// --- Contact direct : les boutons n'existent que si une vraie coordonnée est renseignée ---
+// Aucun numéro n'est fabriqué : téléphone et WhatsApp vides => rien n'est affiché.
+const coordonnees = site;
+const appelLien = numeroAppel(coordonnees.telephone);
+const appelLibelle = libelleNumero(coordonnees);
+const whatsappLien = lienWhatsApp(coordonnees.telephone, coordonnees.whatsapp);
+// Le numéro réel de WhatsApp (distinct du téléphone le cas échéant).
+const whatsappNumero = extraitNumeroAppel(coordonnees.whatsapp) || extraitNumeroAppel(coordonnees.telephone);
+const whatsappLibelle = whatsappNumero ? `+${whatsappNumero}` : '';
+const montrerAppel = peutAppeler(coordonnees);
+const montrerWhatsApp = peutUtiliserWhatsApp(coordonnees);
+const montrerContactDirect = montrerAppel || montrerWhatsApp;
+
+// --- Galerie : photos regroupées par pièce (content/galerie.json reste le seul maître) ---
+const galerieGroupes = chargerGalerie(galerieData);
+const photosPlates: Photo[] = galerieData.photos ?? [];
+// Ordre d'affichage de la visionneuse : les photos dans l'ordre du fichier,
+// en ignorant les entrées sans image (jamais de case vide dans le plein écran).
+const photosVisionneuse = photosPlates.filter((p) => Boolean(p?.src));
+const nombrePhotos = photosVisionneuse.length;
+// Titres de pièces traduits : la visionneuse affiche la pièce courante, donc
+// ils sont sérialisés ici (le contenu JSON reste la seule source d'édition).
+const titresPieces: Record<string, Record<string, string>> = {};
+for (const groupe of galerieGroupes) titresPieces[groupe.categorie.id] = groupe.categorie.titre as Record<string, string>;
 
 function fmtMonth(iso: string): string {
   const [y, m] = iso.split('-');
@@ -96,6 +133,31 @@ const statutClass: Record<string, string> = {
           href={`/gruissan-location/${lang === 'fr' ? '' : lang + '/'}reserver/`}
           class="bg-white/10 border border-white/40 hover:bg-white/20 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
         >{tr['nav.reserver']}</a>
+        <!-- Contact direct : masqué tant que content/site.json n'a pas de vraie coordonnée -->
+        {montrerAppel && appelLien && (
+          <a
+            href={appelLien}
+            class="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-7 py-3.5 rounded-full transition-colors shadow-lg shadow-emerald-600/25"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+            </svg>
+            {tr['contact.appel']}
+          </a>
+        )}
+        {montrerWhatsApp && whatsappLien && (
+          <a
+            href={whatsappLien}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe5b] text-white font-semibold px-7 py-3.5 rounded-full transition-colors shadow-lg shadow-emerald-600/25"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+            </svg>
+            WhatsApp
+          </a>
+        )}
       </div>
     </div>
     <!-- Indicateur de scroll -->
@@ -177,23 +239,118 @@ const statutClass: Record<string, string> = {
         {tr['galerie.subtitle']}
       </p>
       <h2 class="font-display text-3xl md:text-5xl font-semibold text-white">{tr['galerie.title']}</h2>
-      <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {galerieData.photos.map((photo) => (
-          <figure class="group relative rounded-2xl overflow-hidden aspect-[4/3]">
-            <img
-              src={photo.src}
-              alt={photo.alt[lang]}
-              loading="lazy"
-              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-            <figcaption class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ocean-900/90 to-transparent p-5 pt-12">
-              <p class="text-sm text-sand-100">{photo.alt[lang]}</p>
-            </figcaption>
-          </figure>
+      <p class="mt-4 text-ocean-100/70 text-sm">
+        {tr['galerie.piecesTitre']} · {nombrePhotos} {tr['galerie.photos'].replace('{0}', '')}
+      </p>
+
+      <!-- Pièces : une ancre par pièce, générée depuis content/galerie.json -->
+      <nav class="mt-10 flex flex-wrap gap-2" aria-label={tr['galerie.pieces']}>
+        {galerieGroupes.map((groupe) => (
+          <a
+            href={`#galerie-${groupe.categorie.id}`}
+            class="text-sm font-medium px-4 py-2 rounded-full border border-ocean-700 text-ocean-100/80 hover:bg-ocean-800 hover:text-white transition-colors"
+          >
+            {groupe.categorie.titre[lang]}
+            <span class="ml-1.5 text-ocean-300/70 tabular-nums">{groupe.photos.length}</span>
+          </a>
+        ))}
+      </nav>
+
+      <div class="mt-10 space-y-16">
+        {galerieGroupes.map((groupe) => (
+          <div id={`galerie-${groupe.categorie.id}`} class="scroll-mt-24">
+            <h3 class="font-display text-2xl font-semibold text-white">
+              {groupe.categorie.titre[lang]}
+              <span class="ml-3 text-sm font-normal text-ocean-300/70 tabular-nums">
+                {groupe.photos.length} {tr['galerie.photos'].replace('{0}', '')}
+              </span>
+            </h3>
+            <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {groupe.photos.map((photo) => {
+                const index = photosVisionneuse.findIndex((p) => p.src === photo.src);
+                const legende = legendePhoto(photo, lang);
+                return (
+                  <figure class="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-ocean-800">
+                    <img
+                      src={photo.src}
+                      alt={legende}
+                      loading="lazy"
+                      data-photo-index={index >= 0 ? index : undefined}
+                      class="galerie-photo w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <figcaption class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ocean-900/90 to-transparent p-5 pt-12">
+                      <p class="text-sm text-sand-100">{legende}</p>
+                    </figcaption>
+                    <button
+                      type="button"
+                      data-visionneuse-ouvrir={index >= 0 ? index : undefined}
+                      class="absolute inset-0 w-full h-full cursor-zoom-in focus:outline-none focus-visible:ring-4 focus-visible:ring-sunset-400 rounded-2xl"
+                      aria-label={`${tr['visionneuse.ouvrir']} — ${legende}`}
+                    >
+                      <span class="sr-only">{tr['visionneuse.ouvrir']}</span>
+                    </button>
+                  </figure>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </div>
     </div>
   </section>
+
+  <!-- Visionneuse plein écran : navigation clavier (Échap, flèches), focus, aria -->
+  <div
+    id="visionneuse"
+    class="fixed inset-0 z-[60] hidden items-center justify-center bg-ocean-900/95 p-4 sm:p-8"
+    role="dialog"
+    aria-modal="true"
+    aria-label={tr['visionneuse.titre']}
+  >
+    <button
+      type="button"
+      data-visionneuse-fermer
+      class="absolute top-4 right-4 z-10 inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-sunset-400"
+      aria-label={tr['visionneuse.fermer']}
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+    <button
+      type="button"
+      data-visionneuse-precedent
+      class="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-sunset-400"
+      aria-label={tr['visionneuse.precedent']}
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+      </svg>
+    </button>
+    <figure class="relative max-w-5xl w-full flex flex-col items-center gap-4">
+      <img
+        data-visionneuse-image
+        src={photosVisionneuse[0]?.src ?? ''}
+        alt={photosVisionneuse[0] ? legendePhoto(photosVisionneuse[0], lang) : ''}
+        class="max-h-[78vh] w-auto max-w-full rounded-2xl object-contain shadow-card-hover"
+      />
+      <figcaption class="text-center">
+        <p class="text-ocean-100/70 text-xs uppercase tracking-wider" data-visionneuse-categorie></p>
+        <p class="mt-1 text-white" data-visionneuse-legende></p>
+        <p class="mt-2 text-ocean-200/70 text-sm tabular-nums" role="status" aria-live="polite" data-visionneuse-compteur></p>
+      </figcaption>
+    </figure>
+    <button
+      type="button"
+      data-visionneuse-suivant
+      class="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white focus:outline-none focus-visible:ring-4 focus-visible:ring-sunset-400"
+      aria-label={tr['visionneuse.suivant']}
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+      </svg>
+    </button>
+  </div>
 
   <!-- Tarifs -->
   <section id="tarifs" class="max-w-6xl mx-auto px-4 py-24 scroll-mt-16">
@@ -481,20 +638,44 @@ const statutClass: Record<string, string> = {
       </form>
       <div class="space-y-6 md:pt-2">
         <p class="text-ocean-700/70">{tr['contact.ou']}</p>
-        <div class="bg-white rounded-2xl p-7 border border-sand-200 shadow-card space-y-4">
-          <p class="flex items-baseline justify-between gap-4">
-            <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.tel']}</span>
-            <a href={`tel:${site.telephone}`} class="font-display text-xl font-semibold text-ocean-700 hover:text-ocean-500 transition-colors">{site.telephone_display}</a>
-          </p>
-          <p class="flex items-baseline justify-between gap-4">
-            <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.whatsapp']}</span>
-            <a href={`https://wa.me/${site.whatsapp.replace(/[^0-9]/g, '')}`} class="font-display text-xl font-semibold text-ocean-700 hover:text-ocean-500 transition-colors">{site.whatsapp}</a>
-          </p>
-          <p class="flex items-baseline justify-between gap-4">
-            <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.emailLabel']}</span>
-            <a href={`mailto:${site.email}`} class="font-semibold text-ocean-700 hover:text-ocean-500 transition-colors break-all">{site.email}</a>
-          </p>
-        </div>
+        <!-- Contact direct : les boutons n'existent que si une vraie coordonnée est renseignée -->
+        {montrerContactDirect && (
+          <div class="bg-white rounded-2xl p-7 border border-sand-200 shadow-card space-y-4">
+            {montrerAppel && appelLien && (
+              <p class="flex items-baseline justify-between gap-4">
+                <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.tel']}</span>
+                <a
+                  href={appelLien}
+                  class="font-display text-xl font-semibold text-ocean-700 hover:text-ocean-500 transition-colors"
+                  aria-label={tr['contact.appelAccessible'].replace('{0}', appelLibelle)}
+                >
+                  {appelLibelle}
+                </a>
+              </p>
+            )}
+            {montrerWhatsApp && whatsappLien && (
+              <p class="flex items-baseline justify-between gap-4">
+                <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.whatsapp']}</span>
+                <a
+                  href={whatsappLien}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="font-display text-xl font-semibold text-ocean-700 hover:text-ocean-500 transition-colors"
+                  aria-label={tr['contact.whatsappAccessible'].replace('{0}', whatsappLibelle)}
+                >
+                  {whatsappLibelle}
+                </a>
+              </p>
+            )}
+            <p class="flex items-baseline justify-between gap-4">
+              <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.emailLabel']}</span>
+              <a href={`mailto:${site.email}`} class="font-semibold text-ocean-700 hover:text-ocean-500 transition-colors break-all">{site.email}</a>
+            </p>
+          </div>
+        )}
+        {!montrerContactDirect && (
+          <p class="text-sm text-ocean-700/70">{tr['contact.raccrocher']}</p>
+        )}
         {(site.airbnb_url || site.abritel_url || site.booking_url || site.instagram_url) && (
           <div>
             <p class="text-ocean-700/70 mb-4">{tr['contact.plateformes']}:</p>
@@ -509,6 +690,94 @@ const statutClass: Record<string, string> = {
       </div>
     </div>
   </section>
+
+  <script define:vars={{ photosVisionneuse, lang, titresPieces, visionneuseTr: visionneuseTraductions(lang) }}>
+    // Visionneuse plein écran : ouverture au clic, navigation clavier
+    // (Échap pour fermer, flèches pour naviguer), focus conservé dans la boîte.
+    (() => {
+      const boite = document.getElementById('visionneuse');
+      if (!boite || !photosVisionneuse.length) return;
+      const image = boite.querySelector('[data-visionneuse-image]');
+      const legende = boite.querySelector('[data-visionneuse-legende]');
+      const categorie = boite.querySelector('[data-visionneuse-categorie]');
+      const compteur = boite.querySelector('[data-visionneuse-compteur]');
+      const boutonFermer = boite.querySelector('[data-visionneuse-fermer]');
+      const boutonPrecedent = boite.querySelector('[data-visionneuse-precedent]');
+      const boutonSuivant = boite.querySelector('[data-visionneuse-suivant]');
+
+      let index = 0;
+      let dernierFocus = null;
+
+      function lireLegende(photo) {
+        const alt = photo?.alt ?? photo?.legende ?? {};
+        return alt[lang] ?? alt.fr ?? '';
+      }
+
+      function rendre() {
+        const photo = photosVisionneuse[index];
+        if (!photo) return;
+        image.src = photo.src;
+        image.alt = lireLegende(photo);
+        legende.textContent = lireLegende(photo);
+        categorie.textContent = titresPieces[photo.categorie]?.[lang] ?? '';
+        compteur.textContent = visionneuseTr['visionneuse.compteur']
+          .replace('{0}', String(index + 1))
+          .replace('{1}', String(photosVisionneuse.length));
+      }
+
+      function ouvrir(depuis, declencheur) {
+        index = Math.max(0, Number(depuis) || 0);
+        rendre();
+        // Le focus revient sur le bouton qui a ouvert la visionneuse : si ce
+        // dernier n'est plus dans le document, on retombe sur la photo éponyme.
+        dernierFocus = declencheur instanceof HTMLElement
+          ? declencheur
+          : document.querySelector(`[data-visionneuse-ouvrir="${index}"]`);
+        boite.classList.remove('hidden');
+        boite.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+        boutonFermer.focus();
+      }
+
+      function fermer() {
+        boite.classList.add('hidden');
+        boite.classList.remove('flex');
+        document.body.style.overflow = '';
+        if (dernierFocus instanceof HTMLElement) dernierFocus.focus();
+      }
+
+      function suivant() {
+        index = (index + 1) % photosVisionneuse.length;
+        rendre();
+      }
+
+      function precedent() {
+        index = (index - 1 + photosVisionneuse.length) % photosVisionneuse.length;
+        rendre();
+      }
+
+      for (const bouton of document.querySelectorAll('[data-visionneuse-ouvrir]')) {
+        bouton.addEventListener('click', () => ouvrir(bouton.getAttribute('data-visionneuse-ouvrir'), bouton));
+      }
+      boutonFermer.addEventListener('click', fermer);
+      boutonPrecedent.addEventListener('click', precedent);
+      boutonSuivant.addEventListener('click', suivant);
+
+      document.addEventListener('keydown', (e) => {
+        if (boite.classList.contains('hidden')) return;
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          fermer();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          suivant();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          precedent();
+        }
+      });
+    })();
+  </script>
 </Layout>
 
 {

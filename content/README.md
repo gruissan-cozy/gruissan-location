@@ -12,7 +12,18 @@ Calendrier des disponibilités, mois par mois (à jour à la main).
 
 ## galerie/
 Déposez vos photos dans public/images/galerie/ puis listez-les dans galerie.json.
-Les légendes (alt) sont renseignées dans les 4 langues directement dans le fichier.
+
+Chaque photo appartient à une pièce déclarée dans `categories` (séjour, chambres,
+cuisine, salle-de-bain, terrasse, vue, exterieur). Une photo sans pièce reconnue
+est rangée dans la catégorie de repli « autre » : aucune photo n'est perdue.
+Les légendes (`alt`, `legende`) sont renseignées dans les 4 langues directement
+dans le fichier. Le fichier reste modifiable sans toucher au code.
+
+## site.json
+Identité du bien, coordonnées, réseaux/plateformes de réservation.
+`telephone`, `telephone_display` et `whatsapp` peuvent rester vides : les boutons
+d'appel et WhatsApp sont alors masqués automatiquement (aucun faux numéro n'est affiché).
+Pour WhatsApp, `whatsapp` accepte un numéro distinct du téléphone.
 
 ## proximite.json
 Points d'intérêt à proximité avec leur distance en mètres depuis l'appartement.
