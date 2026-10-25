@@ -180,6 +180,40 @@ describe('content/guide.json', () => {
   });
 });
 
+describe('content/modeles-reponse.json', () => {
+  const donnees = loadJson('modeles-reponse.json');
+  const modeles: any[] = Array.isArray(donnees.modeles) ? donnees.modeles : [];
+
+  it('a des modèles avec texte, identifiant, catégorie et 4 langues', () => {
+    expect(modeles.length).toBeGreaterThanOrEqual(3);
+    for (const m of modeles) {
+      expect(m.id, 'id manquant').toBeTruthy();
+      expect(m.categorie, `${m.id} : catégorie`).toBeTruthy();
+      expect(m.texte.trim(), `${m.id} : texte vide`).toBeTruthy();
+      for (const lang of LANGUAGES) {
+        expect(m.nom[lang], `nom[${lang}] manquant pour ${m.id}`).toBeTruthy();
+      }
+    }
+  });
+
+  it('n’utilise que des variables déclarées, toutes présentes dans le texte', () => {
+    for (const m of modeles) {
+      const variables = new Set(
+        [...String(m.texte).matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/g)].map((x) => x[1]),
+      );
+      expect(variables.size, `${m.id} : aucune variable`).toBeGreaterThan(0);
+      for (const v of m.variables ?? []) {
+        expect(variables.has(v), `${m.id} : variable déclarée absente du texte (${v})`).toBe(true);
+      }
+    }
+  });
+
+  it('a des identifiants uniques', () => {
+    const ids = modeles.map((m) => m.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
 describe('content/packs.json', () => {
   const packs = loadJson('packs.json');
 

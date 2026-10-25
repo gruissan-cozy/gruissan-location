@@ -1,0 +1,463 @@
+---
+/**
+ * /admin/taxe-sejour — taxe de séjour (chantier 8 — #22).
+ *
+ * Deux écrans :
+ *   1. TAXE PAR SÉJOUR : nuits × personnes × taux (taux lu dans
+ *      content/tarifs.json), avec le statut d'assujettissement ;
+ *   2. RÉCAPITULATIF PAR ANNÉE : total collecté et nombre de séjours
+ *      assujettis, destiné à la déclaration en mairie.
+ *
+ * Toute la logique est pure et testée dans `src/lib/taxe-sejour.ts`
+ * (tests/taxe-sejour.test.ts) : ce script ne fait que récupérer les
+ * séjours, appeler `calculerTaxeSejour()` / `recapitulerTaxe()` et
+ * afficher. Aucun taux n'est codé en dur ici.
+ *
+ * Dégradation : tant que la migration `0003_sejours.sql` n'est pas
+ * appliquée, la table n'existe pas — bandeau explicite. Si le taux est
+ * absent de content/tarifs.json, aucun montant n'est inventé : le
+ * séjour est affiché avec « non calculable » et signalé.
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { AT } from '../../i18n/admin';
+import tarifsData from '../../../content/tarifs.json';
+
+const configured = isSupabaseConfigured;
+
+/** Taux lu dans le contenu éditable — jamais codé en dur dans la page. */
+const taux = (tarifsData as { taxe_sejour_par_nuit_personne?: unknown })
+  .taxe_sejour_par_nuit_personne;
+const tauxAbsent = typeof taux !== 'number' || !Number.isFinite(taux);
+---
+
+<AdminLayout title={AT['taxe.title']} section="taxe">
+  {configured && (
+    <>
+      <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 class="font-display text-2xl font-semibold text-ocean-900 sm:text-3xl">
+            {AT['taxe.title']}
+          </h1>
+          <p class="mt-1.5 text-sm leading-relaxed text-ocean-700/80">{AT['taxe.subtitle']}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="text-sm font-medium text-ocean-800" for="taxe-scope">
+            {AT['taxe.scope']}
+          </label>
+          <select
+            id="taxe-scope"
+            class="rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+          >
+            <option value="tous">{AT['taxe.scopeAll']}</option>
+          </select>
+          <button
+            id="taxe-export"
+            type="button"
+            class="inline-flex items-center justify-center gap-2 rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-medium text-ocean-800 transition-colors hover:bg-sand-50"
+          >
+            ⭳ {AT['taxe.export']}
+          </button>
+        </div>
+      </header>
+
+      <!-- Alerte : la table `sejours` n'existe pas encore (migration 0003) -->
+      <div
+        id="taxe-migration"
+        class="mb-5 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+        role="alert"
+      >
+        {AT['taxe.tableMissing']}
+      </div>
+
+      <!-- Alerte : le taux est absent du contenu éditable -->
+      <div
+        id="taxe-rate"
+        class="mb-5 hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-relaxed text-rose-800"
+        role="alert"
+      >
+        {AT['taxe.rateMissing']}
+      </div>
+
+      <p id="taxe-loading" class="mb-6 text-sm text-ocean-700/60">{AT['taxe.loading']}</p>
+      <div id="taxe-body" class="hidden space-y-6">
+        <!-- ===== Chiffres clés ===== -->
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="rounded-2xl border border-sunset-200/70 bg-white p-5 shadow-card">
+            <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
+              {AT['taxe.total']}
+            </p>
+            <p id="taxe-total" class="mt-1 font-display text-3xl font-semibold text-sunset-500">—</p>
+          </div>
+          <div class="rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card">
+            <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
+              {AT['taxe.recapStays']}
+            </p>
+            <p id="taxe-assujettis" class="mt-1 font-display text-3xl font-semibold text-ocean-800">—</p>
+          </div>
+          <div class="rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card">
+            <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
+              {AT['taxe.recapNights']}
+            </p>
+            <p id="taxe-nuits" class="mt-1 font-display text-3xl font-semibold text-ocean-800">—</p>
+          </div>
+          <div class="rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card">
+            <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
+              {AT['taxe.withoutRate']}
+            </p>
+            <p id="taxe-sans-taux" class="mt-1 font-display text-3xl font-semibold text-amber-600">—</p>
+          </div>
+        </div>
+
+        <!-- ===== Taxe par séjour ===== -->
+        <section class="rounded-2xl border border-sand-200/70 bg-white shadow-card">
+          <h2 class="border-b border-sand-200/70 px-5 py-4 font-display text-lg font-semibold text-ocean-900 sm:px-6">
+            {AT['taxe.perStay']}
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[52rem] border-collapse">
+              <thead class="bg-sand-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.colSejour']}
+                  </th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.colDates']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.colNights']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.colPeople']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.colRate']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.colAmount']}
+                  </th>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.colStatut']}
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="taxe-sejours" class="divide-y divide-sand-200/70">
+                <tr>
+                  <td colspan="7" class="px-4 py-6 text-sm text-ocean-700/60">
+                    {AT['common.empty']}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ===== Récapitulatif par année ===== -->
+        <section class="rounded-2xl border border-sand-200/70 bg-white shadow-card">
+          <h2 class="border-b border-sand-200/70 px-5 py-4 font-display text-lg font-semibold text-ocean-900 sm:px-6">
+            {AT['taxe.recap']}
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[40rem] border-collapse">
+              <thead class="bg-sand-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.recapYear']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.recapTotal']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.recapStays']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['taxe.recapNights']}
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="taxe-annees" class="divide-y divide-sand-200/70">
+                <tr>
+                  <td colspan="4" class="px-4 py-6 text-sm text-ocean-700/60">
+                    {AT['taxe.emptyYear']}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ===== Cas particuliers à signaler ===== -->
+        <section class="rounded-2xl border border-amber-200/70 bg-amber-50/60 shadow-card">
+          <h2 class="border-b border-amber-200/70 px-5 py-4 font-display text-lg font-semibold text-amber-900 sm:px-6">
+            {AT['taxe.alertsTitle']}
+          </h2>
+          <div id="taxe-alertes" class="divide-y divide-amber-200/50"></div>
+        </section>
+
+        <!-- ===== À vérifier par le propriétaire ===== -->
+        <section class="rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card sm:p-6">
+          <h2 class="font-display text-lg font-semibold text-ocean-900">{AT['taxe.noteTitle']}</h2>
+          <ul class="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-ocean-700/80">
+            <li>{AT['taxe.noteRate']}</li>
+            <li>{AT['taxe.noteExoneration']}</li>
+            <li>{AT['taxe.notePlafond']}</li>
+            <li>{AT['taxe.notePeriode']}</li>
+            <li>{AT['taxe.noteStatuts']}</li>
+          </ul>
+        </section>
+      </div>
+    </>
+  )}
+</AdminLayout>
+
+<script>
+  import { sb, esc, fmtDate, fmtPrice, toast, errText, onAdminReady } from '../../lib/admin-runtime';
+  import { AT } from '../../i18n/admin';
+  import {
+    calculerTaxeSejour,
+    estAssujetti,
+    recapitulerTaxe,
+    type SejourTaxe,
+  } from '../../lib/taxe-sejour';
+  import { construireCsv, nomFichierExport } from '../../lib/revenus';
+  import { estTableSejoursAbsente } from '../../lib/revenus';
+  import type { Sejour } from '../../lib/supabase';
+  import tarifs from '../../../content/tarifs.json';
+
+  // Le taux est injecté depuis le frontmatter (contenu éditable).
+  const TAUX = (tarifs as { taxe_sejour_par_nuit_personne?: unknown })
+    .taxe_sejour_par_nuit_personne;
+
+  let sejours: Sejour[] = [];
+  let periode = 'tous';
+
+  const el = (id: string) => document.getElementById(id);
+
+  const TAXE_ALERTES: Record<string, string> = {
+    taux_absent: AT['taxe.alertTauxAbsent'],
+    personnes_nulles: AT['taxe.alertPersonnes'],
+    nuits_nulles: AT['taxe.alertNuits'],
+    sejour_deux_annees: AT['taxe.alertDeuxAnnees'],
+    duree_longue: AT['taxe.alertDuree'],
+  };
+
+  const sejoursDuPerimetre = (): Sejour[] => {
+    if (periode === 'tous') return sejours;
+    const annee = Number(periode);
+    return sejours.filter((s) => Number(String(s.arrivee).slice(0, 4)) === annee);
+  };
+
+  function anneesDisponibles(): number[] {
+    const annees = new Set<number>();
+    for (const s of sejours) {
+      const a = Number(String(s.arrivee).slice(0, 4));
+      if (Number.isFinite(a)) annees.add(a);
+    }
+    return [...annees].sort((a, b) => a - b);
+  }
+
+  function majSelecteur(): void {
+    const select = el('taxe-scope') as HTMLSelectElement | null;
+    if (!select) return;
+    for (const annee of anneesDisponibles()) {
+      const valeur = String(annee);
+      if (![...select.options].some((o) => o.value === valeur)) {
+        const option = document.createElement('option');
+        option.value = valeur;
+        option.textContent = `${AT['taxe.scopeYear']} ${valeur}`;
+        select.appendChild(option);
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------
+  // Rendu
+  // -------------------------------------------------------------------
+  function rendreSejours(): void {
+    const corps = el('taxe-sejours');
+    if (!corps) return;
+    const liste = sejoursDuPerimetre();
+
+    if (!liste.length) {
+      corps.innerHTML = `<tr><td colspan="7" class="px-4 py-6 text-center text-sm text-ocean-700/60">${esc(
+        AT['taxe.empty'],
+      )}</td></tr>`;
+      return;
+    }
+
+    corps.innerHTML = liste
+      .map((s) => {
+        const assujetti = estAssujetti({ id: s.id, statut: s.statut });
+        const calcul = calculerTaxeSejour(s as SejourTaxe, TAUX);
+        const montant = calcul.montant === null ? esc(AT['taxe.notCalculable']) : esc(fmtPrice(calcul.montant, true));
+        const tauxAffiche =
+          calcul.taux === null ? esc(AT['common.empty']) : esc(String(calcul.taux).replace('.', ','));
+        return `
+        <tr class="transition-colors hover:bg-sand-50/70">
+          <td class="px-4 py-3 text-sm font-medium text-ocean-900">${esc(s.client_nom)}</td>
+          <td class="px-4 py-3 text-sm whitespace-nowrap text-ocean-700/80">${esc(fmtDate(s.arrivee))} → ${esc(fmtDate(s.depart))}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${esc(String(calcul.nuits))}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${esc(String(s.personnes ?? ''))}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${tauxAffiche}</td>
+          <td class="px-4 py-3 text-right text-sm font-semibold ${calcul.montant === null ? 'text-amber-700' : 'text-ocean-900'}">${montant}</td>
+          <td class="px-4 py-3 text-sm text-ocean-700/70">${esc(AT[`statut.${s.statut}`] ?? s.statut)}</td>
+        </tr>`;
+      })
+      .join('');
+  }
+
+  function rendreAnnees(): void {
+    const corps = el('taxe-annees');
+    if (!corps) return;
+    const recap = recapitulerTaxe(sejoursDuPerimetre() as SejourTaxe[], TAUX);
+    if (!recap.parAnnee.length) {
+      corps.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-sm text-ocean-700/60">${esc(
+        AT['taxe.emptyYear'],
+      )}</td></tr>`;
+      return;
+    }
+    corps.innerHTML = recap.parAnnee
+      .map(
+        (a) => `
+        <tr class="transition-colors hover:bg-sand-50/70">
+          <td class="px-4 py-3 text-sm font-medium text-ocean-900">${esc(String(a.annee))}</td>
+          <td class="px-4 py-3 text-right text-sm font-semibold text-ocean-900">${esc(fmtPrice(a.total, true))}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${esc(String(a.assujettis))}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${esc(String(a.nuits))}</td>
+        </tr>`,
+      )
+      .join('');
+  }
+
+  function rendreAlertes(): void {
+    const corps = el('taxe-alertes');
+    if (!corps) return;
+    const alertes = recapitulerTaxe(sejoursDuPerimetre() as SejourTaxe[], TAUX).alertes;
+    if (!alertes.length) {
+      corps.innerHTML = `<p class="px-5 py-4 text-sm text-ocean-700/60 sm:px-6">${esc(AT['taxe.alertsEmpty'])}</p>`;
+      return;
+    }
+    corps.innerHTML = alertes
+      .map(
+        (a) => `
+        <div class="flex items-start gap-3 px-5 py-3 sm:px-6">
+          <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-400/30 text-xs text-amber-900" aria-hidden="true">!</span>
+          <p class="text-sm leading-relaxed text-amber-900/90">
+            <span class="font-medium">${esc(TAXE_ALERTES[a.code] ?? a.code)}</span>
+            <span class="text-amber-900/70"> — ${esc(a.detail)}</span>
+          </p>
+        </div>`,
+      )
+      .join('');
+  }
+
+  function rendreChiffres(): void {
+    const recap = recapitulerTaxe(sejoursDuPerimetre() as SejourTaxe[], TAUX);
+    const assujettis = recap.parAnnee.reduce((s, a) => s + a.assujettis, 0);
+    const nuits = recap.parAnnee.reduce((s, a) => s + a.nuits, 0);
+    el('taxe-total')!.textContent = esc(fmtPrice(recap.total, true));
+    el('taxe-assujettis')!.textContent = esc(String(assujettis));
+    el('taxe-nuits')!.textContent = esc(String(nuits));
+    const sansTaux = el('taxe-sans-taux');
+    if (sansTaux) {
+      const total = recap.sansTaux + recap.nonCalculables;
+      sansTaux.textContent = esc(String(total));
+    }
+  }
+
+  function afficher(): void {
+    rendreSejours();
+    rendreAnnees();
+    rendreAlertes();
+    rendreChiffres();
+  }
+
+  // -------------------------------------------------------------------
+  // Export CSV
+  // -------------------------------------------------------------------
+  function telecharger(nom: string, contenu: string): void {
+    const blob = new Blob([contenu], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nom;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  el('taxe-export')?.addEventListener('click', () => {
+    if (!sejoursDuPerimetre().length) {
+      toast(AT['taxe.exportEmpty'], 'error');
+      return;
+    }
+    const entetes = [
+      AT['taxe.colSejour'],
+      AT['taxe.colDates'],
+      AT['taxe.colNights'],
+      AT['taxe.colPeople'],
+      AT['taxe.colRate'],
+      AT['taxe.colAmount'],
+      AT['taxe.colStatut'],
+    ];
+    const lignes = sejoursDuPerimetre().map((s) => {
+      const calcul = calculerTaxeSejour(s as SejourTaxe, TAUX);
+      return [
+        s.client_nom,
+        `${fmtDate(s.arrivee)} → ${fmtDate(s.depart)}`,
+        String(calcul.nuits),
+        String(s.personnes ?? ''),
+        calcul.taux === null ? '' : String(calcul.taux),
+        calcul.montant === null ? '' : String(calcul.montant),
+        AT[`statut.${s.statut}`] ?? s.statut,
+      ];
+    });
+    telecharger(nomFichierExport('taxe-sejour'), construireCsv(entetes, lignes));
+    toast(AT['taxe.exportOk']);
+  });
+
+  el('taxe-scope')?.addEventListener('change', (event) => {
+    periode = (event.target as HTMLSelectElement).value;
+    afficher();
+  });
+
+  // -------------------------------------------------------------------
+  // Chargement
+  // -------------------------------------------------------------------
+  async function charger(): Promise<void> {
+    const { data, error } = await sb()
+      .from('sejours')
+      .select('*')
+      .order('arrivee', { ascending: false });
+
+    if (error) {
+      // Cas particulier : la migration 0003 n'a pas encore été appliquée.
+      if (estTableSejoursAbsente(error)) {
+        el('taxe-migration')?.classList.remove('hidden');
+        el('taxe-loading')?.classList.add('hidden');
+        el('taxe-body')?.classList.add('hidden');
+        return;
+      }
+      toast(errText(error) || AT['common.errorGeneric'], 'error');
+      return;
+    }
+
+    sejours = (data ?? []) as Sejour[];
+
+    // Taux absent du contenu éditable : aucun montant n'est inventé, on
+    // affiche la page en signalant le problème au propriétaire.
+    if (typeof TAUX !== 'number' || !Number.isFinite(TAUX)) {
+      el('taxe-rate')?.classList.remove('hidden');
+    }
+
+    majSelecteur();
+    el('taxe-loading')?.classList.add('hidden');
+    el('taxe-body')?.classList.remove('hidden');
+    afficher();
+  }
+
+  onAdminReady(() => {
+    void charger();
+  });
+</script>
