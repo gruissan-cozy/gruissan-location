@@ -1,0 +1,499 @@
+---
+/**
+ * /admin/revenus — suivi des revenus et exports de données (chantier 6 — #20).
+ *
+ * Quatre indicateurs, calculés sur les séjours confirmés et terminés :
+ *   - chiffre d'affaires (par mois, par saison, par année) ;
+ *   - taux d'occupation (par mois et sur l'année) ;
+ *   - prix moyen par nuit ;
+ *   - part des séjours sans prix renseigné, signalée sans fausser le total.
+ *
+ * Toute la logique est pure et testée dans `src/lib/revenus.ts`
+ * (tests/revenus.test.ts) : ce script ne fait que récupérer les données,
+ * appeler `aggreger()` / `tauxOccupation()` / `csvSejours()` et afficher.
+ *
+ * Dégradation : tant que la migration `0003_sejours.sql` n'est pas
+ * appliquée, la table n'existe pas — on affiche un bandeau explicite et
+ * le reste du back office reste utilisable.
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { AT } from '../../i18n/admin';
+
+const configured = isSupabaseConfigured;
+---
+
+<AdminLayout title={AT['revenus.title']} section="revenus">
+  {configured && (
+    <>
+      <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 class="font-display text-2xl font-semibold text-ocean-900 sm:text-3xl">
+            {AT['revenus.title']}
+          </h1>
+          <p class="mt-1.5 text-sm leading-relaxed text-ocean-700/80">{AT['revenus.subtitle']}</p>
+        </div>
+
+        <!-- Sélecteur de période : toutes les années ou une année donnée. -->
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="text-sm font-medium text-ocean-800" for="revenus-scope">
+            {AT['revenus.scope']}
+          </label>
+          <select
+            id="revenus-scope"
+            class="rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+          >
+            <option value="tous">{AT['revenus.scopeAll']}</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- Alerte : la table `sejours` n'existe pas encore dans Supabase -->
+      <div
+        id="revenus-migration"
+        class="mb-6 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+        role="alert"
+      >
+        {AT['revenus.tableMissing']}
+      </div>
+
+      <!-- Alerte : des séjours comptables n'ont pas de prix -->
+      <div
+        id="revenus-sans-prix"
+        class="mb-6 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+        role="status"
+      >
+        <p id="revenus-sans-prix-detail" class="font-medium"></p>
+        <p class="mt-1 text-amber-800/80">{AT['revenus.sansPrixAvertissement']}</p>
+      </div>
+
+      <p id="revenus-loading" class="mb-6 text-sm text-ocean-700/60">{AT['revenus.loading']}</p>
+      <div id="revenus-body" class="hidden space-y-6">
+        <!-- ===== Chiffres clés ===== -->
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="rounded-2xl border border-sunset-200/70 bg-white p-5 shadow-card">
+            <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
+              {AT['revenus.total']}
+            </p>
+            <p
+              id="revenus-total"
+              class="mt-1 font-display text-3xl font-semibold text-sunset-500"
+            >—</p>
+          </div>
+          <div class="rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card">
+            <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
+              {AT['revenus.nightsRented']}
+            </p>
+            <p
+              id="revenus-nuits"
+              class="mt-1 font-display text-3xl font-semibold text-ocean-800"
+            >—</p>
+          </div>
+          <div class="rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card">
+            <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
+              {AT['revenus.avgNight']}
+            </p>
+            <p
+              id="revenus-prix-moyen"
+              class="mt-1 font-display text-3xl font-semibold text-ocean-800"
+            >—</p>
+          </div>
+          <div class="rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card">
+            <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
+              {AT['revenus.occupancy']}
+            </p>
+            <p
+              id="revenus-occupation"
+              class="mt-1 font-display text-3xl font-semibold text-ocean-800"
+            >—</p>
+            <p id="revenus-occupation-detail" class="mt-1 text-xs text-ocean-700/55"></p>
+          </div>
+        </div>
+
+        <!-- ===== Par mois ===== -->
+        <section class="rounded-2xl border border-sand-200/70 bg-white shadow-card">
+          <h2 class="border-b border-sand-200/70 px-5 py-4 font-display text-lg font-semibold text-ocean-900 sm:px-6">
+            {AT['revenus.byMonth']}
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[44rem] border-collapse">
+              <thead class="bg-sand-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['revenus.month']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['revenus.revenue']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['revenus.nights']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['revenus.stays']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['revenus.avgPrice']}
+                  </th>
+                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
+                    {AT['revenus.occupancyMonth']}
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="revenus-mois" class="divide-y divide-sand-200/70">
+                <tr>
+                  <td colspan="6" class="px-4 py-6 text-sm text-ocean-700/60">
+                    {AT['common.empty']}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ===== Par saison et par année ===== -->
+        <div class="grid gap-4 lg:grid-cols-2">
+          <section class="rounded-2xl border border-sand-200/70 bg-white shadow-card">
+            <h2 class="border-b border-sand-200/70 px-5 py-4 font-display text-lg font-semibold text-ocean-900 sm:px-6">
+              {AT['revenus.bySeason']}
+            </h2>
+            <div id="revenus-saisons" class="divide-y divide-sand-200/70"></div>
+          </section>
+
+          <section class="rounded-2xl border border-sand-200/70 bg-white shadow-card">
+            <h2 class="border-b border-sand-200/70 px-5 py-4 font-display text-lg font-semibold text-ocean-900 sm:px-6">
+              {AT['revenus.byYear']}
+            </h2>
+            <div id="revenus-annees" class="divide-y divide-sand-200/70"></div>
+          </section>
+        </div>
+
+        <!-- ===== Exports ===== -->
+        <section class="rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card sm:p-6">
+          <h2 class="font-display text-lg font-semibold text-ocean-900">{AT['revenus.export']}</h2>
+          <div class="mt-4 flex flex-wrap items-start gap-4">
+            <div class="min-w-[16rem] flex-1">
+              <button
+                id="revenus-export-sejours"
+                type="button"
+                class="inline-flex items-center justify-center gap-2 rounded-full bg-sunset-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sunset-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ⭳ {AT['revenus.exportSejours']}
+              </button>
+              <p class="mt-1.5 text-xs leading-relaxed text-ocean-700/60">
+                {AT['revenus.exportSejoursHint']}
+              </p>
+              <p id="revenus-sejours-count" class="mt-1 text-xs text-ocean-700/60"></p>
+            </div>
+            <div class="min-w-[16rem] flex-1">
+              <button
+                id="revenus-export-messages"
+                type="button"
+                class="inline-flex items-center justify-center gap-2 rounded-full border border-sand-300 bg-white px-5 py-2.5 text-sm font-semibold text-ocean-800 transition-colors hover:bg-sand-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ⭳ {AT['revenus.exportMessages']}
+              </button>
+              <p class="mt-1.5 text-xs leading-relaxed text-ocean-700/60">
+                {AT['revenus.exportMessagesHint']}
+              </p>
+              <p id="revenus-messages-count" class="mt-1 text-xs text-ocean-700/60"></p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </>
+  )}
+</AdminLayout>
+
+<script>
+  import { sb, esc, fmtPrice, toast, errText, onAdminReady } from '../../lib/admin-runtime';
+  import { AT } from '../../i18n/admin';
+  import {
+    aggreger,
+    tauxOccupation,
+    periodeDuMois,
+    csvSejours,
+    csvMessages,
+    nomFichierExport,
+    estTableSejoursAbsente,
+    type MessageMetier,
+    type Revenus,
+    type SaisonId,
+    type SejourMetier,
+  } from '../../lib/revenus';
+  import type { Message, Sejour } from '../../lib/supabase';
+
+  let sejours: SejourMetier[] = [];
+  let messages: MessageMetier[] = [];
+  let periode = 'tous';
+
+  const el = (id: string) => document.getElementById(id);
+
+  // -------------------------------------------------------------------
+  // Formatage
+  // -------------------------------------------------------------------
+  const fmtEuros = (valeur: number): string => esc(fmtPrice(valeur, true));
+  const fmtPct = (taux: number): string => esc(`${(taux * 100).toFixed(1).replace('.', ',')} %`);
+  const labelMois = (annee: number, mois: number): string => {
+    const MOIS = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+    ];
+    return `${MOIS[mois - 1] ?? ''} ${annee}`;
+  };
+
+  // -------------------------------------------------------------------
+  // Sélecteur de période
+  // -------------------------------------------------------------------
+  function anneesDisponibles(): number[] {
+    const annees = new Set<number>();
+    for (const s of sejours) {
+      const a = Number(String(s.arrivee).slice(0, 4));
+      if (Number.isFinite(a)) annees.add(a);
+    }
+    return [...annees].sort((a, b) => a - b);
+  }
+
+  function majSelecteur(): void {
+    const select = el('revenus-scope') as HTMLSelectElement | null;
+    if (!select) return;
+    const existantes = new Set(
+      [...select.options].map((o) => o.value).filter((v) => v !== 'tous'),
+    );
+    for (const annee of anneesDisponibles()) {
+      const valeur = String(annee);
+      if (!existantes.has(valeur)) {
+        const option = document.createElement('option');
+        option.value = valeur;
+        option.textContent = `${AT['revenus.scopeYear']} ${valeur}`;
+        select.appendChild(option);
+      }
+    }
+  }
+
+  /** Séjours retenus pour le périmètre choisi (tous statuts : le filtre
+   *  annule/option est appliqué par les fonctions de calcul). */
+  function sejoursDuPerimetre(): SejourMetier[] {
+    if (periode === 'tous') return sejours;
+    const annee = Number(periode);
+    return sejours.filter((s) => Number(String(s.arrivee).slice(0, 4)) === annee);
+  }
+
+  // -------------------------------------------------------------------
+  // Rendu
+  // -------------------------------------------------------------------
+  function afficher(): void {
+    const donnees = aggreger(sejoursDuPerimetre());
+
+    el('revenus-total')!.textContent = fmtEuros(donnees.total);
+    el('revenus-nuits')!.textContent = esc(String(donnees.nuitsLoues));
+    el('revenus-prix-moyen')!.textContent = donnees.nuitsComptables > 0
+      ? fmtEuros(donnees.prixMoyenNuit)
+      : esc(AT['common.empty']);
+
+    // Taux d'occupation : sur le mois courant (ou l'année, si « toutes »).
+    // « Toutes les années » : occupation du mois courant (une année entière
+    // serait toujours à 0 % hors saison). « Année N » : l'année civile de N.
+    const maintenant = new Date();
+    const anneeCourante = maintenant.getUTCFullYear();
+    const periodeCourante = periode === 'tous'
+      ? periodeDuMois(anneeCourante, maintenant.getUTCMonth() + 1)
+      : { debut: `${periode}-01-01`, fin: `${periode}-12-31` };
+    const occupation = tauxOccupation(sejoursDuPerimetre(), periodeCourante);
+    el('revenus-occupation')!.textContent = `${fmtPct(occupation.taux)}`;
+    const detailOccupation = el('revenus-occupation-detail');
+    if (detailOccupation) {
+      detailOccupation.textContent = `${esc(String(occupation.nuitsLouees))} / ${esc(String(occupation.nuitsDisponibles))} ${esc(AT['revenus.availableNights'])}`;
+    }
+
+    // Bandeau « séjours sans prix » : on ne fabrique jamais de prix.
+    const sansPrix = el('revenus-sans-prix');
+    if (sansPrix) {
+      const detail = el('revenus-sans-prix-detail');
+      if (donnees.sansPrix.sansPrix > 0) {
+        sansPrix.classList.remove('hidden');
+        if (detail) {
+          detail.textContent = (AT['revenus.sansPrixDetail'] ?? '')
+            .replace('{n}', String(donnees.sansPrix.sansPrix))
+            .replace('{total}', String(donnees.sansPrix.total));
+        }
+      } else {
+        sansPrix.classList.add('hidden');
+      }
+    }
+
+    rendreMois(donnees);
+    rendreSaisons(donnees);
+    rendreAnnees(donnees);
+    majCompteurs();
+  }
+
+  function rendreMois(donnees: Revenus): void {
+    const corps = el('revenus-mois');
+    if (!corps) return;
+    if (!donnees.parMois.length) {
+      corps.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-sm text-ocean-700/60">${esc(AT['revenus.emptyMonth'])}</td></tr>`;
+      return;
+    }
+    corps.innerHTML = donnees.parMois
+      .map((m) => {
+        const occ = tauxOccupation(sejoursDuPerimetre(), periodeDuMois(m.annee, m.mois));
+        const sansPrix = m.sansPrix > 0
+          ? ` <span class="text-xs text-amber-700">(${esc(String(m.sansPrix))} ${esc(AT['revenus.withoutPrice'])})</span>`
+          : '';
+        return `
+        <tr class="transition-colors hover:bg-sand-50/70">
+          <td class="px-4 py-3 text-sm font-medium text-ocean-900">${esc(labelMois(m.annee, m.mois))}</td>
+          <td class="px-4 py-3 text-right text-sm font-semibold text-ocean-900">${fmtEuros(m.ca)}${sansPrix}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${esc(String(m.nuits))}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${esc(String(m.sejourComptable))}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${fmtEuros(m.prixMoyenNuit)}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${fmtPct(occ.taux)}</td>
+        </tr>`;
+      })
+      .join('');
+  }
+
+  function rendreSaisons(donnees: Revenus): void {
+    const corps = el('revenus-saisons');
+    if (!corps) return;
+    const saisons: Array<[SaisonId, string]> = [
+      ['haute', 'Haute saison'],
+      ['moyenne', 'Moyenne saison'],
+      ['basse', 'Basse saison'],
+    ];
+    corps.innerHTML = saisons
+      .map(([id, label]) => {
+        const montant = donnees.parSaison[id] ?? 0;
+        const max = Math.max(...saisons.map(([s]) => donnees.parSaison[s] ?? 0), 1);
+        const largeur = Math.round((montant / max) * 100);
+        return `
+        <div class="px-5 py-3.5 sm:px-6">
+          <div class="flex items-baseline justify-between gap-3">
+            <p class="text-sm font-medium text-ocean-800">${esc(label)}</p>
+            <p class="text-sm font-semibold text-ocean-900">${fmtEuros(montant)}</p>
+          </div>
+          <div class="mt-2 h-2 overflow-hidden rounded-full bg-sand-100" aria-hidden="true">
+            <div class="h-full rounded-full bg-ocean-500" style="width: ${esc(String(largeur))}%"></div>
+          </div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  function rendreAnnees(donnees: Revenus): void {
+    const corps = el('revenus-annees');
+    if (!corps) return;
+    const entrees = Object.entries(donnees.parAnnee).sort(([a], [b]) => Number(a) - Number(b));
+    if (!entrees.length) {
+      corps.innerHTML = `<p class="px-5 py-6 text-sm text-ocean-700/60 sm:px-6">${esc(AT['revenus.emptyYear'])}</p>`;
+      return;
+    }
+    const anneeChoisie = periode === 'tous' ? null : Number(periode);
+    corps.innerHTML = entrees
+      .map(([annee, montant]) => {
+        const actif = anneeChoisie === null || anneeChoisie === Number(annee);
+        const classe = actif ? 'text-ocean-900' : 'text-ocean-700/60';
+        return `
+        <div class="flex items-baseline justify-between gap-3 px-5 py-3.5 sm:px-6">
+          <p class="text-sm font-medium ${classe}">${esc(annee)}</p>
+          <p class="text-sm font-semibold ${classe}">${fmtEuros(montant)}</p>
+        </div>`;
+      })
+      .join('');
+  }
+
+  function majCompteurs(): void {
+    const s = el('revenus-sejours-count');
+    if (s) s.textContent = `${esc(String(sejours.length))} ${esc(AT['revenus.stays'])}`;
+    const m = el('revenus-messages-count');
+    if (m) m.textContent = `${esc(String(messages.length))} ${esc(AT['revenus.messagesCount'])}`;
+  }
+
+  // -------------------------------------------------------------------
+  // Export CSV
+  // -------------------------------------------------------------------
+  function telecharger(nom: string, contenu: string): void {
+    // Le BOM (\uFEFF) est déjà le premier caractère du contenu : si on
+    // comptait les points de code, il disparaîtrait du fichier et Excel
+    // relirait les accents en Windows-1252. On le passe tel quel.
+    const blob = new Blob([contenu], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nom;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  el('revenus-export-sejours')?.addEventListener('click', () => {
+    if (!sejours.length) {
+      toast(AT['revenus.exportEmpty'], 'error');
+      return;
+    }
+    telecharger(nomFichierExport('sejours'), csvSejours(sejours));
+    toast(AT['revenus.exportOk']);
+  });
+
+  el('revenus-export-messages')?.addEventListener('click', () => {
+    if (!messages.length) {
+      toast(AT['revenus.exportEmpty'], 'error');
+      return;
+    }
+    telecharger(nomFichierExport('messages'), csvMessages(messages));
+    toast(AT['revenus.exportOk']);
+  });
+
+  el('revenus-scope')?.addEventListener('change', (event) => {
+    periode = (event.target as HTMLSelectElement).value;
+    afficher();
+  });
+
+  // -------------------------------------------------------------------
+  // Chargement
+  // -------------------------------------------------------------------
+  async function charger(): Promise<void> {
+    const client = sb();
+    const [resSejours, resMessages] = await Promise.all([
+      client.from('sejours').select('*').order('arrivee', { ascending: false }),
+      client.from('messages').select('*').order('created_at', { ascending: false }).limit(1000),
+    ]);
+
+    if (resSejours.error) {
+      // Cas particulier : la migration n'a pas encore été appliquée sur le
+      // projet Supabase — on l'explique clairement plutôt qu'un code abscons.
+      const message = errText(resSejours.error);
+      if (estTableSejoursAbsente(resSejours.error)) {
+        el('revenus-migration')?.classList.remove('hidden');
+        el('revenus-loading')?.classList.add('hidden');
+        el('revenus-body')?.classList.add('hidden');
+        return;
+      }
+      toast(message || AT['common.errorGeneric'], 'error');
+      return;
+    }
+
+    sejours = (resSejours.data ?? []) as Sejour[];
+    messages = ((resMessages.data ?? []) as Message[]).map((m) => ({
+      id: m.id,
+      created_at: m.created_at,
+      nom: m.nom,
+      email: m.email,
+      telephone: m.telephone,
+      dates: m.dates,
+      message: m.message,
+      statut: m.statut,
+      lu_at: m.lu_at ?? null,
+    }));
+
+    majSelecteur();
+    el('revenus-loading')?.classList.add('hidden');
+    el('revenus-body')?.classList.remove('hidden');
+    afficher();
+  }
+
+  onAdminReady(() => {
+    void charger();
+  });
+</script>
