@@ -138,6 +138,82 @@ const FILTERS = [
         estErreurColonneLuAbsente,
       } from '../../lib/lu';
       import type { Message } from '../../lib/supabase';
+      import {
+        libellerModele,
+        preparerInsertion,
+        selectionnerModeles,
+        type ModeleReponse,
+        type Position,
+      } from '../../lib/modeles';
+      import modelesData from '../../../content/modeles-reponse.json';
+
+      /** Modèles de réponse (chantier 8 — #22), éditables sans toucher au code. */
+      const modeles = selectionnerModeles(
+        (modelesData as { modeles: Partial<ModeleReponse>[] }).modeles,
+      );
+      const modeleParId = new Map(modeles.map((m) => [m.modele.id, m]));
+
+      /**
+       * Variables substituables dans un modèle : celles du message ouvert.
+       * Une variable non connue n'est pas fournie — elle restera affichée
+       * telle quelle (`{nom}`) dans le texte inséré, jamais remplacée par
+       * une valeur inventée.
+       */
+      function contexteDuMessage(m: Message): Record<string, unknown> {
+        return {
+          nom: m.nom,
+          email: m.email,
+          telephone: m.telephone ?? '',
+          dates: m.dates ?? '',
+          personnes: '',
+          tarif: '',
+          sejour: '',
+          statut: m.statut,
+        };
+      }
+
+      /** Sélection courante du champ de réponse (bornes de sélection). */
+      function positionDuChamp(champ: HTMLTextAreaElement): Position {
+        return { debut: champ.selectionStart ?? champ.value.length, fin: champ.selectionEnd ?? champ.value.length };
+      }
+
+      /** Insère le modèle choisi dans le champ de réponse. */
+      function insererModele(): void {
+        const select = document.getElementById('reply-modele') as HTMLSelectElement | null;
+        const champ = document.getElementById('reply-body') as HTMLTextAreaElement | null;
+        const hint = document.getElementById('reply-modele-hint');
+        if (!select || !champ) return;
+
+        const entree = select.value ? modeleParId.get(select.value) : undefined;
+        if (!entree || !entree.valide) {
+          if (hint) hint.textContent = AT['modeles.invalid'];
+          return;
+        }
+
+        const message = current();
+        if (!message) return;
+
+        const { contenu, manquantes } = preparerInsertion(
+          entree.modele,
+          champ.value,
+          contexteDuMessage(message),
+          positionDuChamp(champ),
+        );
+        champ.value = contenu;
+        // Le curseur suit le texte inséré : le propriétaire complète
+        // directement les variables restées telles quelles.
+        const curseur = contenu.length;
+        champ.focus();
+        champ.setSelectionRange(curseur, curseur);
+
+        if (hint) {
+          const variables = (entree.modele.variables ?? []).join(', ');
+          const base = (AT['modeles.hint'] ?? '').replace('{variables}', variables);
+          hint.textContent = manquantes.length
+            ? `${base} ${AT['modeles.missing']} ${manquantes.join(', ')}`
+            : base;
+        }
+      }
 
       const STATUTS = STATUTS_MESSAGE;
 
@@ -513,6 +589,32 @@ const FILTERS = [
               </ol>
             </div>
 
+            <!-- Modèles de réponse (chantier 8 — #22) : insertion en un clic -->
+            <div class="mb-4 rounded-xl border border-sand-200/70 bg-white p-4">
+              <label class="${CLS.label}" for="reply-modele">${esc(AT['modeles.label'])}</label>
+              <div class="flex flex-wrap items-center gap-2">
+                <select id="reply-modele" class="${CLS.select} sm:max-w-[18rem]">
+                  <option value="">—</option>
+                  ${modeles
+                    .map(
+                      (entree) =>
+                        `<option value="${esc(entree.modele.id)}" ${entree.valide ? '' : 'disabled'}>${esc(
+                          libellerModele(entree.modele, 'fr'),
+                        )}</option>`,
+                    )
+                    .join('')}
+                </select>
+                <button
+                  type="button"
+                  id="reply-modele-insert"
+                  class="${CLS.btnGhost} ${CLS.btnSmall}"
+                >
+                  ${esc(AT['modeles.insert'])}
+                </button>
+              </div>
+              <p id="reply-modele-hint" class="${CLS.hint}"></p>
+            </div>
+
             <!-- Composer une réponse -->
             <form id="reply-form" class="rounded-xl border border-sand-200/70 bg-sand-50/60 p-4">
               <label class="${CLS.label}" for="reply-body">${esc(AT['msg.replyPlaceholder'])}</label>
@@ -549,6 +651,26 @@ const FILTERS = [
         document.getElementById('msg-statut')?.addEventListener('change', async (event) => {
           const vers = (event.target as HTMLSelectElement).value;
           await updateStatut(m.id, vers);
+        });
+
+        // Modèles de réponse (chantier 8 — #22) : insertion en un clic.
+        document.getElementById('reply-modele-insert')?.addEventListener('click', () => {
+          insererModele();
+        });
+        document.getElementById('reply-modele')?.addEventListener('change', () => {
+          // Choisir un modèle dans la liste ne l'insère pas tout seul :
+          // le bouton « Insérer » évite de remplacer une saisie en cours.
+          const hint = document.getElementById('reply-modele-hint');
+          if (!hint) return;
+          const entree = modeleParId.get((document.getElementById('reply-modele') as HTMLSelectElement | null)?.value ?? '');
+          if (!entree) {
+            hint.textContent = '';
+            return;
+          }
+          hint.textContent = (AT['modeles.hint'] ?? '').replace(
+            '{variables}',
+            (entree.modele.variables ?? []).join(', '),
+          );
         });
 
         document.getElementById('reply-form')?.addEventListener('submit', async (event) => {

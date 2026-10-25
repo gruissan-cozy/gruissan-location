@@ -102,3 +102,26 @@ export interface Sejour {
   prix_total: number | null;
   note: string | null;
 }
+
+/**
+ * Tâche entre séjours (chantier 8 — #22), table `sejour_taches`.
+ *
+ * Le libellé de la liste type est dupliqué dans `libelles` (jsonb des 4
+ * langues) au moment de la création : une tâche reste lisible même si la
+ * liste type est ensuite modifiée.
+ */
+export interface SejourTache {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  sejour_id: string;
+  slug: string;
+  libelles: Record<string, string>;
+  custom_label: string | null;
+  ordre: number;
+  /** Case à cocher : tâche accomplie. */
+  fait: boolean;
+  /** Horodatage de réalisation — null tant que la case n'est pas cochée. */
+  fait_le: string | null;
+}
+

@@ -4,6 +4,7 @@ import {
   creerTache,
   ecrireTaches,
   estFaite,
+  estTableTachesAbsente,
   horodatageTache,
   libellerTache,
   libellesComplets,
@@ -137,6 +138,23 @@ describe('serialiserTaches', () => {
   });
 });
 
+describe('colonne/ table absente (dégradation sans migration 0006)', () => {
+  it('reconnaît les erreurs PostgREST / PostgreSQL d’absence de table', () => {
+    expect(estTableTachesAbsente("Could not find the table 'public.sejour_taches' in the schema cache")).toBe(true);
+    expect(estTableTachesAbsente({ code: '42P01', message: 'relation "sejour_taches" does not exist' })).toBe(true);
+    expect(estTableTachesAbsente({ details: 'PGRST205' })).toBe(true);
+  });
+
+  it('n’accuse pas une erreur sans rapport (droits, réseau, colonne)', () => {
+    expect(estTableTachesAbsente({ message: 'JWT expired' })).toBe(false);
+    expect(estTableTachesAbsente({ message: 'new row violates row-level security' })).toBe(false);
+    expect(estTableTachesAbsente({ message: 'column "fait_le" does not exist' })).toBe(true);
+    expect(estTableTachesAbsente(null)).toBe(false);
+    expect(estTableTachesAbsente(undefined)).toBe(false);
+    expect(estTableTachesAbsente('')).toBe(false);
+  });
+});
+
 describe('progression', () => {
   it('compte les tâches faites et le taux', () => {
     const p = progression([tache({ id: 'a', fait: true }), tache({ id: 'b', fait: false }), tache({ id: 'c', fait: true })]);
@@ -157,7 +175,7 @@ describe('progression', () => {
   });
 
   it('tolère une tâche mal formée (valeur manquante = non faite)', () => {
-    const p = progression([{ id: 'a', fait: true }, { id: 'b' } as Tache]);
+    const p = progression([{ fait: true }, { id: 'b' } as Tache]);
     expect(p.faites).toBe(1);
     expect(p.total).toBe(2);
   });

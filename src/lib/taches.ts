@@ -155,7 +155,7 @@ export function serialiserTaches(taches: ReadonlyArray<Tache>): Array<Record<str
 // ---------------------------------------------------------------------------
 
 /** Avancement d'une liste de tâches (0 tâche → 0 %, considérée terminée). */
-export function progression(taches: ReadonlyArray<TacheLecture>): Progression {
+export function progression(taches: ReadonlyArray<{ fait?: boolean }>): Progression {
   const total = taches.length;
   const faites = taches.filter((t) => t && t.fait === true).length;
   return {
@@ -229,6 +229,43 @@ export function ecrireTaches(
   taches: ReadonlyArray<Tache>,
 ): { sejour_id: string; taches: Array<Record<string, unknown>> } {
   return { sejour_id: sejour.id, taches: serialiserTaches(taches) };
+}
+
+// ---------------------------------------------------------------------------
+// Dégradation : table `sejour_taches` absente (migration 0006 non appliquée)
+// ---------------------------------------------------------------------------
+
+/** Motifs PostgREST / PostgreSQL signalant une table absente du schéma. */
+const MOTIFS_TABLE_ABSENTE = [
+  /does not exist/i,
+  /schema cache/i,
+  /PGRST205/i,
+  /42P01/i,
+  /relation .* does not exist/i,
+];
+
+/**
+ * Vrai si l'erreur Supabase provient de l'absence de la table
+ * `sejour_taches` (migration `0006_sejour_taches.sql` pas encore appliquée).
+ *
+ * Sans ce test, l'erreur remonte comme un message abscons et la page
+ * laisse croire que le suivi d'avancement fonctionne.
+ */
+export function estTableTachesAbsente(error: unknown): boolean {
+  if (!error) return false;
+  const texte =
+    typeof error === 'string'
+      ? error
+      : [
+          (error as { message?: unknown }).message,
+          (error as { details?: unknown }).details,
+          (error as { hint?: unknown }).hint,
+          (error as { code?: unknown }).code,
+        ]
+          .filter(Boolean)
+          .map(String)
+          .join(' ');
+  return MOTIFS_TABLE_ABSENTE.some((m) => m.test(texte));
 }
 
 /** Liste type proposée par défaut (libellés éditables dans le back office). */

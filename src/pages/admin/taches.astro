@@ -1,0 +1,411 @@
+---
+/**
+ * /admin/taches — tâches entre séjours (chantier 8 — #22).
+ *
+ * Liste type (ménage, remise des clés, état des lieux…) rattachée à un
+ * séjour, avec case à cocher, horodatage de réalisation et suivi
+ * d'avancement. Tout est persisté dans la table `sejour_taches`
+ * (migration 0006).
+ *
+ * Toute la logique est pure et testée dans `src/lib/taches.ts`
+ * (tests/taches.test.ts) : ce script ne fait que lire, normaliser,
+ * basculer et réécrire les tâches.
+ *
+ * Dégradation : tant que `migrations/0006_sejour_taches.sql` n'est pas
+ * appliquée, la table n'existe pas — bandeau explicite, la case reste
+ * cochable localement mais n'est pas persistée.
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { AT } from '../../i18n/admin';
+
+const configured = isSupabaseConfigured;
+---
+
+<AdminLayout title={AT['taches.title']} section="taches">
+  {configured && (
+    <>
+      <header class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 class="font-display text-2xl font-semibold text-ocean-900 sm:text-3xl">
+            {AT['taches.title']}
+          </h1>
+          <p class="mt-1.5 text-sm leading-relaxed text-ocean-700/80">{AT['taches.subtitle']}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <p id="taches-count" class="text-sm text-ocean-700/70"></p>
+          <label class="text-sm font-medium text-ocean-800" for="taches-filter">
+            {AT['taches.filter']}
+          </label>
+          <select
+            id="taches-filter"
+            class="rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+          >
+            <option value="tous">{AT['taches.filterAll']}</option>
+            <option value="a_faire">{AT['taches.filterTodo']}</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- Alerte : la table `sejour_taches` n'existe pas encore -->
+      <div
+        id="taches-migration"
+        class="mb-5 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+        role="alert"
+      >
+        {AT['taches.tableMissing']}
+      </div>
+
+      <!-- Confirmation : table présente, enregistrement actif -->
+      <div
+        id="taches-migration-ok"
+        class="mb-5 hidden rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-relaxed text-emerald-800"
+        role="status"
+      >
+        {AT['taches.migrationOk']}
+      </div>
+
+      <p id="taches-loading" class="mb-6 text-sm text-ocean-700/60">{AT['taches.loading']}</p>
+      <div id="taches-body" class="hidden space-y-5">
+        <div id="taches-list" class="space-y-5"></div>
+      </div>
+    </>
+  )}
+</AdminLayout>
+
+<script>
+  import {
+    sb,
+    CLS,
+    esc,
+    fmtDate,
+    fmtDateTime,
+    toast,
+    errText,
+    onAdminReady,
+  } from '../../lib/admin-runtime';
+  import { AT } from '../../i18n/admin';
+  import {
+    basculerTache,
+    creerTache,
+    estTableTachesAbsente,
+    libellerTache,
+    normaliserTaches,
+    progression,
+    type Tache,
+  } from '../../lib/taches';
+  import type { Sejour, SejourTache } from '../../lib/supabase';
+
+  /** Liste type proposée par défaut (libellés éditables). */
+  const TYPES: ReadonlyArray<{ slug: string; labels: Record<string, string> }> = [
+    { slug: 'menage', labels: { fr: 'Ménage', en: 'Cleaning', es: 'Limpieza', de: 'Reinigung' } },
+    {
+      slug: 'remise_cles',
+      labels: { fr: 'Remise des clés', en: 'Key handover', es: 'Entrega de llaves', de: 'Schlüsselübergabe' },
+    },
+    {
+      slug: 'etat_des_lieux',
+      labels: { fr: 'État des lieux', en: 'Inventory check', es: 'Inventario', de: 'Übergabeprotokoll' },
+    },
+    { slug: 'linge', labels: { fr: 'Linge propre', en: 'Fresh linen', es: 'Ropa limpia', de: 'Frische Wäsche' } },
+    { slug: 'inventaire', labels: { fr: 'Inventaire', en: 'Inventory', es: 'Existencias', de: 'Inventar' } },
+  ];
+
+  /** Tâche en mémoire, lue depuis la table (ou vide si migration absente). */
+  interface LigneTache extends Tache {
+    id: string;
+    sejour_id: string;
+  }
+
+  let sejours: Sejour[] = [];
+  let tachesParSejour = new Map<string, LigneTache[]>();
+  /** true si les écritures en base sont possibles (table présente). */
+  let persistance = false;
+  let filtre = 'tous';
+
+  const el = (id: string) => document.getElementById(id);
+
+  const libelleType = (slug: string): Record<string, string> =>
+    TYPES.find((t) => t.slug === slug)?.labels ?? {};
+
+  // -------------------------------------------------------------------
+  // Lecture
+  // -------------------------------------------------------------------
+  async function charger(): Promise<void> {
+    const resSejours = await sb()
+      .from('sejours')
+      .select('*')
+      .order('arrivee', { ascending: false });
+
+    if (resSejours.error) {
+      toast(errText(resSejours.error) || AT['common.errorGeneric'], 'error');
+      return;
+    }
+    sejours = (resSejours.data ?? []) as Sejour[];
+
+    // Les tâches vivent dans leur propre table : si elle n'existe pas,
+    // on affiche un bandeau et la case reste cochable sans persistance.
+    const resTaches = await sb()
+      .from('sejour_taches')
+      .select('*')
+      .order('ordre', { ascending: true });
+
+    if (resTaches.error) {
+      if (estTableTachesAbsente(resTaches.error)) {
+        el('taches-migration')?.classList.remove('hidden');
+        persistance = false;
+      } else {
+        toast(errText(resTaches.error) || AT['common.errorGeneric'], 'error');
+      }
+    } else {
+      persistance = true;
+      el('taches-migration-ok')?.classList.remove('hidden');
+      const lignes = (resTaches.data ?? []) as SejourTache[];
+      tachesParSejour = new Map();
+      for (const l of lignes) {
+        const liste = tachesParSejour.get(l.sejour_id) ?? [];
+        liste.push({
+          id: l.id,
+          sejour_id: l.sejour_id,
+          slug: l.slug,
+          labels: l.libelles ?? {},
+          custom_label: l.custom_label,
+          fait: l.fait === true,
+          fait_le: l.fait_le,
+        });
+        tachesParSejour.set(l.sejour_id, liste);
+      }
+    }
+
+    el('taches-loading')?.classList.add('hidden');
+    el('taches-body')?.classList.remove('hidden');
+    rendre();
+  }
+
+  // -------------------------------------------------------------------
+  // Rendu
+  // -------------------------------------------------------------------
+  function rendre(): void {
+    const corps = el('taches-list');
+    if (!corps) return;
+
+    if (!sejours.length) {
+      corps.innerHTML = `<div class="rounded-2xl border border-sand-200/70 bg-white p-8 text-center text-sm text-ocean-700/60 shadow-card">${esc(AT['taches.empty'])}</div>`;
+      if (el('taches-count')) el('taches-count')!.textContent = '';
+      return;
+    }
+
+    const groupes = sejours
+      .map((s) => {
+        const taches = (tachesParSejour.get(s.id) ?? []).sort((a, b) => a.slug.localeCompare(b.slug));
+        return { sejour: s, taches, progression: progression(taches) };
+      })
+      .filter((g) => (filtre === 'a_faire' ? g.progression.terminee === false : true));
+
+    if (!groupes.length) {
+      corps.innerHTML = `<div class="rounded-2xl border border-sand-200/70 bg-white p-8 text-center text-sm text-ocean-700/60 shadow-card">${esc(AT['taches.noneDone'])}</div>`;
+      return;
+    }
+
+    corps.innerHTML = groupes
+      .map((g) => {
+        const pct = Math.round(g.progression.taux * 100);
+        const derniere = g.taches
+          .filter((t) => t.fait_le)
+          .map((t) => t.fait_le as string)
+          .sort()
+          .pop();
+        const lignes = g.taches.length
+          ? g.taches
+              .map(
+                (t) => `
+              <li class="flex items-start gap-3 py-2.5">
+                <input
+                  type="checkbox"
+                  data-tache="${esc(t.id)}"
+                  data-sejour="${esc(g.sejour.id)}"
+                  ${t.fait ? 'checked' : ''}
+                  class="${CLS.checkbox} mt-0.5 shrink-0"
+                  aria-label="${esc(libellerTache(t, 'fr'))}"
+                />
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm ${t.fait ? 'text-ocean-700/50 line-through' : 'text-ocean-900'}">${esc(libellerTache(t, 'fr'))}</span>
+                  ${
+                    t.fait_le
+                      ? `<span class="mt-0.5 block text-xs text-ocean-700/55">${esc(AT['taches.doneOn'])} ${esc(fmtDateTime(t.fait_le))}</span>`
+                      : ''
+                  }
+                </span>
+                <button
+                  type="button"
+                  data-suppr-tache="${esc(t.id)}"
+                  data-sejour="${esc(g.sejour.id)}"
+                  class="shrink-0 rounded-full border border-rose-200 bg-white px-2.5 py-1 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-50"
+                >${esc(AT['common.delete'])}</button>
+              </li>`,
+              )
+              .join('')
+          : `<li class="py-2.5 text-sm text-ocean-700/55">${esc(AT['taches.none'])}</li>`;
+
+        return `
+        <section class="overflow-hidden rounded-2xl border border-sand-200/70 bg-white shadow-card">
+          <header class="flex flex-wrap items-center justify-between gap-3 border-b border-sand-200/70 px-5 py-4 sm:px-6">
+            <div class="min-w-0">
+              <h2 class="font-display text-lg font-semibold text-ocean-900">${esc(g.sejour.client_nom)}</h2>
+              <p class="mt-0.5 text-xs text-ocean-700/60">
+                ${esc(fmtDate(g.sejour.arrivee))} → ${esc(fmtDate(g.sejour.depart))}
+                · ${esc(AT[`statut.${g.sejour.statut}`] ?? g.sejour.statut)}
+                · ${esc(String(g.sejour.personnes ?? ''))} ${esc(AT['sejours.personnes'])}
+              </p>
+            </div>
+            <div class="min-w-[10rem]">
+              <p class="text-xs text-ocean-700/60">${esc(AT['taches.progress']).replace('{fait}', String(g.progression.faites)).replace('{total}', String(g.progression.total))}</p>
+              <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-sand-100" aria-hidden="true">
+                <div class="h-full rounded-full ${g.progression.terminee ? 'bg-emerald-500' : 'bg-ocean-500'}" style="width: ${esc(String(pct))}%;"></div>
+              </div>
+              ${
+                derniere
+                  ? `<p class="mt-1 text-xs text-ocean-700/50">${esc(AT['taches.colLastDone'])} : ${esc(fmtDateTime(derniere))}</p>`
+                  : ''
+              }
+            </div>
+          </header>
+          <ul class="divide-y divide-sand-200/60 px-5 sm:px-6">${lignes}</ul>
+          <form
+            data-add-form="${esc(g.sejour.id)}"
+            class="flex flex-col gap-3 border-t border-sand-200/70 bg-sand-50/60 px-5 py-4 sm:flex-row sm:items-end sm:px-6"
+          >
+            <div class="flex-1">
+              <label class="${CLS.label}" for="tache-type-${esc(g.sejour.id)}">${esc(AT['taches.typeLabel'])}</label>
+              <select id="tache-type-${esc(g.sejour.id)}" class="${CLS.select}">
+                ${TYPES.map((t) => `<option value="${esc(t.slug)}">${esc(t.labels.fr)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="flex-1">
+              <label class="${CLS.label}" for="tache-custom-${esc(g.sejour.id)}">${esc(AT['taches.customLabel'])}</label>
+              <input
+                id="tache-custom-${esc(g.sejour.id)}"
+                type="text"
+                maxlength="200"
+                placeholder="${esc(AT['taches.customLabelPlaceholder'])}"
+                class="${CLS.input}"
+              />
+            </div>
+            <button type="submit" class="${CLS.btnPrimary} ${CLS.btnSmall}">${esc(AT['taches.add'])}</button>
+          </form>
+        </section>`;
+      })
+      .join('');
+
+    const totalTaches = groupes.reduce((s, g) => s + g.taches.length, 0);
+    const countEl = el('taches-count');
+    if (countEl) countEl.textContent = `${totalTaches} ${esc(AT['taches.count'])}`;
+  }
+
+  // -------------------------------------------------------------------
+  // Écritures
+  // -------------------------------------------------------------------
+  async function basculer(sejourId: string, tacheId: string, fait: boolean): Promise<void> {
+    const liste = tachesParSejour.get(sejourId) ?? [];
+    const suivante = basculerTache(liste, tacheId, fait);
+    tachesParSejour.set(sejourId, suivante as LigneTache[]);
+
+    if (!persistance) {
+      // Migration non appliquée : la case reste cochable mais rien n'est
+      // enregistré — le bandeau « migration requise » est déjà affiché.
+      rendre();
+      return;
+    }
+
+    const cible = suivante.find((t) => t.id === tacheId);
+    const { error } = await sb()
+      .from('sejour_taches')
+      .update({ fait: cible?.fait === true, fait_le: cible?.fait_le ?? null })
+      .eq('id', tacheId);
+    if (error) {
+      toast(errText(error) || AT['common.errorGeneric'], 'error');
+      await charger();
+      return;
+    }
+    toast(AT['taches.toggled']);
+    rendre();
+  }
+
+  async function supprimer(sejourId: string, tacheId: string): Promise<void> {
+    if (!window.confirm(AT['taches.deleteConfirm'])) return;
+    if (!persistance) {
+      tachesParSejour.set(sejourId, (tachesParSejour.get(sejourId) ?? []).filter((t) => t.id !== tacheId));
+      rendre();
+      return;
+    }
+    const { error } = await sb().from('sejour_taches').delete().eq('id', tacheId);
+    if (error) {
+      toast(errText(error) || AT['common.errorGeneric'], 'error');
+      return;
+    }
+    toast(AT['taches.deleted']);
+    await charger();
+  }
+
+  async function ajouter(sejourId: string, slug: string, customLabel: string): Promise<void> {
+    if (!persistance) {
+      // Migration non appliquée : aucune ligne ne peut être créée.
+      toast(AT['taches.migrationBody'], 'error');
+      return;
+    }
+    const { data, error } = await sb()
+      .from('sejour_taches')
+      .insert({
+        sejour_id: sejourId,
+        slug,
+        libelles: libelleType(slug),
+        custom_label: customLabel || null,
+        ordre: (tachesParSejour.get(sejourId) ?? []).length,
+      })
+      .select('id')
+      .single();
+    if (error) {
+      toast(errText(error) || AT['common.errorGeneric'], 'error');
+      return;
+    }
+    toast(AT['taches.saved']);
+    await charger();
+    // Le champ de libellé libre est vidé après ajout : le formulaire du
+    // séjour vient d'être re-rendu, il est donc de nouveau vierge.
+    void data;
+  }
+
+  // -------------------------------------------------------------------
+  // Interactions
+  // -------------------------------------------------------------------
+  el('taches-body')?.addEventListener('change', (event) => {
+    const input = event.target as HTMLInputElement | null;
+    if (!input?.dataset.tache) return;
+    void basculer(input.dataset.sejour ?? '', input.dataset.tache, input.checked);
+  });
+
+  el('taches-body')?.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-suppr-tache]');
+    if (!btn) return;
+    void supprimer(btn.dataset.sejour ?? '', btn.dataset.supprTache ?? '');
+  });
+
+  el('taches-body')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const sejourId = form.dataset.addForm;
+    if (!sejourId) return;
+    const select = form.querySelector<HTMLSelectElement>('select');
+    const custom = form.querySelector<HTMLInputElement>('input[type="text"]');
+    void ajouter(sejourId, select?.value ?? 'menage', (custom?.value ?? '').trim());
+  });
+
+  el('taches-filter')?.addEventListener('change', (event) => {
+    filtre = (event.target as HTMLSelectElement).value;
+    rendre();
+  });
+
+  onAdminReady(() => {
+    void charger();
+  });
+</script>
