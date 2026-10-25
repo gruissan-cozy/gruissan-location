@@ -2,7 +2,6 @@
 import Layout from '../layouts/Layout.astro';
 import site from '../../content/site.json';
 import tarifsData from '../../content/tarifs.json';
-import dispoData from '../../content/disponibilites.json';
 import galerieData from '../../content/galerie.json';
 import proxiData from '../../content/proximite.json';
 import avisData from '../../content/avis.json';
@@ -11,6 +10,19 @@ import annulationData from '../../content/annulation.json';
 import { t } from '../i18n';
 import type { Lang } from '../i18n';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { calendrier as calendrierTr } from '../i18n/calendrier';
+import {
+  ajouterJours,
+  construireMois,
+  grilleSemaines,
+  jourSemaine,
+  listeMois,
+  moisParDefaut,
+  parseMois,
+  type EtatJour,
+  type JourCalendrier,
+} from '../lib/calendrier';
+import { chargerDisponibilites } from '../lib/disponibilites';
 import {
   chargerGalerie,
   extraitNumeroAppel,
@@ -40,6 +52,7 @@ import {
 interface Props { lang: Lang }
 const { lang } = Astro.props as Props;
 const tr = t[lang];
+const calTr = calendrierTr[lang];
 const supabaseConfigured = isSupabaseConfigured;
 const supabaseUrl = supabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_URL) : '';
 const supabaseKey = supabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY) : '';
@@ -69,11 +82,6 @@ const nombrePhotos = photosVisionneuse.length;
 const titresPieces: Record<string, Record<string, string>> = {};
 for (const groupe of galerieGroupes) titresPieces[groupe.categorie.id] = groupe.categorie.titre as Record<string, string>;
 
-function fmtMonth(iso: string): string {
-  const [y, m] = iso.split('-');
-  return `${MOIS_PAR_LANGUE[lang][Number(m) - 1]} ${y}`;
-}
-
 function fmtDist(m: number): string {
   return m >= 1000 ? `${(m / 1000).toFixed(m % 1000 === 0 ? 0 : 1)} km` : `${m} m`;
 }
@@ -93,10 +101,105 @@ const faqSchema = faqJsonLd(faqEntrees, lang);
 // --- Conditions d'annulation : barème type, explicitement à valider ---
 const annulationAPValider = annulationData.a_valider === true;
 
-const statutClass: Record<string, string> = {
-  libre: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-  reserve: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200',
-  partiel: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+// --- Calendrier de disponibilités : séjours Supabase en priorité, repli JSON ---
+// Les dates occupées viennent de la table `sejours` ; si Supabase n'est pas
+// configuré ou si la table n'existe pas encore, on retombe sur
+// content/disponibilites.json (voir src/lib/disponibilites.ts).
+const aujourdHui = new Date().toISOString().slice(0, 10);
+const slugParDefaut = moisParDefaut(aujourdHui);
+const slugDemande = Astro.url.searchParams.get('mois');
+const slugMoisCourant = slugDemande && parseMois(slugDemande) ? slugDemande : slugParDefaut;
+const moisAnalyse = parseMois(slugMoisCourant)!;
+const { plages, source } = await chargerDisponibilites();
+const moisCourant = construireMois(moisAnalyse.annee, moisAnalyse.mois, plages, { aujourdHui });
+const moisOptions = listeMois(slugParDefaut, 12);
+const semaines = grilleSemaines(moisAnalyse.annee, moisAnalyse.mois, 1);
+const joursParIso = new Map(moisCourant.jours.map((j) => [j.iso, j]));
+
+function libelleMois(slug: string): string {
+  const p = parseMois(slug);
+  return p ? `${MOIS_PAR_LANGUE[lang][p.mois - 1]} ${p.annee}` : slug;
+}
+
+// En-têtes de colonnes : noms des jours localisés, du lundi au dimanche.
+const fmtJourCourt = new Intl.DateTimeFormat(lang, { weekday: 'short', timeZone: 'UTC' });
+const fmtJourLong = new Intl.DateTimeFormat(lang, { weekday: 'long', timeZone: 'UTC' });
+const premierDuMois = `${slugMoisCourant}-01`;
+const decalageLundi = (jourSemaine(premierDuMois) - 1 + 7) % 7;
+const lundiDebut = ajouterJours(premierDuMois, -decalageLundi);
+const entetesSemaine = [0, 1, 2, 3, 4, 5, 6].map((i) => {
+  const iso = ajouterJours(lundiDebut, i);
+  return {
+    court: fmtJourCourt.format(new Date(`${iso}T00:00:00Z`)),
+    long: fmtJourLong.format(new Date(`${iso}T00:00:00Z`)),
+  };
+});
+
+const libelleEtat: Record<EtatJour, string> = {
+  libre: calTr['calendrier.jour.libre'],
+  occupe: calTr['calendrier.jour.occupe'],
+  partiel: calTr['calendrier.jour.partiel'],
+};
+
+const classeEtat: Record<EtatJour, string> = {
+  libre: 'bg-emerald-50/60 text-emerald-700 hover:bg-emerald-100',
+  occupe: 'bg-rose-50/60 text-rose-700',
+  partiel: 'bg-amber-50/60 text-amber-800',
+};
+
+const legendes = [
+  { classe: 'bg-emerald-300 ring-emerald-400', libelle: calTr['calendrier.legende.libre'] },
+  { classe: 'bg-rose-300 ring-rose-400', libelle: calTr['calendrier.legende.occupe'] },
+  { classe: 'bg-amber-300 ring-amber-400', libelle: calTr['calendrier.legende.partiel'] },
+];
+
+/** Nom du mois + état du jour, ou action « choisir cette plage » (lu par les lecteurs d'écran). */
+function texteAccessible(j: JourCalendrier): string {
+  const date = dateAffichee(j.iso, lang);
+  if (j.plageLibre) {
+    return `${date} · ${calTr['calendrier.choisirAccessible']
+      .replace('{debut}', dateAffichee(j.plageLibre.debut, lang))
+      .replace('{fin}', dateAffichee(j.plageLibre.fin, lang))}`;
+  }
+  const etat = j.passe ? `${libelleEtat[j.etat]} · ${calTr['calendrier.jour.passe']}` : libelleEtat[j.etat];
+  return `${date} · ${etat}`;
+}
+
+/** Lien vers /reserver pré-rempli avec une plage libre. */
+function lienReserver(plage: { debut: string; fin: string }): string {
+  const base = lang === 'fr' ? '/gruissan-location/reserver/' : `/gruissan-location/${lang}/reserver/`;
+  return `${base}?arrivee=${plage.debut}&depart=${plage.fin}`;
+}
+
+const lienReserverSansDate =
+  lang === 'fr' ? '/gruissan-location/reserver/' : `/gruissan-location/${lang}/reserver/`;
+
+const noteCalendrier =
+  source === 'supabase' ? calTr['calendrier.note'] : calTr['calendrier.noteRepli'];
+
+// --- Configuration passée au script client : bascule de mois sans rechargement ---
+// Le site est statique (GitHub Pages) : un paramètre d'URL ne peut pas déclencher
+// de nouveau rendu serveur. Le mois demandé est donc lu par le script, qui
+// reconstruit la grille avec la même logique pure (src/lib/calendrier.ts).
+const cfgCalendrier = {
+  lang,
+  aujourdHui,
+  slugDefaut: slugParDefaut,
+  moisOptions,
+  plages,
+  reserverBase: lienReserverSansDate,
+  nomsMois: MOIS_PAR_LANGUE[lang],
+  t: {
+    precedent: calTr['calendrier.precedent'],
+    suivant: calTr['calendrier.suivant'],
+    nuitsLibres: calTr['calendrier.nuitsLibres'],
+    aucunLibre: calTr['calendrier.aucunLibre'],
+    etatLibre: calTr['calendrier.jour.libre'],
+    etatOccupe: calTr['calendrier.jour.occupe'],
+    etatPartiel: calTr['calendrier.jour.partiel'],
+    etatPasse: calTr['calendrier.jour.passe'],
+    choisir: calTr['calendrier.choisirAccessible'],
+  },
 };
 ---
 
@@ -419,25 +522,133 @@ const statutClass: Record<string, string> = {
     </div>
   </section>
 
-  <!-- Disponibilités -->
+  <!-- Disponibilités — calendrier mois par mois (séjours réels, repli JSON) -->
   <section id="dispo" class="bg-sand-100 py-24 scroll-mt-16">
     <div class="max-w-6xl mx-auto px-4">
       <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
         {tr['dispo.subtitle']}
       </p>
       <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['dispo.title']}</h2>
-      <div class="mt-14 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {dispoData.mois.map((m) => (
-          <div class="bg-white rounded-xl p-5 text-center shadow-card">
-            <p class="font-medium text-ocean-800">{fmtMonth(m.mois)}</p>
-            <span class:list={['inline-block mt-3 text-xs font-semibold px-3 py-1 rounded-full', statutClass[m.statut]]}>
-              {dispoData.legende[m.statut as keyof typeof dispoData.legende]}
-            </span>
-          </div>
-        ))}
+
+      <!-- Sélecteur de mois : bascule gérée en JavaScript, mois courant rendu côté serveur -->
+      <div class="mt-12 flex flex-wrap items-center justify-between gap-4">
+        <button
+          type="button"
+          data-cal-precedent
+          class="inline-flex items-center gap-2 rounded-full border border-sand-200 bg-white px-5 py-2.5 text-sm font-semibold text-ocean-800 transition-colors hover:border-ocean-300 hover:bg-ocean-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400"
+        >
+          <span aria-hidden="true">←</span>
+          {calTr['calendrier.precedent']}
+        </button>
+
+        <div class="flex items-center gap-3">
+          <label for="cal-mois" class="text-sm font-medium text-ocean-700">
+            {calTr['calendrier.label.mois']}
+          </label>
+          <select
+            id="cal-mois"
+            name="mois"
+            data-cal-select
+            class="rounded-xl border border-sand-200 bg-white px-4 py-2.5 text-sm font-medium text-ocean-900 focus:outline-none focus:ring-2 focus:ring-ocean-400"
+          >
+            {moisOptions.map((slug) => (
+              <option value={slug} selected={slug === slugMoisCourant}>
+                {libelleMois(slug)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          type="button"
+          data-cal-suivant
+          class="inline-flex items-center gap-2 rounded-full border border-sand-200 bg-white px-5 py-2.5 text-sm font-semibold text-ocean-800 transition-colors hover:border-ocean-300 hover:bg-ocean-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400"
+        >
+          {calTr['calendrier.suivant']}
+          <span aria-hidden="true">→</span>
+        </button>
       </div>
+
+      <h3 id="cal-mois-titre" data-cal-titre class="mt-10 font-display text-2xl font-semibold text-ocean-900">
+        {libelleMois(slugMoisCourant)}
+      </h3>
+      <p data-cal-nuits class="mt-2 text-sm font-medium text-ocean-700/80" role="status">
+        {moisCourant.nuitsLibres > 0
+          ? calTr['calendrier.nuitsLibres'].replace('{0}', String(moisCourant.nuitsLibres))
+          : calTr['calendrier.aucunLibre']}
+      </p>
+      <p data-cal-note class="mt-2 max-w-3xl text-sm text-ocean-700/70">{noteCalendrier}</p>
+
+      <div class="mt-8 overflow-x-auto rounded-2xl border border-sand-200 bg-white shadow-card">
+        <table class="w-full min-w-[560px] border-collapse">
+          <caption class="sr-only">{calTr['calendrier.aria.table']}</caption>
+          <thead class="bg-sand-50">
+            <tr>
+              {entetesSemaine.map((e) => (
+                <th
+                  scope="col"
+                  abbr={e.long}
+                  class="px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider text-ocean-700/70"
+                >
+                  {e.court}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-sand-200/80" data-cal-corps>
+            {semaines.map((semaine) => (
+              <tr>
+                {semaine.map((iso) => {
+                  if (!iso) {
+                    return <td class="h-14 border-l border-sand-200/60 bg-sand-50/50" aria-hidden="true"></td>;
+                  }
+                  const j = joursParIso.get(iso)!;
+                  const classe = [
+                    'flex h-14 items-center justify-center border-l border-sand-200/60 text-sm tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sunset-400',
+                    j.weekend ? 'font-semibold' : '',
+                    classeEtat[j.etat],
+                    j.passe ? 'opacity-40' : '',
+                    iso === aujourdHui ? 'ring-2 ring-inset ring-sunset-500' : '',
+                  ].join(' ');
+                  return (
+                    <td class="p-0">
+                      {j.plageLibre ? (
+                        <a href={lienReserver(j.plageLibre)} class={classe}>
+                          <span aria-hidden="true">{j.jour}</span>
+                          <span class="sr-only">{texteAccessible(j)}</span>
+                        </a>
+                      ) : (
+                        <span class:list={[classe, 'cursor-default']}>
+                          <span aria-hidden="true">{j.jour}</span>
+                          <span class="sr-only">{texteAccessible(j)}</span>
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Légende -->
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <p class="text-sm font-semibold text-ocean-800">{calTr['calendrier.legende.titre']}</p>
+        {legendes.map((l) => (
+          <p class="flex items-center gap-2 text-sm text-ocean-700/80">
+            <span class={`inline-block h-3.5 w-3.5 rounded-full ring-1 ${l.classe}`} aria-hidden="true"></span>
+            {l.libelle}
+          </p>
+        ))}
+        <p class="flex items-center gap-2 text-sm text-ocean-700/80">
+          <span class="inline-block h-3.5 w-3.5 rounded-full ring-2 ring-sunset-500" aria-hidden="true"></span>
+          {calTr['calendrier.aujourdHui']}
+        </p>
+      </div>
+
       <a
-        href="#contact"
+        href={lienReserverSansDate}
         class="inline-block mt-10 bg-sunset-500 hover:bg-sunset-600 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
       >
         {tr['dispo.contact']}
@@ -776,6 +987,167 @@ const statutClass: Record<string, string> = {
           precedent();
         }
       });
+    })();
+  </script>
+
+  <script define:vars={{ cfgCalendrier }}>
+import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/calendrier';
+
+    // Le corps est encapsulé dans une IIFE : les scripts Astro sont compilés
+    // au niveau racine du module, où un `return` anticipé est interdit.
+    (() => {
+
+      // Calendrier de disponibilités : bascule de mois sans rechargement de page.
+      // Le mois courant est rendu côté serveur (le calendrier reste lisible sans
+      // JavaScript) ; le script reconstruit les autres mois avec la même logique
+      // pure que le serveur, issue de src/lib/calendrier.ts.
+
+      const { lang, aujourdHui, slugDefaut, plages, nomsMois, reserverBase, t } = cfgCalendrier;
+
+      const corps = document.querySelector('[data-cal-corps]');
+      const titre = document.querySelector('[data-cal-titre]');
+      const nuits = document.querySelector('[data-cal-nuits]');
+      const select = document.querySelector('[data-cal-select]');
+      const boutonPrecedent = document.querySelector('[data-cal-precedent]');
+      const boutonSuivant = document.querySelector('[data-cal-suivant]');
+      if (!corps) return;
+
+      const fmtDate = new Intl.DateTimeFormat(lang, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      });
+      const dateLongue = (iso) => fmtDate.format(new Date(`${iso}T00:00:00Z`));
+
+      const libelleMois = (slug) => {
+        const p = parseMois(slug);
+        return p ? `${nomsMois[p.mois - 1]} ${p.annee}` : slug;
+      };
+
+      const CLASSE_BASE =
+        'flex h-14 items-center justify-center border-l border-sand-200/60 text-sm tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sunset-400';
+      const CLASSE_ETAT = {
+        libre: 'bg-emerald-50/60 text-emerald-700 hover:bg-emerald-100',
+        occupe: 'bg-rose-50/60 text-rose-700',
+        partiel: 'bg-amber-50/60 text-amber-800',
+      };
+
+      const lienReserver = (plage) => `${reserverBase}?arrivee=${plage.debut}&depart=${plage.fin}`;
+
+      /** Nom du jour + état, ou action « choisir cette plage » (lu par les lecteurs d'écran). */
+      function texteAccessible(j) {
+        const date = dateLongue(j.iso);
+        if (j.plageLibre) {
+          const action = t.choisir
+            .replace('{debut}', dateLongue(j.plageLibre.debut))
+            .replace('{fin}', dateLongue(j.plageLibre.fin));
+          return `${date} · ${action}`;
+        }
+        const libelle = { libre: t.etatLibre, occupe: t.etatOccupe, partiel: t.etatPartiel }[j.etat];
+        return `${date} · ${j.passe ? `${libelle} · ${t.etatPasse}` : libelle}`;
+      }
+
+      function cellule(j) {
+        const td = document.createElement('td');
+        td.className = 'p-0';
+        const classe = [
+          CLASSE_BASE,
+          j.weekend ? 'font-semibold' : '',
+          CLASSE_ETAT[j.etat] ?? '',
+          j.passe ? 'opacity-40' : '',
+          j.iso === aujourdHui ? 'ring-2 ring-inset ring-sunset-500' : '',
+        ].join(' ');
+        const chiffre = document.createElement('span');
+        chiffre.setAttribute('aria-hidden', 'true');
+        chiffre.textContent = String(j.jour);
+        const accessible = document.createElement('span');
+        accessible.className = 'sr-only';
+        accessible.textContent = texteAccessible(j);
+        if (j.plageLibre) {
+          const a = document.createElement('a');
+          a.href = lienReserver(j.plageLibre);
+          a.className = classe;
+          a.append(chiffre, accessible);
+          td.append(a);
+        } else {
+          const s = document.createElement('span');
+          s.className = `${classe} cursor-default`;
+          s.append(chiffre, accessible);
+          td.append(s);
+        }
+        return td;
+      }
+
+      /** Ajoute l'option du mois courant s'il sort de la liste pré-calculée. */
+      function assurerOption(liste, slug) {
+        if (!liste || [...liste.options].some((o) => o.value === slug)) return;
+        const opt = document.createElement('option');
+        opt.value = slug;
+        opt.textContent = libelleMois(slug);
+        const suivante = [...liste.options].find((o) => o.value > slug);
+        if (suivante) liste.insertBefore(opt, suivante);
+        else liste.append(opt);
+      }
+
+      function rendre(slug) {
+        const p = parseMois(slug);
+        if (!p) return;
+        const mois = construireMois(p.annee, p.mois, plages, { aujourdHui });
+        corps.replaceChildren();
+        for (const semaine of grilleSemaines(p.annee, p.mois, 1)) {
+          const tr = document.createElement('tr');
+          for (const iso of semaine) {
+            if (!iso) {
+              const td = document.createElement('td');
+              td.className = 'h-14 border-l border-sand-200/60 bg-sand-50/50';
+              td.setAttribute('aria-hidden', 'true');
+              tr.append(td);
+              continue;
+            }
+            const jour = mois.jours.find((x) => x.iso === iso);
+            if (jour) tr.append(cellule(jour));
+          }
+          corps.append(tr);
+        }
+        if (titre) titre.textContent = libelleMois(slug);
+        if (nuits) {
+          nuits.textContent =
+            mois.nuitsLibres > 0
+              ? t.nuitsLibres.replace('{0}', String(mois.nuitsLibres))
+              : t.aucunLibre;
+        }
+        assurerOption(select, slug);
+        if (select) select.value = slug;
+        // Le mois reste partageable dans l'URL (signet, lien copié).
+        const url = new URL(window.location.href);
+        url.searchParams.set('mois', slug);
+        url.hash = 'dispo';
+        window.history.replaceState(null, '', url.toString());
+      }
+
+      let slugCourant = (() => {
+        const demande = new URLSearchParams(window.location.search).get('mois');
+        return demande && parseMois(demande) ? demande : slugDefaut;
+      })();
+
+      rendre(slugCourant);
+
+      select?.addEventListener('change', () => {
+        if (parseMois(select.value)) {
+          slugCourant = select.value;
+          rendre(slugCourant);
+        }
+      });
+      boutonPrecedent?.addEventListener('click', () => {
+        slugCourant = ajouterMois(slugCourant, -1);
+        rendre(slugCourant);
+      });
+      boutonSuivant?.addEventListener('click', () => {
+        slugCourant = ajouterMois(slugCourant, 1);
+        rendre(slugCourant);
+      });
+  
     })();
   </script>
 </Layout>

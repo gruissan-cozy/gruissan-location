@@ -3,6 +3,7 @@ import { LANGUAGES, t, seo } from '../src/i18n';
 import { adminT } from '../src/i18n/admin';
 import { guideT } from '../src/i18n/guide';
 import { booking } from '../src/i18n/booking';
+import { calendrier } from '../src/i18n/calendrier';
 
 /** Vérifie qu'un dictionnaire a exactement les mêmes clés dans les 4 langues, sans valeur vide. */
 function expectParity(dict: Record<string, Record<string, string>>, label: string): void {
@@ -75,6 +76,28 @@ describe('i18n/booking.ts (page /reserver)', () => {
     for (const lang of LANGUAGES) {
       expect(booking[lang]['booking.checkin'], `booking.checkin manquant en ${lang}`).toBeTruthy();
       expect(booking[lang]['booking.submit'] ?? booking[lang]['booking.send'], `bouton de soumission manquant en ${lang}`).toBeTruthy();
+    }
+  });
+});
+
+describe('i18n/calendrier.ts (calendrier de disponibilités)', () => {
+  it('respecte la parité des clés sur les 4 langues', () => {
+    expectParity(calendrier as never, 'calendrier.ts');
+  });
+
+  it('contient les libellés indispensables du calendrier', () => {
+    for (const lang of LANGUAGES) {
+      for (const cle of [
+        'calendrier.precedent',
+        'calendrier.suivant',
+        'calendrier.legende.libre',
+        'calendrier.legende.occupe',
+        'calendrier.legende.partiel',
+        'calendrier.nuitsLibres',
+        'calendrier.choisirAccessible',
+      ]) {
+        expect(calendrier[lang][cle], `${cle} manquant en ${lang}`).toBeTruthy();
+      }
     }
   });
 });
