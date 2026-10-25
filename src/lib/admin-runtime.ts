@@ -224,3 +224,28 @@ export function showFieldError(el: HTMLElement | null, message: string): void {
   el.textContent = message;
   el.hidden = !message;
 }
+
+// ---------------------------------------------------------------------------
+// Badge « demandes non lues » (chantier 4 — #18)
+// ---------------------------------------------------------------------------
+
+/** Sélecteur des badges de non-lus (navigation, tableau de bord). */
+export const BADGE_NON_LUS_SELECTOR = '[data-non-lus-badge]';
+
+/**
+ * Met à jour tous les badges « demandes non lues » du back office :
+ * le compteur de la navigation et celui du tableau de bord portent le
+ * même attribut `data-non-lus-badge`. Un nombre à zéro masque le badge.
+ */
+export function majBadgeNonLus(nombre: number): void {
+  const n = Number.isFinite(nombre) && nombre > 0 ? Math.floor(nombre) : 0;
+  for (const el of document.querySelectorAll<HTMLElement>(BADGE_NON_LUS_SELECTOR)) {
+    el.textContent = n ? String(n) : '';
+    el.classList.toggle('hidden', n === 0);
+  }
+}
+
+/** Masque les badges de non-lus (colonne absente, erreur, ou zéro). */
+export function cacherBadgeNonLus(): void {
+  majBadgeNonLus(0);
+}

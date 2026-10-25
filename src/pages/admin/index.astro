@@ -120,8 +120,33 @@ const CARDS = [
             <p class="mt-1.5 text-sm text-ocean-700/80">{AT['dash.subtitle']}</p>
           </header>
 
+          <!-- Alerte : la migration du suivi lu / non lu n'est pas appliquée -->
+          <div
+            id="dash-migration-lu"
+            class="mb-6 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+            role="alert"
+          >
+            {AT['dash.migrationLuMissing']}
+          </div>
+
           <!-- Compteurs -->
-          <div class="mb-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="mb-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div class="rounded-2xl border border-sunset-200/70 bg-white p-5 shadow-card">
+              <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
+                {AT['dash.statUnread']}
+              </p>
+              <p class="mt-1 flex items-center gap-2">
+                <span
+                  id="stat-unread"
+                  data-non-lus-badge
+                  class="mt-1 hidden h-6 min-w-6 items-center justify-center rounded-full bg-sunset-500 px-1.5 font-display text-sm font-semibold text-white"
+                ></span>
+                <span id="stat-unread-count" class="mt-1 font-display text-3xl font-semibold text-sunset-500">
+                  —
+                </span>
+              </p>
+              <p id="stat-unread-hint" class="mt-1 text-xs text-ocean-700/55"></p>
+            </div>
             <div class="rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card">
               <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
                 {AT['dash.statNew']}
@@ -188,7 +213,8 @@ const CARDS = [
 
 <script>
   import { getSupabase } from '../../lib/supabase';
-  import { errText, toast } from '../../lib/admin-runtime';
+  import { errText, toast, majBadgeNonLus } from '../../lib/admin-runtime';
+  import { estErreurColonneLuAbsente } from '../../lib/lu';
   import { AT } from '../../i18n/admin';
 
   const loginView = document.getElementById('admin-login');
@@ -304,9 +330,19 @@ const CARDS = [
         const el = document.getElementById(id);
         if (el) el.textContent = value;
       };
+      const migrationEl = document.getElementById('dash-migration-lu');
+
+      // Suivi lu / non lu (chantier 4 — #18) : la colonne `lu_at` n'existe
+      // pas tant que la migration 0005 n'est pas appliquée. On tente la
+      // requête dédiée ; en cas d'échec, on retombe sur le compteur des
+      // demandes au statut « nouveau » et on affiche un bandeau explicite.
+      const nonLus = supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .is('lu_at', null);
 
       try {
-        const [total, nouveaux, dispo, packs] = await Promise.all([
+        const [total, nouveaux, dispo, packs, nonLues] = await Promise.all([
           supabase.from('messages').select('id', { count: 'exact', head: true }),
           supabase
             .from('messages')
@@ -314,6 +350,7 @@ const CARDS = [
             .eq('statut', 'nouveau'),
           supabase.from('availability').select('id', { count: 'exact', head: true }),
           supabase.from('packs').select('id', { count: 'exact', head: true }).eq('actif', true),
+          nonLus,
         ]);
 
         const firstError = [total, nouveaux, dispo, packs].find((r) => r.error);
@@ -323,6 +360,23 @@ const CARDS = [
         set('stat-new', String(nouveaux.count ?? 0));
         set('stat-dispo', String(dispo.count ?? 0));
         set('stat-packs', String(packs.count ?? 0));
+
+        // Suivi lu / non lu : en cas d'échec de la requête dédiée (colonne
+        // absente), on retombe sur le compteur « nouveau » pour ne rien
+        // casser, et on affiche un bandeau demandant la migration 0005.
+        const nonLuesReelles = nonLues.error ? nouveaux.count ?? 0 : nonLues.count ?? 0;
+        set('stat-unread-count', String(nonLuesReelles));
+        majBadgeNonLus(nonLuesReelles);
+        if (nonLues.error && estErreurColonneLuAbsente(nonLues.error) && migrationEl) {
+          migrationEl.classList.remove('hidden');
+        }
+
+        const hint = document.getElementById('stat-unread-hint');
+        if (hint) {
+          hint.textContent = nonLuesReelles
+            ? `${nonLuesReelles} ${AT['msg.unreadCount']} — ${AT['dash.unreadHint']}`
+            : '';
+        }
       } catch (error) {
         toast(errText(error) || AT['common.errorGeneric'], 'error');
       }
