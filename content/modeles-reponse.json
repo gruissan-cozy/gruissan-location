@@ -1,0 +1,114 @@
+{
+  "description": "Modèles de réponse insérables en un clic dans le champ de réponse de la messagerie du back office. Éditables ici, sans toucher au code.",
+  "aide_variables": "Variables disponibles : {nom} (nom du demandeur), {dates} (dates souhaitées), {email}, {telephone}, {sejour} (dates du séjour, format « 10/07/2027 → 17/07/2027 »), {tarif} (prix total du séjour), {personnes} (nombre de voyageurs), {statut} (statut du séjour). Une variable absente reste affichée telle quelle dans le texte : complétez-la avant l'envoi.",
+  "modeles": [
+    {
+      "id": "disponibilite_oui",
+      "categorie": "disponibilite",
+      "nom": {
+        "fr": "Disponible",
+        "en": "Available",
+        "es": "Disponible",
+        "de": "Verfügbar"
+      },
+      "texte": "Bonjour {nom},\n\nBonne nouvelle : le logement est disponible pour les dates que vous indiquez ({dates}).\n\nLe tarif est de {tarif} pour {personnes} personne(s), taxe de séjour incluse.\n\nSouhaitez-vous que je bloque ces dates en option ?\n\nBien cordialement,",
+      "variables": ["nom", "dates", "tarif", "personnes"]
+    },
+    {
+      "id": "disponibilite_non",
+      "categorie": "disponibilite",
+      "nom": {
+        "fr": "Indisponible",
+        "en": "Unavailable",
+        "es": "No disponible",
+        "de": "Nicht verfügbar"
+      },
+      "texte": "Bonjour {nom},\n\nMerci pour votre demande. Le logement est malheureusement déjà réservé sur la période que vous souhaitez ({dates}).\n\nJe peux vous proposer les dates suivantes si cela vous convient, ou vous orienter vers un autre hébergement du village.\n\nBien cordialement,",
+      "variables": ["nom", "dates"]
+    },
+    {
+      "id": "disponibilite_partiel",
+      "categorie": "disponibilite",
+      "nom": {
+        "fr": "Partiellement disponible",
+        "en": "Partly available",
+        "es": "Parcialmente disponible",
+        "de": "Teilweise verfügbar"
+      },
+      "texte": "Bonjour {nom},\n\nVotre période ({dates}) chevauche une réservation déjà confirmée. Je peux vous proposer :\n\n- une arrivée plus tardive,\n- un départ plus précoce,\n- ou une autre semaine.\n\nDites-moi ce qui vous conviendrait le mieux.\n\nBien cordialement,",
+      "variables": ["nom", "dates"]
+    },
+    {
+      "id": "tarif_devis",
+      "categorie": "tarif",
+      "nom": {
+        "fr": "Tarif et devis",
+        "en": "Price and quote",
+        "es": "Tarifa y presupuesto",
+        "de": "Preis und Angebot"
+      },
+      "texte": "Bonjour {nom},\n\nVoici le détail du tarif pour {personnes} personne(s) sur la période {dates} :\n\n- location du logement : {tarif}\n- taxe de séjour : calculée selon le barème communal en vigueur\n- caution : à prévoir à l'arrivée, restituée après l'état des lieux\n\nLe montant définitif vous sera confirmé une fois les dates validées.\n\nBien cordialement,",
+      "variables": ["nom", "dates", "personnes", "tarif"]
+    },
+    {
+      "id": "tarif_semaine",
+      "categorie": "tarif",
+      "nom": {
+        "fr": "Réservation à la semaine",
+        "en": "Weekly booking",
+        "es": "Reserva por semana",
+        "de": "Wochenbuchung"
+      },
+      "texte": "Bonjour {nom},\n\nEn haute saison, la location se fait à la semaine (du samedi au samedi) avec un minimum de 7 nuits.\n\nLes courts séjours sont possibles en moyenne et basse saison (minimum 3 puis 2 nuits).\n\nDites-moi vos dates souhaitées ({dates}) pour que je vous confirme le tarif applicable.\n\nBien cordialement,",
+      "variables": ["nom", "dates"]
+    },
+    {
+      "id": "conditions_annulation",
+      "categorie": "conditions",
+      "nom": {
+        "fr": "Conditions d'annulation",
+        "en": "Cancellation terms",
+        "es": "Condiciones de cancelación",
+        "de": "Stornobedingungen"
+      },
+      "texte": "Bonjour {nom},\n\nVoici les conditions d'annulation appliquées :\n\n- annulation plus de 30 jours avant l'arrivée : acompte restitué,\n- annulation entre 30 et 7 jours : 50 % du montant du séjour dû,\n- annulation à moins de 7 jours ou non-présentation : montant total dû.\n\nCes conditions figurent aussi dans le guide d'accueil remis à votre arrivée.\n\nBien cordialement,",
+      "variables": ["nom"]
+    },
+    {
+      "id": "conditions_arrivee",
+      "categorie": "conditions",
+      "nom": {
+        "fr": "Modalités d'arrivée",
+        "en": "Check-in details",
+        "es": "Modalidades de llegada",
+        "de": "Anreise-Informationen"
+      },
+      "texte": "Bonjour {nom},\n\nVoici les modalités d'arrivée pour votre séjour ({sejour}) :\n\n- remise des clés à partir de 16 h (possibilité d'arrivée plus tôt selon l'état du logement),\n- état des lieux d'entrée en votre présence,\n- départ avant 10 h, état des lieux de sortie et restitution de la caution.\n\nJe vous confirme l'adresse et le code d'accès la veille de votre arrivée.\n\nBien cordialement,",
+      "variables": ["nom", "sejour"]
+    },
+    {
+      "id": "conditions_reponse",
+      "categorie": "conditions",
+      "nom": {
+        "fr": "Demande d'informations complémentaires",
+        "en": "Request for further details",
+        "es": "Solicitud de información adicional",
+        "de": "Bitte um weitere Angaben"
+      },
+      "texte": "Bonjour {nom},\n\nMerci pour votre message. Pour vous répondre précisément, pourriez-vous me préciser :\n\n- le nombre de voyageurs ({personnes} ?),\n- la durée du séjour souhaité,\n- l'âge des enfants éventuels.\n\nJe reviens vers vous rapidement.\n\nBien cordialement,",
+      "variables": ["nom"]
+    },
+    {
+      "id": "accuse_reception",
+      "categorie": "accuse",
+      "nom": {
+        "fr": "Accusé de réception",
+        "en": "Acknowledgement of receipt",
+        "es": "Acuse de recibo",
+        "de": "Eingangsbestätigung"
+      },
+      "texte": "Bonjour {nom},\n\nJ'ai bien reçu votre demande du {dates} et je vous réponds dans les meilleurs délais.\n\nBien cordialement,",
+      "variables": ["nom", "dates"]
+    }
+  ]
+}
