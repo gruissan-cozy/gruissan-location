@@ -132,7 +132,30 @@ assemblent.
 
 ---
 
-## 7. Définition de « terminé »
+## 7. Notifications des nouvelles demandes
+
+Le back office suit les demandes **non lues** (colonne `messages.lu_at`,
+migration `migrations/0005_demandes_lues.sql`) : badge dans la navigation,
+carte de comptage au tableau de bord, filtre « Non lues » et marquage lu /
+non lu persistant dans `/admin/messages/`. Logique pure dans `src/lib/lu.ts`
+(testée dans `tests/lu.test.ts`).
+
+> ⚠️ **Migration 0005 à appliquer à la main** (SQL Editor de Supabase).
+> Le token d'administration n'est pas disponible pour les agents de code.
+> Sans elle, le suivi dégrade proprement (bandeau explicite, compteur
+> masqué) et le reste du back office reste utilisable.
+
+**Alerter le propriétaire en dehors de `/admin/`** (Telegram, e-mail,
+notification GitHub) : le site est statique, rien ne tourne en permanence.
+Les options possibles, leurs prérequis (token de bot, clé d'API, fournisseur
+SMTP, clé Supabase de lecture) et leurs limites sont détaillées dans
+[`docs/notifications.md`](docs/notifications.md). Aucune n'est implémentée :
+aucun identifiant n'est disponible et le propriétaire a exclu tout service
+payant. **Toute nouvelle option doit être documentée avant d'être codée.**
+
+---
+
+## 8. Définition de « terminé »
 
 Une tâche est terminée quand :
 

@@ -35,6 +35,10 @@ export interface Message {
   // `bookings.historique`. Optionnel : la colonne n'existe pas tant que
   // la migration 0004_pipeline_statuts.sql n'est pas appliquée.
   historique?: Array<{ at: string; by: string; action: string; detail?: string }>;
+  // Suivi LU / NON LU (chantier 4 — #18) : NULL = non lu, non NULL =
+  // horodatage de lecture. Optionnel : la colonne n'existe pas tant que
+  // la migration 0005_demandes_lues.sql n'est pas appliquée.
+  lu_at?: string | null;
 }
 
 export interface Booking {
