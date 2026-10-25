@@ -187,7 +187,68 @@ importants :
 
 ---
 
-## 9. Définition de « terminé »
+## 9. Taxe de séjour, tâches entre séjours et modèles de réponse (issue #22)
+
+Trois fonctions du back office, chacune adossée à une logique **pure**
+testée (`tests/*.test.ts`) :
+
+**1. Taxe de séjour — `/admin/taxe-sejour/`.** Montant par séjour =
+`nuits × personnes × taux`, le taux étant lu dans `content/tarifs.json`
+(`taxe_sejour_par_nuit_personne`) et **jamais codé en dur**. La page
+affiche aussi un récapitulatif par année (total collecté, séjours
+assujettis, nuits) pour la déclaration en mairie, avec un filtre par
+année et un export CSV.
+
+- Un taux absent n'est **jamais remplacé par une valeur approchante** :
+  le séjour reste visible, le montant est « non calculable » et le cas
+  est signalé au propriétaire.
+- Seuls les séjours « confirmé » et « terminé » sont assujettis.
+- Un séjour à cheval sur deux années est **ventilé nuit par nuit**
+  (`repartirNuitsParAnnee`) ; chaque année est arrondie au centime et le
+  solde est repris sur la dernière.
+- **Cas particuliers signalés mais non tranchés** : exonérations
+  possibles, plafond de nuits par personne. Ce que le propriétaire doit
+  vérifier (barème communal, code communal des communes touristiques) est
+  détaillé sur la page et dans `src/lib/taxe-sejour.ts`.
+- Dégradation : bandeau « migration requise » si `sejours` (0003)
+  manque, bandeau dédié si le taux manque dans `tarifs.json`.
+
+**2. Tâches entre séjours — `/admin/taches/`.** Liste type (ménage,
+remise des clés, état des lieux…) rattachée à un séjour, case à cocher,
+horodatage de réalisation (`fait_le`), libellé libre, progression par
+séjour et filtre « tâches restantes ».
+
+- Stockage : **table dédiée `sejour_taches`** (migration
+  `0006_sejour_taches.sql`), et non colonne `jsonb` sur `sejours` — la
+  justification (clé étrangère + cascade, politiques RLS propres,
+  interrogations par ligne) est écrite dans l'en-tête de la migration.
+- Le libellé de la liste type est **dupliqué** dans `libelles` au moment
+  de la création : une tâche reste lisible si la liste type change.
+- Contraintes : une tâche non faite ne peut pas porter d'horodatage ;
+  la suppression d'un séjour emporte ses tâches.
+- Dégradation : bandeau « migration requise » (0006) ; la case reste
+  cochable localement mais n'est pas persistée.
+
+**3. Modèles de réponse — messagerie `/admin/messages/`.** Sélecteur
+insérable en un clic dans le champ de réponse, substitution de
+`{nom}` / `{dates}` / `{email}` / `{telephone}` / `{statut}`.
+
+- Les variables **non connues ne sont jamais remplacées par une valeur
+  inventée** : elles restent affichées telles quelles et sont listées
+  comme « à compléter ».
+- Contenu éditable dans `content/modeles-reponse.json` (aucune table,
+  aucun objet SQL) : un modèle cassé est désactivé, jamais inséré.
+- Le rendu est du texte brut (aucune balise HTML ajoutée) et les
+  accolades contenues dans une valeur sont échappées.
+
+> ⚠️ **Migration 0006 à appliquer à la main** (SQL Editor de Supabase).
+> Le token d'administration n'est pas disponible pour les agents de code.
+> Sans elle, `/admin/taches/` affiche un bandeau explicite et le reste du
+> back office reste utilisable (la case est cochable sans persistance).
+
+---
+
+## 10. Définition de « terminé »
 
 Une tâche est terminée quand :
 

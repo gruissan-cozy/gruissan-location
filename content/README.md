@@ -28,3 +28,11 @@ Pour WhatsApp, `whatsapp` accepte un numéro distinct du téléphone.
 ## proximite.json
 Points d'intérêt à proximité avec leur distance en mètres depuis l'appartement.
 Chaque point a un nom et une description dans les 4 langues.
+
+## modeles-reponse.json
+Réponses types insérables en un clic dans le champ de réponse de la messagerie
+du back office (disponibilité, tarif, conditions…). Éditables ici, sans toucher
+au code. Chaque modèle porte un `id`, une `categorie`, un `nom` en 4 langues et
+un `texte` contenant des variables entre accolades (`{nom}`, `{dates}`…) :
+une variable absente du message reste affichée telle quelle dans le texte,
+elle n'est jamais remplacée par une valeur inventée.
