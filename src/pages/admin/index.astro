@@ -15,6 +15,14 @@ const base = import.meta.env.BASE_URL ?? '/';
 
 const CARDS = [
   {
+    key: 'revenus',
+    href: `${base}admin/revenus/`,
+    icon: '€',
+    title: AT['nav.revenus'],
+    desc: AT['dash.cardRevenus'],
+    statId: 'stat-ca',
+  },
+  {
     key: 'messages',
     href: `${base}admin/messages/`,
     icon: '✉',
@@ -129,8 +137,28 @@ const CARDS = [
             {AT['dash.migrationLuMissing']}
           </div>
 
+          <!-- Alerte : la table des séjours n'existe pas encore (chantier 6) -->
+          <div
+            id="dash-ca-migration"
+            class="mb-6 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+            role="alert"
+          >
+            {AT['dash.migrationSejoursMissing']}
+          </div>
+
           <!-- Compteurs -->
-          <div class="mb-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div class="mb-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <!-- Chiffre d'affaires : masqué tant que les séjours ne sont pas
+                 chargés (la table peut ne pas exister). -->
+            <div
+              id="dash-card-ca"
+              class="hidden rounded-2xl border border-sunset-200/70 bg-white p-5 shadow-card"
+            >
+              <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
+                {AT['dash.statCa']}
+              </p>
+              <p id="stat-ca" class="mt-1 font-display text-3xl font-semibold text-sunset-500">—</p>
+            </div>
             <div class="rounded-2xl border border-sunset-200/70 bg-white p-5 shadow-card">
               <p class="text-xs font-medium uppercase tracking-wide text-ocean-700/60">
                 {AT['dash.statUnread']}
@@ -213,8 +241,10 @@ const CARDS = [
 
 <script>
   import { getSupabase } from '../../lib/supabase';
-  import { errText, toast, majBadgeNonLus } from '../../lib/admin-runtime';
+  import { errText, toast, majBadgeNonLus, fmtPrice } from '../../lib/admin-runtime';
   import { estErreurColonneLuAbsente } from '../../lib/lu';
+  import { aggreger, estTableSejoursAbsente } from '../../lib/revenus';
+  import type { Sejour } from '../../lib/supabase';
   import { AT } from '../../i18n/admin';
 
   const loginView = document.getElementById('admin-login');
@@ -376,6 +406,25 @@ const CARDS = [
           hint.textContent = nonLuesReelles
             ? `${nonLuesReelles} ${AT['msg.unreadCount']} — ${AT['dash.unreadHint']}`
             : '';
+        }
+
+        // ---------- Chiffre d'affaires (chantier 6 — #20) ----------
+        // Séparé du bloc ci-dessus : si la table `sejours` n'existe pas
+        // encore, la carte reste masquée et les autres compteurs
+        // s'affichent quand même.
+        const resSejours = await supabase.from('sejours').select('*');
+        if (resSejours.error) {
+          if (estTableSejoursAbsente(resSejours.error)) {
+            // Bandeau réutilisé : il nomme la migration 0003 à appliquer.
+            document
+              .getElementById('dash-ca-migration')
+              ?.classList.remove('hidden');
+          }
+        } else {
+          const sejours = (resSejours.data ?? []) as Sejour[];
+          const ca = aggreger(sejours).total;
+          set('stat-ca', fmtPrice(ca, true));
+          document.getElementById('dash-card-ca')?.classList.remove('hidden');
         }
       } catch (error) {
         toast(errText(error) || AT['common.errorGeneric'], 'error');

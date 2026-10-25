@@ -155,7 +155,39 @@ payant. **Toute nouvelle option doit être documentée avant d'être codée.**
 
 ---
 
-## 8. Définition de « terminé »
+## 8. Suivi des revenus et exports (issue #20)
+
+`/admin/revenus/` affiche quatre indicateurs calculés sur les séjours
+**confirmés et terminés** : chiffre d'affaires (par mois, par saison, par
+année), taux d'occupation (par mois et sur l'année), prix moyen par nuit,
+et part des séjours sans prix renseigné. La page exporte les séjours et
+les messages en CSV.
+
+Logique pure dans `src/lib/revenus.ts` (testée dans
+`tests/revenus.test.ts` et `tests/revenus-export.test.ts`). Points
+importants :
+
+- **Répartition au prorata des nuits** : un séjour à cheval sur deux mois
+  n'est pas compté en entier dans le premier mois. Les centimes perdus
+  par les arrondis sont repris sur le dernier mois.
+- **Un prix absent n'est jamais inventé** : le séjour reste visible et
+  compté dans « sans prix », mais ne contribue ni au chiffre d'affaires
+  ni au prix moyen — sinon les totaux seraient faussés.
+- **CSV** : séparateur `;` (Excel français), BOM UTF-8 (sinon les accents
+  sont relus en Windows-1252), guillemets doublés, fin de ligne Windows.
+- **Injection de formules** : toute valeur commençant par `=`, `+`, `-`,
+  `@` ou une tabulation est préfixée d'une apostrophe — sans cela, un nom
+  de client saisi comme `=HYPERLINK(...)` s'exécuterait à l'ouverture du
+  tableur.
+
+> ⚠️ **Migration 0003 à appliquer à la main** (SQL Editor de Supabase).
+> Tant que la table `sejours` n'existe pas, `/admin/revenus/` affiche un
+> bandeau explicite, la carte de chiffre d'affaires du tableau de bord
+> reste masquée et les autres compteurs fonctionnent toujours.
+
+---
+
+## 9. Définition de « terminé »
 
 Une tâche est terminée quand :
 
