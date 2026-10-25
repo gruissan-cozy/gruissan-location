@@ -15,6 +15,20 @@ interface Props {
 const { lang } = Astro.props as Props;
 const b = bt[lang];
 
+// --- Dates pré-remplies depuis le calendrier des disponibilités --------------
+// /reserver?arrivee=2026-08-01&depart=2026-08-08 : on ne retient que des dates
+// réellement cohérentes (format ISO, départ après arrivée), sinon le formulaire
+// reste vierge et fonctionne exactement comme avant.
+const brutArrivee = Astro.url.searchParams.get('arrivee') ?? '';
+const brutDepart = Astro.url.searchParams.get('depart') ?? '';
+const ISO_DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+const arriveeInitiale = ISO_DATE.test(brutArrivee) ? brutArrivee : '';
+const departInitial = ISO_DATE.test(brutDepart) ? brutDepart : '';
+const datesPreRemplies =
+  arriveeInitiale !== '' && departInitial !== '' && departInitial > arriveeInitiale;
+const arrivee = datesPreRemplies ? arriveeInitiale : '';
+const depart = datesPreRemplies ? departInitial : '';
+
 // --- Packs : Supabase (table packs, actifs, triés) ou content/packs.json ------
 let packs: Pack[] = [];
 if (isSupabaseConfigured) {
@@ -125,6 +139,7 @@ const cfg = {
                 name="check_in"
                 type="date"
                 required
+                value={arrivee}
                 class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
               />
             </div>
@@ -137,6 +152,7 @@ const cfg = {
                 name="check_out"
                 type="date"
                 required
+                value={depart}
                 class="w-full rounded-xl border border-sand-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
               />
             </div>
@@ -428,6 +444,13 @@ const cfg = {
 
   // Format monétaire adapté à la langue de la page (ex. « 1 466,08 € » en fr).
   const money = new Intl.NumberFormat(lang, { style: 'currency', currency: 'EUR' });
+
+  // Dates pré-remplies par le calendrier : le devis est calculé dès l'arrivée,
+  // sans attendre que le visiteur touche au formulaire.
+  if (checkIn.value && checkOut.value) {
+    updateEstimate();
+    scheduleAvailability();
+  }
 
   /** Échappe une chaîne avant injection dans innerHTML (noms de packs). */
   function esc(value) {
