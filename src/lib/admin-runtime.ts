@@ -160,11 +160,15 @@ export function fmtRange(start: string, end: string): string {
   return `${fmtDate(start)} → ${fmtDate(end)}`;
 }
 
-/** Prix en euros : 45 → « 45 € », 45.5 → « 45,50 € ». */
-export function fmtPrice(value: number | null | undefined): string {
+/**
+ * Prix en euros : 45 → « 45 € », 45.5 → « 45,50 € ».
+ * `decimales: true` force deux décimales — utile pour les chiffres
+ * d'affaires, qui ne sont jamais des montants entiers.
+ */
+export function fmtPrice(value: number | null | undefined, decimales = false): string {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
   const n = Number(value);
-  const txt = Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',');
+  const txt = Number.isInteger(n) && !decimales ? String(n) : n.toFixed(2).replace('.', ',');
   return `${txt} €`;
 }
 
