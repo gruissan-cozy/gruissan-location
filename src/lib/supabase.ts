@@ -125,3 +125,48 @@ export interface SejourTache {
   fait_le: string | null;
 }
 
+export interface TenantSession {
+  id: string;
+  created_at: string;
+  reservation_id: string;
+  email: string;
+  token: string;
+  expires_at: string;
+  used: boolean;
+}
+
+export interface ChecklistItem {
+  id: string;
+  created_at: string;
+  reservation_id: string;
+  moment: 'checkin' | 'checkout';
+  room: string;
+  item: string;
+  ok: boolean;
+  note: string | null;
+}
+
+export interface TenantPhoto {
+  id: string;
+  created_at: string;
+  reservation_id: string;
+  moment: 'checkin' | 'checkout';
+  room: string;
+  path: string;
+  mime: string;
+  size: number | null;
+  meta: Record<string, unknown>;
+}
+
+export interface PdfReport {
+  id: string;
+  created_at: string;
+  reservation_id: string;
+  moment: 'checkin' | 'checkout';
+  path: string;
+  size: number | null;
+  sent_to_tenant: boolean;
+  sent_to_owner: boolean;
+  error: string | null;
+}
+
