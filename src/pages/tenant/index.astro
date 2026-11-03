@@ -330,7 +330,18 @@ const tr = t[lang];
           .order('created_at', { ascending: false })
           .limit(1);
 
-        showFeedback(tr.reportSent, 'success');
+        // Envoyer les emails via Resend
+        const { data: sendData, error: sendError } = await supabase.functions.invoke('send-email', {
+          body: {
+            reservation_id: session.reservation_id,
+            moment: computedMoment,
+          },
+        });
+
+        if (sendError || !sendData?.ok) {
+          showFeedback(tr.reportError, 'error');
+          return;
+        }
       } catch {
         showFeedback(tr.reportError, 'error');
       }

@@ -1,0 +1,8 @@
+{
+  "name": "send-email",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "resend": "^4.0.0"
+  }
+}
