@@ -303,29 +303,37 @@ const tr = t[lang];
 
     // ---------- Soumission ----------
     document.getElementById('tenant-submit')?.addEventListener('click', async () => {
-      const signatureCanvas = document.getElementById('tenant-signature-canvas');
-      if (!session || !signatureCanvas) return;
+      const signatureCanvasEl = document.getElementById('tenant-signature-canvas');
+      if (!session || !signatureCanvasEl) return;
 
-      const signatureDataUrl = (signatureCanvas as HTMLCanvasElement).toDataURL('image/png');
+      const signatureDataUrl = (signatureCanvasEl as HTMLCanvasElement).toDataURL('image/png');
 
-      const { error } = await supabase
-        .from('pdf_reports')
-        .insert({
-          reservation_id: session.reservation_id,
-          moment: computedMoment,
-          path: '',
-          size: null,
-          sent_to_tenant: false,
-          sent_to_owner: false,
-          error: null,
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-pdf', {
+          body: {
+            reservation_id: session.reservation_id,
+            moment: computedMoment,
+          },
         });
 
-      if (error) {
-        showFeedback(tr.reportError, 'error');
-        return;
-      }
+        if (error || !data?.ok) {
+          showFeedback(tr.reportError, 'error');
+          return;
+        }
 
-      showFeedback(tr.reportSent, 'success');
+        // Marquer comme envoyé au propriétaire
+        await supabase
+          .from('pdf_reports')
+          .update({ sent_to_owner: true })
+          .eq('reservation_id', session.reservation_id)
+          .eq('moment', computedMoment)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        showFeedback(tr.reportSent, 'success');
+      } catch {
+        showFeedback(tr.reportError, 'error');
+      }
     });
 
     loadGuide();
