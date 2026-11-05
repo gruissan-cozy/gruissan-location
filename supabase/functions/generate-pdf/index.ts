@@ -35,15 +35,12 @@ Deno.serve(async (req: Request) => {
     if (typeof reservationId !== 'string' || reservationId !== session.reservation_id || !['checkin', 'checkout'].includes(moment)) {
       return jsonResponse({ error: 'Réservation ou étape invalide.' }, 400);
     }
-    let signatureBytes: Uint8Array | null = null;
-    if (signatureDataUrl !== undefined) {
-      if (typeof signatureDataUrl !== 'string' || signatureDataUrl.length > 700_000) {
-        return jsonResponse({ error: 'Signature invalide ou trop volumineuse.' }, 400);
-      }
-      const signatureMatch = signatureDataUrl.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/);
-      if (!signatureMatch) return jsonResponse({ error: 'Format de signature invalide.' }, 415);
-      signatureBytes = Uint8Array.from(atob(signatureMatch[1]), (char) => char.charCodeAt(0));
+    if (typeof signatureDataUrl !== 'string' || signatureDataUrl.length > 700_000) {
+      return jsonResponse({ error: 'Signature requise ou trop volumineuse.' }, 400);
     }
+    const signatureMatch = signatureDataUrl.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/);
+    if (!signatureMatch) return jsonResponse({ error: 'Format de signature invalide.' }, 415);
+    const signatureBytes = Uint8Array.from(atob(signatureMatch[1]), (char) => char.charCodeAt(0));
 
     const supabase = createServiceClient();
     const { data: booking, error: bookingError } = await supabase
@@ -64,18 +61,26 @@ Deno.serve(async (req: Request) => {
     if (checklistError || photosError || guideError) return jsonResponse({ error: 'Données de l’état des lieux indisponibles.' }, 500);
     const checklistRows = (checklist || []) as ChecklistEntry[];
     const photoRows = (photos || []) as PhotoEntry[];
-    const invalidChecklist = checklistRows.length > 100 || checklistRows.some((row) =>
-      !REQUIRED_ROOMS.includes(row.room) || typeof row.item !== 'string' || row.item.length > 120
-      || typeof row.ok !== 'boolean'
+    const roomRows = new Set(checklistRows.filter((row) => row.item === 'condition').map((row) => row.room));
+    const missingRooms = REQUIRED_ROOMS.filter((room) => !roomRows.has(room));
+    if (missingRooms.length) return jsonResponse({ error: `Évaluation manquante pour : ${missingRooms.join(', ')}.` }, 400);
+    const invalidChecklist = checklistRows.length !== REQUIRED_ROOMS.length || checklistRows.some((row) =>
+      !REQUIRED_ROOMS.includes(row.room) || row.item !== 'condition' || typeof row.ok !== 'boolean'
       || (row.note !== null && (typeof row.note !== 'string' || row.note.length > 500))
-    );
+    ) || REQUIRED_ROOMS.some((room) => checklistRows.filter((row) => row.room === room).length !== 1);
     if (invalidChecklist) return jsonResponse({ error: 'La checklist contient des données invalides.' }, 400);
+    const unresolved = checklistRows.filter((row) => !row.ok && !row.note?.trim());
+    if (unresolved.length) return jsonResponse({ error: 'Cochez chaque pièce comme OK ou décrivez le problème.' }, 400);
     const rooms = REQUIRED_ROOMS;
     if (photoRows.length > REQUIRED_ROOMS.length * 2 || photoRows.some((photo) =>
       !rooms.includes(photo.room) || !['image/jpeg', 'image/png'].includes(photo.mime)
       || !Number.isInteger(photo.size) || photo.size < 1 || photo.size > 1_500_000
     ) || rooms.some((room) => photoRows.filter((photo) => photo.room === room).length > 2)) {
       return jsonResponse({ error: 'La liste de photos contient des données invalides.' }, 400);
+    }
+    const roomsWithoutPhoto = rooms.filter((room) => !photoRows.some((photo) => photo.room === room));
+    if (roomsWithoutPhoto.length) {
+      return jsonResponse({ error: `Ajoutez au moins une photo pour chaque pièce : ${roomsWithoutPhoto.join(', ')}.` }, 400);
     }
 
     const pdf = await PDFDocument.create();
