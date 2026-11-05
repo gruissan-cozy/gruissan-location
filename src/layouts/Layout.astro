@@ -66,6 +66,7 @@ const metaDesc = seo[lang].description;
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"
       rel="stylesheet"
     />
+    <slot name="head" />
     <!-- Données structurées schema.org (résultats enrichis Google) -->
     <script type="application/ld+json" set:html={JSON.stringify({
       '@context': 'https://schema.org',

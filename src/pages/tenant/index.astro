@@ -1,349 +1,445 @@
 ---
 /**
- * /tenant/ — espace locataire temporaire (check-in / check-out).
- *
- * Page statique, rendu dynamique côté client via le token
- * passé en query param : `/tenant/?token=...`.
+ * Espace locataire statique pour GitHub Pages.
+ * Le lien de séjour porte un jeton temporaire en query string.
  */
-
 import Layout from '../../layouts/Layout.astro';
-import { t, type Lang } from '../../i18n';
-
+import type { Lang } from '../../i18n';
 const lang: Lang = 'fr';
-const tr = t[lang];
 ---
 
-<Layout lang={lang} title={tr['tenant.title']}>
-  <section class="max-w-2xl mx-auto px-4 py-10">
+<Layout lang={lang} title="Espace locataire — Gruissan Cozy">
+  <meta name="referrer" content="no-referrer" slot="head" />
+  <meta name="robots" content="noindex, nofollow, noarchive" slot="head" />
+  <section class="mx-auto max-w-3xl px-4 py-8 sm:py-12">
     <header class="mb-8">
-      <h1 class="font-display text-3xl font-semibold text-ocean-900">{tr['tenant.title']}</h1>
-      <p class="mt-2 text-ocean-700/80">{tr['tenant.subtitle']}</p>
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sunset-600">Gruissan Plage</p>
+      <h1 id="tenant-title" class="mt-2 font-display text-3xl font-semibold text-ocean-900">Espace locataire</h1>
+      <p id="tenant-subtitle" class="mt-2 text-ocean-700/80"></p>
     </header>
-
-    <div id="tenant-root" class="space-y-6">
-      <p class="text-sm text-ocean-700/70">Chargement…</p>
+    <div id="tenant-root" class="space-y-6" aria-live="polite">
+      <p id="tenant-loading" class="text-sm text-ocean-700/70">Chargement…</p>
     </div>
-
-    <p id="tenant-feedback" class="mt-4 text-sm text-ocean-700 hidden"></p>
+    <p id="tenant-feedback" class="mt-5 hidden rounded-lg p-3 text-sm" role="status"></p>
   </section>
 </Layout>
 
 <script>
-  (async () => {
+  import { createClient } from '@supabase/supabase-js';
+  import { t, LANGUAGES, type Lang } from '../../i18n';
+  import { TENANT_ROOMS, attachTenantSignaturePad, tenantReportPreflight } from '../../lib/tenant';
+
+  (() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token') || '';
+    const requestedLang = params.get('lang') || 'fr';
+    const lang: Lang = LANGUAGES.includes(requestedLang as Lang) ? requestedLang as Lang : 'fr';
+    const tr = t[lang];
     const root = document.getElementById('tenant-root');
     const feedback = document.getElementById('tenant-feedback');
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token') || '';
-
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
-    const supabaseAnon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
-
-    const showFeedback = (msg: string, type = 'info') => {
-      if (!feedback) return;
-      feedback.textContent = msg;
-      feedback.classList.remove('hidden', 'text-rose-700', 'text-ocean-700');
-      feedback.classList.add(type === 'error' ? 'text-rose-700' : 'text-ocean-700');
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+    const rooms = TENANT_ROOMS;
+    type Room = (typeof rooms)[number];
+    type Moment = 'checkin' | 'checkout';
+    type ChecklistRow = { id: string; room: Room; item: string; ok: boolean; note: string | null };
+    type Photo = { id: string; room: Room; moment: Moment };
+    const roomLabels: Record<Room, string> = {
+      living: tr['tenant.room.living'], kitchen: tr['tenant.room.kitchen'],
+      bedroom: tr['tenant.room.bedroom'], mezzanine: tr['tenant.room.mezzanine'],
+      bathroom: tr['tenant.room.bathroom'], entrance: tr['tenant.room.entrance'],
     };
 
-    if (!supabaseUrl || !supabaseAnon || !token) {
-      if (root) root.innerHTML = '<p class="text-sm text-ocean-700/70">Lien invalide.</p>';
-      showFeedback('Lien invalide.', 'error');
+    const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[char] || char);
+    const showMessage = (message: string, isError = false) => {
+      if (!feedback) return;
+      feedback.textContent = message;
+      feedback.className = `mt-5 rounded-lg p-3 text-sm ${isError ? 'bg-rose-50 text-rose-700' : 'bg-ocean-50 text-ocean-800'}`;
+    };
+    const fail = (message: string) => {
+      if (root) root.innerHTML = `<p class="rounded-xl bg-rose-50 p-4 text-rose-700">${escapeHtml(message)}</p>`;
+    };
+
+    const title = document.getElementById('tenant-title');
+    const subtitle = document.getElementById('tenant-subtitle');
+    if (title) title.textContent = tr['tenant.title'];
+    if (subtitle) subtitle.textContent = tr['tenant.subtitle'];
+    document.documentElement.lang = lang;
+
+    if (!token || !supabaseUrl || !supabaseAnonKey || !root) {
+      fail(tr['tenant.invalid']);
       return;
     }
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(supabaseUrl, supabaseAnon, {
+    const tenantRoot = root as HTMLElement;
+
+    // Garder le jeton en mémoire uniquement, et le retirer de l’adresse affichée.
+    params.delete('token');
+    const safeQuery = params.toString();
+    history.replaceState(null, '', `${window.location.pathname}${safeQuery ? `?${safeQuery}` : ''}`);
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { 'x-tenant-token': token } },
     });
+    let reservationId = '';
+    let moment: Moment = 'checkin';
+    let checklist: ChecklistRow[] = [];
+    let photos: Photo[] = [];
+    let signaturePad: ReturnType<typeof attachTenantSignaturePad> | null = null;
+    const pendingSaves = new Set<Promise<void>>();
+    const pendingReports: Partial<Record<Moment, string>> = {};
+    const completedMoments = new Set<Moment>();
 
-    // ---------- Vérifier la session ----------
-    const { data: sessionData, error: sessionError } = await supabase
-      .from('tenant_sessions')
-      .select('id, reservation_id, expires_at')
-      .eq('token', token)
-      .maybeSingle();
-
-    if (sessionError || !sessionData) {
-      if (root) root.innerHTML = '<p class="text-sm text-ocean-700/70">Lien invalide.</p>';
-      showFeedback('Lien invalide.', 'error');
-      return;
-    }
-
-    const session = sessionData as { id: string; reservation_id: string; expires_at: string };
-    if (session.expires_at < new Date().toISOString()) {
-      if (root) root.innerHTML = '<p class="text-sm text-ocean-700/70">Ce lien a expiré.</p>';
-      showFeedback('Ce lien a expiré.', 'error');
-      return;
-    }
-
-    const reservationId = session.reservation_id;
-
-    // ---------- Déduire le moment ----------
-    const { data: bookingData } = await supabase
-      .from('bookings')
-      .select('check_in, check_out')
-      .eq('id', reservationId)
-      .maybeSingle();
-
-    const now = new Date().toISOString();
-    const computedMoment: 'checkin' | 'checkout' =
-      bookingData && now < (bookingData as { check_in: string }).check_in + 'T00:00:00Z'
-        ? 'checkin'
-        : 'checkout';
-
-    const tr = {
-      title: 'Espace locataire',
-      subtitle: 'Accédez à votre guide et à votre état des lieux.',
-      guide: "Guide de l'appartement",
-      checkin: 'Check-in',
-      checkout: 'Check-out',
-      room: 'Pièce',
-      item: 'Élément',
-      ok: 'OK',
-      note: 'Note',
-      save: 'Enregistrer',
-      submit: 'Valider et signer',
-      photoAdd: 'Ajouter une photo',
-      photoRetake: 'Reprendre',
-      photoRemove: 'Supprimer',
-      signature: 'Signature',
-      signatureClear: 'Effacer',
-      reportSent: 'Rapport envoyé par email.',
-      reportError: "Erreur lors de l'envoi du rapport.",
-      expired: 'Ce lien a expiré.',
-      invalid: 'Lien invalide.',
+    const edgeCall = async (functionName: string, body: Record<string, unknown>) => {
+      const { data, error } = await supabase.functions.invoke(functionName, { body });
+      if (error) throw new Error(tr['tenant.serverError']);
+      return data;
     };
 
-    // ---------- Charger checklist + photos ----------
-    const [checkRes, photoRes] = await Promise.all([
-      supabase.from('checklists').select('*').eq('reservation_id', reservationId),
-      supabase.from('photos').select('id, room, moment').eq('reservation_id', reservationId),
-    ]);
-
-    const checklist = (checkRes.data || []) as Array<{
-      id: string;
-      room: string;
-      item: string;
-      ok: boolean;
-      note: string | null;
-    }>;
-    const photos = (photoRes.data || []) as Array<{
-      id: string;
-      room: string;
-      path: string;
-      moment: string;
-    }>;
-
-    const grouped: Record<string, typeof checklist> = {};
-    for (const item of checklist) {
-      (grouped[item.room] ||= []).push(item);
-    }
-
-    // ---------- Rendu initial ----------
-    if (root) {
-      root.innerHTML = `
-        <header>
-          <h2 class="font-display text-2xl font-semibold text-ocean-900">${tr.title}</h2>
-          <p class="mt-2 text-ocean-700/80">${tr.subtitle}</p>
-          <p class="mt-1 text-xs text-ocean-700/60">${computedMoment === 'checkin' ? tr.checkin : tr.checkout}</p>
-        </header>
-
-        <section>
-          <h3 class="font-display text-xl font-semibold text-ocean-900 mb-2">${tr.guide}</h3>
-          <div id="tenant-guide-content" class="space-y-4 text-ocean-800/90 leading-relaxed">
-            <p class="text-sm text-ocean-700/70">Chargement du guide…</p>
-          </div>
-        </section>
-
-        <section>
-          <h3 class="font-display text-xl font-semibold text-ocean-900 mb-2">${computedMoment === 'checkin' ? tr.checkin : tr.checkout}</h3>
-          <div id="tenant-checklist" class="space-y-4">
-            ${Object.entries(grouped).map(([room, roomItems]) => `
-              <fieldset class="rounded-xl border border-sand-200 bg-white p-4 shadow-card">
-                <legend class="px-2 font-display text-lg font-semibold text-ocean-900">${room}</legend>
-                <div class="mt-2 space-y-3">
-                  ${roomItems.map((row) => `
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <label class="flex items-center gap-2 text-sm text-ocean-800">
-                        <input type="checkbox" data-id="${row.id}" ${row.ok ? 'checked' : ''} class="h-4 w-4 rounded border-sand-300 text-ocean-600 focus:ring-ocean-500" />
-                        <span>${row.item}</span>
-                      </label>
-                      <input type="text" data-id="${row.id}" value="${row.note || ''}" placeholder="Note" class="w-full sm:w-48 rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 placeholder:text-ocean-700/40 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none" />
-                    </div>
-                  `).join('')}
-                </div>
-              </fieldset>
-            `).join('')}
-          </div>
-        </section>
-
-        <section>
-          <h3 class="font-display text-xl font-semibold text-ocean-900 mb-2">${tr.signature}</h3>
-          <div id="tenant-signature-canvas" class="rounded-xl border border-sand-300 bg-white h-40 touch-none"></div>
-          <button id="tenant-signature-clear" type="button" class="mt-2 rounded-full border border-ocean-300 bg-white px-4 py-2 text-sm font-medium text-ocean-800 transition hover:bg-ocean-50">${tr.signatureClear}</button>
-        </section>
-
-        <div class="flex flex-col gap-3">
-          <button id="tenant-submit" type="button" class="inline-flex items-center justify-center rounded-full bg-sunset-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sunset-600">${tr.submit}</button>
-        </div>
-      `;
-    }
-
-    // ---------- Charger le guide ----------
-    async function loadGuide() {
-      const guideContainer = document.getElementById('tenant-guide-content');
-      if (!guideContainer) return;
-      const { data, error } = await supabase
-        .from('guide_sections')
-        .select('slug, titre, contenu, icone, ordre')
-        .eq('actif', true)
-        .order('ordre');
-
-      if (error || !data || data.length === 0) {
-        guideContainer.innerHTML = '<p class="text-sm text-ocean-700/70">Guide indisponible pour le moment.</p>';
-        return;
-      }
-
-      guideContainer.innerHTML = data.map((s) => {
-        const titre = ((s.titre as Record<string, string>) || {})['fr'] || s.slug;
-        const contenu = ((s.contenu as Record<string, string>) || {})['fr'] || '';
-        return `
-          <article class="rounded-xl border border-sand-200 bg-white p-4 shadow-card">
-            <div class="flex items-center gap-3 mb-2">
-              <span class="text-xl" aria-hidden="true">${s.icone ?? '📄'}</span>
-              <h3 class="font-display text-lg font-semibold text-ocean-900">${titre}</h3>
-            </div>
-            <div class="text-sm leading-relaxed text-ocean-800/90 space-y-2">${contenu}</div>
-          </article>
-        `;
-      }).join('');
-    }
-
-    // ---------- Signature canvas ----------
-    function initSignature() {
-      const signatureCanvasEl = document.getElementById('tenant-signature-canvas');
-      if (!signatureCanvasEl) return;
-      const signatureCanvas = signatureCanvasEl as HTMLCanvasElement;
-      const ctx = signatureCanvas.getContext('2d');
-      if (!ctx) return;
-
-      let drawing = false;
-      let lastX = 0;
-      let lastY = 0;
-
-      const resize = () => {
-        const rect = signatureCanvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        signatureCanvas.width = rect.width * dpr;
-        signatureCanvas.height = rect.height * dpr;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.scale(dpr, dpr);
-        ctx.strokeStyle = '#0f4c81';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-      };
-
-      resize();
-      window.addEventListener('resize', resize);
-
-      const getPos = (e: PointerEvent) => {
-        const rect = signatureCanvas.getBoundingClientRect();
-        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      };
-
-      signatureCanvas.addEventListener('pointerdown', (e) => {
-        drawing = true;
-        const pos = getPos(e);
-        lastX = pos.x;
-        lastY = pos.y;
-        signatureCanvas.setPointerCapture(e.pointerId);
-      });
-
-      signatureCanvas.addEventListener('pointermove', (e) => {
-        if (!drawing) return;
-        const pos = getPos(e);
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-        lastX = pos.x;
-        lastY = pos.y;
-      });
-
-      const stopDrawing = (e: PointerEvent) => {
-        drawing = false;
-        signatureCanvas.releasePointerCapture(e.pointerId);
-      };
-      signatureCanvas.addEventListener('pointerup', stopDrawing);
-      signatureCanvas.addEventListener('pointercancel', stopDrawing);
-
-      document.getElementById('tenant-signature-clear')?.addEventListener('click', () => {
-        const rect = signatureCanvas.getBoundingClientRect();
-        ctx.clearRect(0, 0, rect.width, rect.height);
-      });
-    }
-
-    // ---------- Sauvegarde checklist ----------
-    document.getElementById('tenant-checklist')?.addEventListener('change', async (e) => {
-      const target = e.target as HTMLInputElement;
-      const id = target.dataset.id;
-      if (!id) return;
-
-      const row = target.closest('div');
-      const noteInput = row?.querySelector('input[type="text"]') as HTMLInputElement | null;
-      const ok = target.type === 'checkbox' ? target.checked : undefined;
-      const note = noteInput?.value || null;
-
-      if (ok !== undefined) {
-        const { error } = await supabase.from('checklists').update({ ok, note }).eq('id', id);
-        if (error) showFeedback(error.message, 'error');
-      }
-    });
-
-    // ---------- Soumission ----------
-    let reportReady = false;
-    let reportSent = false;
-    document.getElementById('tenant-submit')?.addEventListener('click', async () => {
-      if (reportSent) return;
-      const signatureCanvasEl = document.getElementById('tenant-signature-canvas');
-      if (!session || !signatureCanvasEl) return;
-
-      const signatureDataUrl = (signatureCanvasEl as HTMLCanvasElement).toDataURL('image/png');
-
-      try {
-        if (!reportReady) {
-          const { data, error } = await supabase.functions.invoke('generate-pdf', {
-            body: {
-              reservation_id: session.reservation_id,
-              moment: computedMoment,
-              signature: signatureDataUrl,
-            },
-          });
-
-          if (error || !data?.ok) {
-            showFeedback(tr.reportError, 'error');
-            return;
-          }
-          reportReady = true;
-        }
-
-        const { error: emailError } = await supabase.functions.invoke('send-email', {
-          body: { reservation_id: session.reservation_id, moment: computedMoment },
-        });
-        if (emailError) {
-          showFeedback(tr.reportError, 'error');
+    function safeGuideFragment(html: string): DocumentFragment {
+      const parsed = new DOMParser().parseFromString(html, 'text/html');
+      const fragment = document.createDocumentFragment();
+      const allowedTags = new Set(['P', 'STRONG', 'EM', 'B', 'I', 'UL', 'OL', 'LI', 'BR', 'H3', 'H4', 'A']);
+      const copy = (source: Node, target: Node) => {
+        if (source.nodeType === Node.TEXT_NODE) {
+          target.appendChild(document.createTextNode(source.textContent || ''));
           return;
         }
-        reportReady = false;
-        reportSent = true;
-        showFeedback(tr.reportSent, 'success');
-      } catch {
-        showFeedback(tr.reportError, 'error');
-      }
-    });
+        if (!(source instanceof HTMLElement) || !allowedTags.has(source.tagName)) {
+          source.childNodes.forEach((child) => copy(child, target));
+          return;
+        }
+        const node = document.createElement(source.tagName.toLowerCase());
+        if (source.tagName === 'A') {
+          const href = source.getAttribute('href') || '';
+          if (/^https?:\/\//i.test(href)) {
+            node.setAttribute('href', href);
+            node.setAttribute('rel', 'noopener noreferrer');
+            node.setAttribute('target', '_blank');
+          }
+        }
+        source.childNodes.forEach((child) => copy(child, node));
+        target.appendChild(node);
+      };
+      parsed.body.childNodes.forEach((child) => copy(child, fragment));
+      return fragment;
+    }
 
-    loadGuide();
-    initSignature();
+    async function loadGuide() {
+      const container = document.getElementById('tenant-guide');
+      if (!container) return;
+      const { data, error } = await supabase.from('guide_sections')
+        .select('slug, titre, contenu, icone, ordre').eq('actif', true).order('ordre');
+      if (error || !data?.length) {
+        container.textContent = tr['tenant.guideUnavailable'];
+        return;
+      }
+      container.replaceChildren(...data.map((section) => {
+        const article = document.createElement('article');
+        article.className = 'rounded-xl border border-sand-200 bg-white p-4 shadow-card';
+        const heading = document.createElement('h3');
+        heading.className = 'mb-2 font-display text-lg font-semibold text-ocean-900';
+        const titles = section.titre as Record<string, string>;
+        heading.textContent = `${section.icone || '📄'} ${titles?.[lang] || titles?.fr || section.slug}`;
+        const content = document.createElement('div');
+        content.className = 'space-y-2 text-sm leading-relaxed text-ocean-800/90';
+        const bodies = section.contenu as Record<string, string>;
+        content.appendChild(safeGuideFragment(bodies?.[lang] || bodies?.fr || ''));
+        article.append(heading, content);
+        return article;
+      }));
+    }
+
+    async function signedPhotoUrl(photoId: string): Promise<string> {
+      const data = await edgeCall('tenant-upload', { action: 'sign', photoId });
+      return data.url as string;
+    }
+
+    async function loadMoment(nextMoment: Moment) {
+      moment = nextMoment;
+      signaturePad?.destroy();
+      signaturePad = null;
+      const { data, error } = await supabase.from('checklists')
+        .select('id, room, item, ok, note').eq('reservation_id', reservationId)
+        .eq('moment', moment).order('room');
+      if (error) throw error;
+      const rows = (data || []) as ChecklistRow[];
+      const missing = rooms.filter((room) => !rows.some((row) => row.room === room && row.item === 'condition'));
+      if (missing.length) {
+        const { error: seedError } = await supabase.from('checklists').upsert(missing.map((room) => ({
+          reservation_id: reservationId, moment, room, item: 'condition', ok: false,
+        })), { onConflict: 'reservation_id,moment,room,item' });
+        if (seedError) throw seedError;
+      }
+      const refreshed = missing.length
+        ? await supabase.from('checklists').select('id, room, item, ok, note')
+          .eq('reservation_id', reservationId).eq('moment', moment).order('room')
+        : { data: rows, error: null };
+      if (refreshed.error) throw refreshed.error;
+      checklist = (refreshed.data || []) as ChecklistRow[];
+      const photoResult = await supabase.from('photos').select('id, room, moment')
+        .eq('reservation_id', reservationId).eq('moment', moment).order('created_at');
+      if (photoResult.error) throw photoResult.error;
+      photos = (photoResult.data || []) as Photo[];
+      await renderPanel();
+    }
+
+    async function compressImage(file: File): Promise<string> {
+      if (!file.type.startsWith('image/') || file.size > 12_000_000) throw new Error('invalid image');
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 1400 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('canvas unavailable');
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.68);
+      if (dataUrl.length > 2_100_000) throw new Error('compressed image too large');
+      return dataUrl;
+    }
+
+    async function renderPanel() {
+      const activeLabel = moment === 'checkin' ? tr['tenant.checkin'] : tr['tenant.checkout'];
+      tenantRoot.innerHTML = `
+        <section class="rounded-2xl border border-sand-200 bg-white p-5 shadow-card sm:p-7">
+          <h2 class="font-display text-2xl font-semibold text-ocean-900">${escapeHtml(tr['tenant.guide'])}</h2>
+          <div id="tenant-guide" class="mt-4 space-y-3"><p class="text-sm text-ocean-700/70">…</p></div>
+        </section>
+        <section class="rounded-2xl border border-sand-200 bg-white p-5 shadow-card sm:p-7">
+          <div class="flex flex-wrap gap-2" role="tablist">
+            <button type="button" data-moment="checkin" role="tab" aria-selected="${moment === 'checkin'}" class="min-h-11 rounded-full px-4 py-2 text-sm font-semibold ${moment === 'checkin' ? 'bg-ocean-800 text-white' : 'border border-ocean-200 text-ocean-800'}">${escapeHtml(tr['tenant.checkin'])}</button>
+            <button type="button" data-moment="checkout" role="tab" aria-selected="${moment === 'checkout'}" class="min-h-11 rounded-full px-4 py-2 text-sm font-semibold ${moment === 'checkout' ? 'bg-ocean-800 text-white' : 'border border-ocean-200 text-ocean-800'}">${escapeHtml(tr['tenant.checkout'])}</button>
+          </div>
+          <h2 class="mt-5 font-display text-2xl font-semibold text-ocean-900">${escapeHtml(activeLabel)}</h2>
+          <div id="tenant-rooms" class="mt-5 space-y-4"></div>
+          <div class="mt-8">
+            <h3 class="font-display text-xl font-semibold text-ocean-900">${escapeHtml(tr['tenant.signature'])}</h3>
+            <canvas id="tenant-signature" aria-label="${escapeHtml(tr['tenant.signature'])}" class="mt-3 h-40 w-full touch-none rounded-xl border border-sand-300 bg-white"></canvas>
+            <button type="button" id="tenant-clear-signature" class="mt-2 min-h-11 rounded-full border border-ocean-300 px-4 py-2 text-sm font-medium text-ocean-800">${escapeHtml(tr['tenant.signature.clear'])}</button>
+          </div>
+          <button type="button" id="tenant-submit" class="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-sunset-500 px-6 py-3 text-sm font-semibold text-white hover:bg-sunset-600">${escapeHtml(tr['tenant.submit'])}</button>
+        </section>`;
+      tenantRoot.querySelectorAll<HTMLButtonElement>('[data-moment]').forEach((button) => {
+        button.addEventListener('click', () => void loadMoment(button.dataset.moment as Moment).catch(() => showMessage(tr['tenant.loadingError'], true)));
+      });
+      await loadGuide();
+      await renderRooms();
+      initSignature();
+      document.getElementById('tenant-clear-signature')?.addEventListener('click', clearSignature);
+      document.getElementById('tenant-submit')?.addEventListener('click', submitReport);
+    }
+
+    async function renderRooms() {
+      const container = document.getElementById('tenant-rooms');
+      if (!container) return;
+      container.replaceChildren();
+      for (const room of rooms) {
+        const row = checklist.find((entry) => entry.room === room && entry.item === 'condition');
+        if (!row) continue;
+        const card = document.createElement('article');
+        card.className = 'rounded-xl border border-sand-200 bg-sand-50 p-4';
+        card.innerHTML = `
+          <h3 class="font-display text-lg font-semibold text-ocean-900">${escapeHtml(roomLabels[room])}</h3>
+          <label class="mt-3 flex min-h-11 items-center gap-3 text-sm text-ocean-800">
+            <input type="checkbox" data-ok class="h-5 w-5 rounded border-sand-300 text-ocean-700" ${row.ok ? 'checked' : ''} />
+            <span>${escapeHtml(tr['tenant.condition'])} — ${escapeHtml(tr['tenant.ok'])}</span>
+          </label>
+          <label class="mt-2 block text-sm text-ocean-700">${escapeHtml(tr['tenant.problem'])}
+            <input data-note type="text" maxlength="300" value="${escapeHtml(row.note || '')}" class="mt-1 min-h-11 w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-ocean-900" />
+          </label>
+          <div data-preview class="mt-3 hidden"></div>
+          <input data-file type="file" accept="image/*" capture="environment" class="sr-only" />
+          <button type="button" data-add class="mt-3 inline-flex min-h-11 items-center justify-center rounded-full border border-ocean-300 bg-white px-4 py-2 text-sm font-semibold text-ocean-800">${escapeHtml(tr['tenant.addPhoto'])}</button>
+          <h4 class="mt-4 text-sm font-semibold text-ocean-800">${escapeHtml(tr['tenant.photos'])}</h4>
+          <div data-gallery class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3"></div>`;
+        container.appendChild(card);
+
+        const checkbox = card.querySelector<HTMLInputElement>('[data-ok]')!;
+        const noteInput = card.querySelector<HTMLInputElement>('[data-note]')!;
+        const fileInput = card.querySelector<HTMLInputElement>('[data-file]')!;
+        const preview = card.querySelector<HTMLDivElement>('[data-preview]')!;
+        const gallery = card.querySelector<HTMLDivElement>('[data-gallery]')!;
+        let saveQueue: Promise<void> = Promise.resolve();
+        const saveChecklist = () => {
+          const values = { ok: checkbox.checked, note: noteInput.value.trim() || null };
+          saveQueue = saveQueue.then(async () => {
+            showMessage(tr['tenant.saving']);
+            try {
+              const { error } = await supabase.from('checklists').update(values).eq('id', row.id);
+              if (error) {
+                showMessage(tr['tenant.serverError'], true);
+                return;
+              }
+              checklist = checklist.map((entry) => entry.id === row.id ? { ...entry, ...values } : entry);
+              showMessage(tr['tenant.saved']);
+            } catch {
+              showMessage(tr['tenant.loadingError'], true);
+            }
+          });
+          const operation = saveQueue;
+          pendingSaves.add(operation);
+          void operation.finally(() => pendingSaves.delete(operation));
+          return operation;
+        };
+        checkbox.addEventListener('change', () => void saveChecklist());
+        noteInput.addEventListener('change', () => void saveChecklist());
+        card.querySelector('[data-add]')?.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => {
+          const file = fileInput.files?.[0];
+          if (!file) return;
+          if (photos.filter((photo) => photo.room === room).length >= 2) {
+            showMessage(tr['tenant.photoLimit'], true);
+            fileInput.value = '';
+            return;
+          }
+          const objectUrl = URL.createObjectURL(file);
+          preview.classList.remove('hidden');
+          preview.innerHTML = `<img src="${objectUrl}" alt="${escapeHtml(roomLabels[room])}" class="max-h-64 w-full rounded-lg object-cover" />
+            <div class="mt-2 flex gap-2"><button type="button" data-confirm class="min-h-11 rounded-full bg-ocean-800 px-4 py-2 text-sm font-semibold text-white">${escapeHtml(tr['tenant.confirmPhoto'])}</button>
+            <button type="button" data-retake class="min-h-11 rounded-full border border-ocean-300 px-4 py-2 text-sm">${escapeHtml(tr['tenant.photo.retake'])}</button></div>`;
+          preview.querySelector('[data-retake]')?.addEventListener('click', () => {
+            URL.revokeObjectURL(objectUrl);
+            fileInput.value = '';
+            preview.classList.add('hidden');
+            preview.replaceChildren();
+          });
+          preview.querySelector('[data-confirm]')?.addEventListener('click', async () => {
+            const button = preview.querySelector<HTMLButtonElement>('[data-confirm]');
+            if (button) { button.disabled = true; button.textContent = tr['tenant.uploading']; }
+            try {
+              const dataUrl = await compressImage(file);
+              const result = await edgeCall('tenant-upload', { action: 'upload', moment, room, dataUrl });
+              photos.push(result.photo as Photo);
+              URL.revokeObjectURL(objectUrl);
+              fileInput.value = '';
+              preview.classList.add('hidden');
+              preview.replaceChildren();
+              await drawGallery(room, gallery);
+              showMessage(tr['tenant.saved']);
+            } catch {
+              showMessage(tr['tenant.photoError'], true);
+              if (button) { button.disabled = false; button.textContent = tr['tenant.confirmPhoto']; }
+            }
+          });
+        });
+        await drawGallery(room, gallery);
+      }
+    }
+
+    async function drawGallery(room: Room, gallery: HTMLDivElement) {
+      gallery.replaceChildren();
+      for (const photo of photos.filter((entry) => entry.room === room && entry.moment === moment)) {
+        const url = await signedPhotoUrl(photo.id).catch(() => '');
+        if (!url) continue;
+        const figure = document.createElement('figure');
+        const image = document.createElement('img');
+        image.src = url;
+        image.alt = roomLabels[room];
+        image.loading = 'lazy';
+        image.className = 'h-28 w-full rounded-lg object-cover';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = tr['tenant.photo.remove'];
+        button.className = 'mt-1 min-h-10 w-full rounded-full border border-rose-200 bg-white px-3 py-1 text-xs text-rose-700';
+        button.addEventListener('click', async () => {
+          button.disabled = true;
+          try {
+            await edgeCall('tenant-upload', { action: 'delete', photoId: photo.id });
+            photos = photos.filter((entry) => entry.id !== photo.id);
+            await drawGallery(room, gallery);
+          } catch {
+            button.disabled = false;
+            showMessage(tr['tenant.loadingError'], true);
+          }
+        });
+        figure.append(image, button);
+        gallery.appendChild(figure);
+      }
+    }
+
+    function initSignature() {
+      signaturePad?.destroy();
+      const canvas = document.getElementById('tenant-signature') as HTMLCanvasElement | null;
+      const context = canvas?.getContext('2d');
+      signaturePad = canvas && context ? attachTenantSignaturePad(canvas, context) : null;
+    }
+
+    function clearSignature() {
+      signaturePad?.clear();
+    }
+
+    async function submitReport() {
+      if (completedMoments.has(moment)) {
+        showMessage(tr['tenant.success']);
+        return;
+      }
+      if (pendingSaves.size) await Promise.all([...pendingSaves]);
+      const preflight = tenantReportPreflight(checklist, photos, moment, Boolean(signaturePad?.hasSignature) || Boolean(pendingReports[moment]));
+      if (preflight === 'assessment') {
+        showMessage(tr['tenant.assessmentRequired'], true);
+        return;
+      }
+      if (preflight === 'photos') {
+        showMessage(tr['tenant.photosRequired'], true);
+        return;
+      }
+      if (preflight === 'signature') {
+        showMessage(tr['tenant.signatureRequired'], true);
+        return;
+      }
+      if (!window.confirm(tr['tenant.confirm'])) return;
+      const button = document.getElementById('tenant-submit') as HTMLButtonElement | null;
+      if (button) { button.disabled = true; button.textContent = tr['tenant.saving']; }
+      try {
+        let signedUrl = pendingReports[moment];
+        if (!signedUrl) {
+          const canvas = document.getElementById('tenant-signature') as HTMLCanvasElement;
+          const generated = await edgeCall('generate-pdf', {
+            reservation_id: reservationId, moment, signature: canvas.toDataURL('image/png'),
+          });
+          if (!generated?.ok || typeof generated.signedUrl !== 'string') throw new Error(tr['tenant.serverError']);
+          signedUrl = generated.signedUrl;
+          pendingReports[moment] = signedUrl;
+        }
+        if (!signedUrl) throw new Error(tr['tenant.serverError']);
+        await edgeCall('send-email', { reservation_id: reservationId, moment });
+        delete pendingReports[moment];
+        completedMoments.add(moment);
+        showMessage(tr['tenant.success']);
+        const link = document.createElement('a');
+        link.href = signedUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'mt-2 inline-block font-semibold underline';
+        link.textContent = tr['tenant.downloadReport'];
+        feedback?.append(document.createElement('br'), link);
+      } catch {
+        if (pendingReports[moment]) showMessage(tr['tenant.emailPartial'], true);
+        else showMessage(tr['tenant.loadingError'], true);
+      } finally {
+        if (button) { button.disabled = false; button.textContent = tr['tenant.submit']; }
+      }
+    }
+
+    async function init() {
+      try {
+        const { data: session, error } = await supabase.from('tenant_sessions')
+          .select('id, reservation_id, expires_at').eq('token', token).maybeSingle();
+        if (error || !session || new Date(session.expires_at).getTime() <= Date.now()) {
+          fail(tr['tenant.invalid']);
+          return;
+        }
+        reservationId = session.reservation_id;
+        await loadMoment('checkin');
+      } catch {
+        fail(tr['tenant.loadingError']);
+      }
+    }
+
+    void init();
   })();
 </script>
