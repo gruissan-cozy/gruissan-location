@@ -257,3 +257,28 @@ Une tâche est terminée quand :
 - [ ] la logique nouvelle est couverte par des tests ;
 - [ ] la PR est ouverte, la CI verte, puis mergée en squash ;
 - [ ] le déploiement GitHub Pages a réussi et le site répond en 200.
+
+---
+
+## 11. Exécution autonome d’un lot d’issues demandé
+
+Quand le propriétaire demande explicitement de traiter un lot d’issues en autonomie,
+continuer sans attendre une nouvelle consigne entre les issues :
+
+1. Lire les issues ouvertes du lot et leurs critères d’acceptation, puis les ordonner
+   par dépendances.
+2. Pour chaque issue, développer et tester le livrable, lancer `npm run verify`,
+   ouvrir une PR qui référence l’issue avec `Closes #N`, attendre les contrôles CI,
+   puis merger la PR avant de commencer l’issue suivante.
+3. Après chaque merge, synchroniser la branche de travail avec `origin/main` et
+   relancer le gate complet avant la PR suivante.
+4. Ne demander une décision que si une information métier essentielle manque,
+   si un secret doit être fourni, ou si une opération de production/destructive
+   exige une validation humaine.
+5. Si un déploiement ou une configuration manuelle bloque la production, finir et
+   merger tout ce qui peut l’être sans risque, puis remettre au propriétaire une
+   liste exacte des étapes manuelles restantes. Ne jamais présenter le code livré
+   comme une fonctionnalité déployée ou opérationnelle avant vérification réelle.
+6. Prévenir le propriétaire quand toutes les issues du lot sont terminées, ou dès
+   qu’un blocage réel empêche de poursuivre ; ne pas s’arrêter simplement après
+   avoir rédigé un plan ou ouvert une PR.
