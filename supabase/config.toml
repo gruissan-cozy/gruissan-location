@@ -2,3 +2,9 @@ project_id = "ykvieyeftewvxjralcym"
 
 [functions.generate-pdf]
 verify_jwt = true
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.purge-tenant-data]
+verify_jwt = false

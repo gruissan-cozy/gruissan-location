@@ -59,7 +59,7 @@ const tr = t[lang];
     // ---------- Vérifier la session ----------
     const { data: sessionData, error: sessionError } = await supabase
       .from('tenant_sessions')
-      .select('*')
+      .select('id, reservation_id, expires_at')
       .eq('token', token)
       .maybeSingle();
 
@@ -117,7 +117,7 @@ const tr = t[lang];
     // ---------- Charger checklist + photos ----------
     const [checkRes, photoRes] = await Promise.all([
       supabase.from('checklists').select('*').eq('reservation_id', reservationId),
-      supabase.from('photos').select('*').eq('reservation_id', reservationId),
+      supabase.from('photos').select('id, room, moment').eq('reservation_id', reservationId),
     ]);
 
     const checklist = (checkRes.data || []) as Array<{
@@ -302,35 +302,41 @@ const tr = t[lang];
     });
 
     // ---------- Soumission ----------
+    let reportReady = false;
+    let reportSent = false;
     document.getElementById('tenant-submit')?.addEventListener('click', async () => {
+      if (reportSent) return;
       const signatureCanvasEl = document.getElementById('tenant-signature-canvas');
       if (!session || !signatureCanvasEl) return;
 
       const signatureDataUrl = (signatureCanvasEl as HTMLCanvasElement).toDataURL('image/png');
 
       try {
-        const { data, error } = await supabase.functions.invoke('generate-pdf', {
-          body: {
-            reservation_id: session.reservation_id,
-            moment: computedMoment,
-            signature: signatureDataUrl,
-          },
-        });
+        if (!reportReady) {
+          const { data, error } = await supabase.functions.invoke('generate-pdf', {
+            body: {
+              reservation_id: session.reservation_id,
+              moment: computedMoment,
+              signature: signatureDataUrl,
+            },
+          });
 
-        if (error || !data?.ok) {
+          if (error || !data?.ok) {
+            showFeedback(tr.reportError, 'error');
+            return;
+          }
+          reportReady = true;
+        }
+
+        const { error: emailError } = await supabase.functions.invoke('send-email', {
+          body: { reservation_id: session.reservation_id, moment: computedMoment },
+        });
+        if (emailError) {
           showFeedback(tr.reportError, 'error');
           return;
         }
-
-        // Marquer comme envoyé au propriétaire
-        await supabase
-          .from('pdf_reports')
-          .update({ sent_to_owner: true })
-          .eq('reservation_id', session.reservation_id)
-          .eq('moment', computedMoment)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
+        reportReady = false;
+        reportSent = true;
         showFeedback(tr.reportSent, 'success');
       } catch {
         showFeedback(tr.reportError, 'error');
