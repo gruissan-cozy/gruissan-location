@@ -1,0 +1,44 @@
+name: Keepalive Supabase
+
+# Le plan Free de Supabase met un projet en pause après ~7 jours sans
+# activité. Ce workflow interroge une table publique toutes les 48 h pour
+# maintenir le projet actif. Il n'écrit aucune donnée et n'expose aucun secret.
+
+on:
+  schedule:
+    # Toutes les 48 h à 06:17 UTC (hors heures de pointe GitHub Actions).
+    - cron: "17 6 */2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier que la base Supabase répond
+        env:
+          SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::Secrets PUBLIC_SUPABASE_URL / PUBLIC_SUPABASE_ANON_KEY manquants."
+            exit 1
+          fi
+
+          status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 \
+            "$SUPABASE_URL/rest/v1/packs?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+
+          echo "Réponse Supabase : HTTP $status"
+
+          if [ "$status" != "200" ]; then
+            echo "::error::La base Supabase ne répond pas (HTTP $status). Le projet est probablement en pause : le restaurer depuis le dashboard Supabase."
+            exit 1
+          fi
+
+          echo "Base Supabase active."
