@@ -86,6 +86,12 @@ export interface GuideSection {
   icone: string | null;
   ordre: number;
   actif: boolean;
+  /**
+   * 'public' : section affichée sur le guide public /guide/.
+   * 'tenant' : section réservée à l'espace locataire (codes d'accès).
+   * Absente tant que la migration 0010 n'est pas appliquée.
+   */
+  visibilite?: 'public' | 'tenant';
 }
 
 /** Séjour daté du logement (chantier 1 — calendrier). */

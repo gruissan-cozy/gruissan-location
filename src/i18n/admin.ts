@@ -225,6 +225,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'guide.saved': 'Section enregistrée.',
     'guide.deleted': 'Section supprimée.',
     'guide.toggled': 'Visibilité de la section mise à jour.',
+    'guide.public': 'Visible publiquement',
+    'guide.publicHint':
+      "Affichée sur le guide public. Décochez pour réserver la section aux locataires (codes d'accès).",
     'guide.htmlHelp':
       'HTML simple accepté : p, strong, em, ul/ol, li, h3, a. Le contenu est celui de vos voyageurs.',
     'guide.previewTitle': 'Aperçu',
@@ -636,6 +639,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'guide.saved': 'Section saved.',
     'guide.deleted': 'Section deleted.',
     'guide.toggled': 'Section visibility updated.',
+    'guide.public': 'Publicly visible',
+    'guide.publicHint':
+      'Shown in the public guide. Uncheck to keep this section for tenants only (access codes).',
     'guide.htmlHelp': 'Simple HTML accepted: p, strong, em, ul/ol, li, h3, a. This is your travellers’ content.',
     'guide.previewTitle': 'Preview',
     'guide.previewNote': 'Preview of the English content.',
@@ -1046,6 +1052,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'guide.saved': 'Sección guardada.',
     'guide.deleted': 'Sección eliminada.',
     'guide.toggled': 'Visibilidad de la sección actualizada.',
+    'guide.public': 'Visible públicamente',
+    'guide.publicHint':
+      'Se muestra en la guía pública. Desmarca para reservar esta sección a los inquilinos (códigos de acceso).',
     'guide.htmlHelp':
       'HTML sencillo admitido: p, strong, em, ul/ol, li, h3, a. Es el contenido de tus viajeros.',
     'guide.previewTitle': 'Vista previa',
@@ -1457,6 +1466,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'guide.saved': 'Abschnitt gespeichert.',
     'guide.deleted': 'Abschnitt gelöscht.',
     'guide.toggled': 'Sichtbarkeit des Abschnitts aktualisiert.',
+    'guide.public': 'Öffentlich sichtbar',
+    'guide.publicHint':
+      'Wird im öffentlichen Guide angezeigt. Deaktivieren, um den Abschnitt nur für Mieter zu behalten (Zugangscodes).',
     'guide.htmlHelp':
       'Einfaches HTML erlaubt: p, strong, em, ul/ol, li, h3, a. Das ist der Inhalt für Ihre Gäste.',
     'guide.previewTitle': 'Vorschau',
