@@ -1,7 +1,7 @@
 # Site vitrine — Location saisonnière à Gruissan
 
 Site vitrine pour la location saisonnière de votre appartement à Gruissan Plage.
-Stack 100 % open source : **Astro 5** + **Tailwind CSS 4**, déployé gratuitement sur **GitHub Pages**.
+Stack 100 % open source : **Astro 7** + **Tailwind CSS 4**, déployé gratuitement sur **GitHub Pages**.
 
 ## Fonctionnalités
 
