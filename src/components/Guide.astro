@@ -29,8 +29,9 @@ if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabase
         .from('guide_sections')
-        .select('slug, titre, contenu, icone, ordre, actif')
+        .select('slug, titre, contenu, icone, ordre, actif, visibilite')
         .eq('actif', true)
+        .eq('visibilite', 'public')
         .order('ordre');
       if (!error && data && data.length > 0) {
         sections = data.map((row) => ({

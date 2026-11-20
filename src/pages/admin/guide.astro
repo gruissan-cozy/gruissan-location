@@ -200,6 +200,14 @@ const LANGS = ['fr', 'en', 'es', 'de'] as const;
                 </div>
               </div>
 
+              <label class="flex items-start gap-2 text-sm text-ocean-800">
+                <input id="guide-public" type="checkbox" checked class="mt-0.5 h-4 w-4 rounded border-sand-300 text-ocean-600 focus:ring-ocean-200" />
+                <span>
+                  {AT['guide.public']}
+                  <span class="block text-xs text-ocean-700/60">{AT['guide.publicHint']}</span>
+                </span>
+              </label>
+
               <p id="guide-form-error" class="hidden rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200"></p>
 
               <div class="flex flex-wrap items-center justify-end gap-2 border-t border-sand-200/70 pt-4">
@@ -367,11 +375,13 @@ const LANGS = ['fr', 'en', 'es', 'de'] as const;
         const icone = val('guide-icone');
         const ordre = val('guide-ordre');
         const actif = chk('guide-actif');
+        const publicChk = chk('guide-public');
         if (id) id.value = section?.id ?? '';
         if (slug) slug.value = section?.slug ?? '';
         if (icone) icone.value = section?.icone ?? '';
         if (ordre) ordre.value = section ? String(section.ordre) : '0';
         if (actif) actif.checked = section ? section.actif : true;
+        if (publicChk) publicChk.checked = section ? section.visibilite !== 'tenant' : true;
 
         for (const l of LANGS) {
           const titre = val(`guide-titre-${l}`);
@@ -415,6 +425,7 @@ const LANGS = ['fr', 'en', 'es', 'de'] as const;
         const icone = (val('guide-icone')?.value ?? '').trim() || null;
         const ordre = Number(val('guide-ordre')?.value ?? 0);
         const actif = Boolean(chk('guide-actif')?.checked);
+        const visibilite = chk('guide-public')?.checked === false ? 'tenant' : 'public';
 
         let invalid = false;
         if (!slug || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
@@ -434,6 +445,7 @@ const LANGS = ['fr', 'en', 'es', 'de'] as const;
           icone,
           ordre: Number.isFinite(ordre) ? ordre : 0,
           actif,
+          visibilite,
         };
 
         const { error } = editingId
