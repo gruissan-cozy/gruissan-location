@@ -301,16 +301,35 @@ GitHub Actions, `src/lib/` si une logique pure est extraite.
 
 ### Tâche 6 — Nettoyer la double source de disponibilité
 
+**Objectif** : retirer `availability` (statut mensuel) du parcours de décision,
+au profit des séjours datés **et des blocages** (`calendar_blocks`), et
+conserver le repli JSON uniquement pour l'affichage public.
+
 **Critères d'acceptation**
 - [ ] `/admin/disponibilites/` n'est plus un moyen de bloquer des dates (ou est
-      retiré de la navigation).
+      retiré de la navigation au profit de `/admin/blocages/`).
 - [ ] Le formulaire et le calendrier lisent la même source (voir
-      `2026-11-reservation-disponibilites.md`, tâche 1).
+      `2026-11-reservation-disponibilites.md`, tâches 0 et 1).
 - [ ] Le repli `content/disponibilites.json` reste utilisé seulement si
       Supabase est indisponible, et la page l'indique.
 - [ ] Aucune régression sur la vitrine.
 - [ ] 4 langues, `npm run verify` vert.
 
-**Fichiers concernés** : `src/pages/admin/disponibilites.astro`,
-`src/layouts/AdminLayout.astro`, `src/components/Reservation.astro`,
-`src/lib/disponibilites.ts`, `src/i18n/admin.ts`.
+### Tâche 7 — Vue « Blocages » dans le back office
+
+**Objectif** : créer la page de gestion des blocages de dates (`calendar_blocks`)
+distincte des séjours, avec la source visible.
+
+**Critères d'acceptation**
+- [ ] Création, modification, suppression d'un blocage (dates + note interne).
+- [ ] La colonne `source` est affichée ; en V1 elle vaut toujours `direct`
+      (aucun sélecteur airbnb/booking tant que l'import n'existe pas).
+- [ ] Un `external_uid` n'est jamais saisissable à la main (champ réservé à
+      l'import V2), et son index unique partiel est vérifié par un test.
+- [ ] Les blocages sont exclus des revenus et du taux d'occupation.
+- [ ] Tests : création, chevauchement signalé, absence dans `revenus.ts`.
+- [ ] 4 langues, `npm run verify` vert.
+
+**Fichiers concernés** : `src/pages/admin/blocages.astro` (nouveau),
+`src/layouts/AdminLayout.astro`, `src/lib/supabase.ts`, `src/lib/calendrier.ts`,
+`src/i18n/admin.ts`, `tests/`.
