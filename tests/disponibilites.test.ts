@@ -187,25 +187,50 @@ describe('chargerDisponibilites', () => {
     ]);
   });
 
-  it('garde les séjours quand calendar_blocks n’existe pas encore', async () => {
-    // Cas réel : 0011_calendar_blocks.sql pas encore appliquée.
+  it('garde les séjours quand calendar_blocks n’existe pas encore, et ajoute le repli', async () => {
+    // Cas réel : 0011_calendar_blocks.sql pas encore appliquée. Une source est
+    // illisible : on ne peut pas affirmer que le reste est libre, donc les
+    // plages du repli statique (juin partiel, juillet-août occupés, décembre
+    // partiel) s'ajoutent aux séjours réellement lus.
     const client = fauxClient({
       sejours: { data: [{ arrivee: '2026-07-10', depart: '2026-07-17' }], error: null },
       calendar_blocks: TABLE_ABSENTE,
     });
     const res = await chargerDisponibilites({ configure: true, client });
-    expect(res.source).toBe('supabase');
-    expect(res.plages).toEqual([{ debut: '2026-07-10', fin: '2026-07-16', etat: 'occupe' }]);
+    expect(res.source).toBe('json');
+    expect(res.plages).toEqual([
+      { debut: '2026-06-01', fin: '2026-06-30', etat: 'partiel' },
+      { debut: '2026-07-01', fin: '2026-08-31', etat: 'occupe' },
+      { debut: '2026-12-01', fin: '2026-12-31', etat: 'partiel' },
+    ]);
   });
 
-  it('garde les blocages quand sejours n’existe pas encore', async () => {
+  it('garde les blocages quand sejours n’existe pas encore, et ajoute le repli', async () => {
     const client = fauxClient({
       sejours: TABLE_ABSENTE,
       calendar_blocks: { data: [{ debut: '2026-03-03', fin: '2026-03-08' }], error: null },
     });
     const res = await chargerDisponibilites({ configure: true, client });
-    expect(res.source).toBe('supabase');
-    expect(res.plages).toEqual([{ debut: '2026-03-03', fin: '2026-03-08', etat: 'occupe' }]);
+    expect(res.source).toBe('json');
+    expect(res.plages).toEqual([
+      { debut: '2026-03-03', fin: '2026-03-08', etat: 'occupe' },
+      { debut: '2026-06-01', fin: '2026-06-30', etat: 'partiel' },
+      { debut: '2026-07-01', fin: '2026-08-31', etat: 'occupe' },
+      { debut: '2026-12-01', fin: '2026-12-31', etat: 'partiel' },
+    ]);
+  });
+
+  it('ne conclut jamais « libre » quand sejours échoue et calendar_blocks est vide', async () => {
+    // Le défaut corrigé : avant, cette combinaison renvoyait `supabase` + `[]`,
+    // c'est-à-dire « tout est libre », alors que juillet et août sont réservés.
+    const client = fauxClient({
+      sejours: new Error('réseau'),
+      calendar_blocks: { data: [], error: null },
+    });
+    const res = await chargerDisponibilites({ configure: true, client });
+    expect(res.source).toBe('json');
+    expect(res.plages).toEqual(plagesRepli());
+    expect(res.plages).not.toEqual([]);
   });
 
   it('retombe sur le JSON quand les deux tables sont absentes', async () => {

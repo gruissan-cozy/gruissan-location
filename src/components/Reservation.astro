@@ -653,19 +653,17 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
     }
     show(availMsg, s.checking, true);
     // Même calendrier que la vitrine : séjours (`depart` exclusif) ET blocages
-    // (`fin` inclusive), convertis par la fonction pure de src/lib/calendrier.ts.
-    // Les deux lectures sont indépendantes : un échec sur l'une (table absente)
-    // ne doit pas annuler l'autre.
+    // (`fin` inclusive), convertis par la fonction unique `plagesOccupees` de
+    // src/lib/calendrier.ts. Les deux lectures sont indépendantes : un échec sur
+    // l'une (table absente, RLS, réseau) ne doit pas annuler l'autre.
     const [sejours, blocages] = await Promise.all([
       lireDates('sejours', 'arrivee, depart'),
       lireDates('calendar_blocks', 'debut, fin'),
     ]);
-    if (!sejours && !blocages) {
-      // En cas d'erreur de lecture on ne bloque pas la demande
-      blocked = false;
-      show(availMsg, s.toConfirm, true);
-      return;
-    }
+    // Lecture partielle : on ne sait pas tout. On garde les dates réellement
+    // lues, mais on annonce « à confirmer » au lieu de « libre » — jamais de
+    // « Ces dates semblent libres » sur une source manquante.
+    const lecturePartielle = !sejours || !blocages;
     const plages = plagesOccupees(
       (sejours ?? []) as LigneSejour[],
       (blocages ?? []) as LigneBlocage[],
@@ -675,6 +673,9 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
     if (conflict) {
       show(availMsg, s.unavailable, false);
       submitBtn.disabled = true;
+    } else if (lecturePartielle) {
+      show(availMsg, s.toConfirm, true);
+      submitBtn.disabled = false;
     } else {
       show(availMsg, s.available, true);
       submitBtn.disabled = false;
@@ -684,6 +685,11 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
   /**
    * Lit les dates d'une table ; `null` si la lecture échoue (table absente,
    * réseau, RLS). Un tableau vide signifie « aucune ligne », pas une erreur.
+   *
+   * DUPLIQUÉ volontairement de `lireDates` dans src/lib/disponibilites.ts : ce
+   * script est exécuté dans le navigateur et ne peut pas importer un module qui
+   * lit `import.meta.env` côté serveur. Toute évolution de la lecture doit être
+   * reportée dans les deux fichiers (même contrat : `null` = échec).
    */
   async function lireDates(table: string, colonnes: string): Promise<unknown[] | null> {
     try {
