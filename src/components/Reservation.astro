@@ -49,12 +49,16 @@ if (!packs.length) {
 }
 
 // --- Configuration passée au script client -----------------------------------
+// Sérialisée dans une balise JSON (et non `define:vars`) : `define:vars` force
+// un script inline, où un `import` est interdit (SyntaxError, tout le script
+// de la page ne s'exécutait pas). Le script ci-dessous reste un module bundlé.
 const cfg = {
   lang,
   supabaseUrl: isSupabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_URL) : '',
   supabaseKey: isSupabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY) : '',
   supabaseConfigured: isSupabaseConfigured,
   email: site.email,
+  capacite: site.capacite,
   caution: tarifsData.caution,
   taxeSejour: tarifsData.taxe_sejour_par_nuit_personne,
   saisons: tarifsData.saisons.map((s) => ({
@@ -80,6 +84,7 @@ const cfg = {
     toConfirm: b['booking.toConfirm'],
     minNights: b['booking.minNights'],
     dateError: b['booking.dateError'],
+    capacityError: b['booking.capacityError'],
     sending: b['booking.sending'],
     submit: b['booking.submit'],
     error: b['booking.error'],
@@ -98,11 +103,19 @@ const cfg = {
     totalNote: b['booking.totalNote'],
     checkin: b['booking.checkin'],
     checkout: b['booking.checkout'],
-    guests: b['booking.guests'],
+    adults: b['booking.adults'],
+    minors: b['booking.minors'],
+    taxeDetail: b['booking.taxeDetail'],
+    taxeMinorsExempt: b['booking.taxeMinorsExempt'],
+    taxeMinorsCount: b['booking.taxeMinorsCount'],
+    taxeNotCalculable: b['booking.taxeNotCalculable'],
     recapRequestTitle: b['booking.recapRequestTitle'],
     replyDelay: b['booking.replyDelay'],
   },
 };
+
+// JSON échappé : `</script>` dans une valeur ne doit pas fermer la balise.
+const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
 ---
 
 <Layout lang={lang} title={b['booking.title']}>
@@ -129,7 +142,7 @@ const cfg = {
           <h2 class="font-display text-2xl font-semibold text-ocean-800 mb-6">
             {b['booking.datesTitle']}
           </h2>
-          <div class="grid sm:grid-cols-3 gap-5">
+          <div class="grid sm:grid-cols-4 gap-5">
             <div>
               <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="check_in">
                 {b['booking.checkin']}
@@ -157,18 +170,38 @@ const cfg = {
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="guests">
-                {b['booking.guests']}
+              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="adults">
+                {b['booking.adults']}
               </label>
               <select
-                id="guests"
-                name="guests"
+                id="adults"
+                name="adults"
                 class="w-full rounded-xl border border-sand-200 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
               >
-                {[1, 2, 3, 4].map((n) => <option value={n} selected={n === 2}>{n}</option>)}
+                {Array.from({ length: site.capacite }, (_, i) => i + 1).map((n) => (
+                  <option value={n} selected={n === 2}>{n}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="minors">
+                {b['booking.minors']}
+              </label>
+              <select
+                id="minors"
+                name="minors"
+                class="w-full rounded-xl border border-sand-200 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
+              >
+                {Array.from({ length: site.capacite }, (_, i) => i).map((n) => (
+                  <option value={n} selected={n === 0}>{n}</option>
+                ))}
               </select>
             </div>
           </div>
+          <p class="mt-3 text-xs text-ocean-700/60">
+            {b['booking.capacityHint'].replace('{n}', String(site.capacite))}
+          </p>
+          <p class="mt-1 text-xs text-ocean-700/60">{b['booking.taxeMinorsExempt']}</p>
           <p
             id="availability-msg"
             role="status"
@@ -177,6 +210,12 @@ const cfg = {
           >
           </p>
           <p id="min-nights-msg" class="mt-3 text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-3 hidden">
+          </p>
+          <p
+            id="capacity-msg"
+            role="alert"
+            class="mt-3 text-sm text-rose-700 bg-rose-50 rounded-xl px-4 py-3 hidden"
+          >
           </p>
         </div>
 
@@ -319,11 +358,14 @@ const cfg = {
           </p>
           <div id="recap-packs-lines" class="space-y-1 pl-3 text-xs text-ocean-100/70"></div>
 
-          <!-- Taxe de séjour -->
-          <p class="flex justify-between gap-4">
-            <span class="text-ocean-100/80">{b['booking.taxeSejour']}</span>
-            <span id="recap-taxe" class="font-semibold text-white tabular-nums"></span>
-          </p>
+          <!-- Taxe de séjour : appliquée aux seuls adultes (mineurs exonérés) -->
+          <div class="space-y-1.5">
+            <p class="flex justify-between gap-4">
+              <span class="text-ocean-100/80">{b['booking.taxeSejour']}</span>
+              <span id="recap-taxe" class="font-semibold text-white tabular-nums"></span>
+            </p>
+            <p id="recap-taxe-detail" class="pl-3 text-xs text-ocean-100/70"></p>
+          </div>
 
           <!-- Total dû -->
           <p class="flex justify-between items-baseline gap-4 pt-4 border-t border-ocean-700">
@@ -385,14 +427,57 @@ const cfg = {
   </section>
 </Layout>
 
-<script define:vars={{ cfg }}>
-  import { computeQuote } from '../lib/pricing';
+<script type="application/json" id="booking-cfg" set:html={cfgJson}></script>
+
+<script>
+  import { computeQuote, exceedsCapacity } from '../lib/pricing';
+  import type { PackUnite, Saison, SaisonId } from '../lib/pricing';
+  import type { SupabaseClient } from '@supabase/supabase-js';
+
+  interface BookingPack {
+    id: string;
+    slug: string;
+    nom: Record<string, string>;
+    description: Record<string, string>;
+    prix: number;
+    unite: PackUnite;
+    ordre: number;
+  }
+
+  interface BookingConfig {
+    lang: string;
+    supabaseUrl: string;
+    supabaseKey: string;
+    supabaseConfigured: boolean;
+    email: string;
+    capacite: number;
+    caution: number;
+    taxeSejour: number;
+    saisons: Saison[];
+    packs: BookingPack[];
+    s: Record<string, string>;
+  }
+
+  /** Élément du formulaire : le balisage est rendu par ce composant. */
+  function byId<T extends HTMLElement>(id: string): T {
+    const el = document.getElementById(id);
+    if (!el) throw new Error(`Élément #${id} introuvable`);
+    return el as T;
+  }
+
+  // Configuration du formulaire, sérialisée en JSON par le serveur (voir plus
+  // haut). `define:vars` aurait imposé un script inline, incompatible avec
+  // l'import ci-dessus : le devis ne s'affichait alors jamais en production.
+  const cfg = JSON.parse(
+    byId<HTMLScriptElement>('booking-cfg').textContent ?? '{}',
+  ) as BookingConfig;
 
   const {
     supabaseUrl,
     supabaseKey,
     supabaseConfigured,
     email,
+    capacite,
     saisons,
     packs,
     caution,
@@ -401,31 +486,38 @@ const cfg = {
     lang,
   } = cfg;
 
-  const form = document.getElementById('booking-form');
-  const checkIn = document.getElementById('check_in');
-  const checkOut = document.getElementById('check_out');
-  const guests = document.getElementById('guests');
-  const availMsg = document.getElementById('availability-msg');
-  const minMsg = document.getElementById('min-nights-msg');
-  const recapHint = document.getElementById('recap-hint');
-  const recapDetails = document.getElementById('recap-details');
-  const recapNights = document.getElementById('recap-nights');
-  const recapSeasons = document.getElementById('recap-seasons');
-  const recapBase = document.getElementById('recap-base');
-  const recapPacks = document.getElementById('recap-packs');
-  const recapPacksLines = document.getElementById('recap-packs-lines');
-  const recapTaxe = document.getElementById('recap-taxe');
-  const recapTotal = document.getElementById('recap-total');
-  const recapCaution = document.getElementById('recap-caution');
-  const packsField = document.getElementById('packs-field');
-  const totalField = document.getElementById('total-field');
-  const submitBtn = document.getElementById('booking-submit');
-  const formError = document.getElementById('form-error');
-  const confirmation = document.getElementById('booking-confirmation');
-  const confirmationDetails = document.getElementById('confirmation-details');
+  const form = byId<HTMLFormElement>('booking-form');
+  const checkIn = byId<HTMLInputElement>('check_in');
+  const checkOut = byId<HTMLInputElement>('check_out');
+  const adults = byId<HTMLSelectElement>('adults');
+  const minors = byId<HTMLSelectElement>('minors');
+  const nomField = byId<HTMLInputElement>('nom');
+  const emailField = byId<HTMLInputElement>('email');
+  const telephoneField = byId<HTMLInputElement>('telephone');
+  const messageField = byId<HTMLTextAreaElement>('message');
+  const availMsg = byId<HTMLElement>('availability-msg');
+  const minMsg = byId<HTMLElement>('min-nights-msg');
+  const capacityMsg = byId<HTMLElement>('capacity-msg');
+  const recapHint = byId<HTMLElement>('recap-hint');
+  const recapDetails = byId<HTMLElement>('recap-details');
+  const recapNights = byId<HTMLElement>('recap-nights');
+  const recapSeasons = byId<HTMLElement>('recap-seasons');
+  const recapBase = byId<HTMLElement>('recap-base');
+  const recapPacks = byId<HTMLElement>('recap-packs');
+  const recapPacksLines = byId<HTMLElement>('recap-packs-lines');
+  const recapTaxe = byId<HTMLElement>('recap-taxe');
+  const recapTaxeDetail = byId<HTMLElement>('recap-taxe-detail');
+  const recapTotal = byId<HTMLElement>('recap-total');
+  const recapCaution = byId<HTMLElement>('recap-caution');
+  const packsField = byId<HTMLInputElement>('packs-field');
+  const totalField = byId<HTMLInputElement>('total-field');
+  const submitBtn = byId<HTMLButtonElement>('booking-submit');
+  const formError = byId<HTMLElement>('form-error');
+  const confirmation = byId<HTMLElement>('booking-confirmation');
+  const confirmationDetails = byId<HTMLElement>('confirmation-details');
 
   // supabase-js chargé uniquement si configuré (import dynamique)
-  let sb = null;
+  let sb: SupabaseClient | null = null;
   if (supabaseConfigured) {
     import('@supabase/supabase-js').then(({ createClient }) => {
       sb = createClient(supabaseUrl, supabaseKey);
@@ -434,9 +526,9 @@ const cfg = {
   }
 
   let blocked = false; // dates réservées → soumission refusée
-  let availabilityTimer = null;
+  let availabilityTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const seasonLabels = {
+  const seasonLabels: Record<SaisonId, string> = {
     haute: s.seasonHaute,
     moyenne: s.seasonMoyenne,
     basse: s.seasonBasse,
@@ -444,6 +536,9 @@ const cfg = {
 
   // Format monétaire adapté à la langue de la page (ex. « 1 466,08 € » en fr).
   const money = new Intl.NumberFormat(lang, { style: 'currency', currency: 'EUR' });
+
+  // Capacité : plafonne dès l'affichage les options « Mineurs » impossibles.
+  capMinorsOptions();
 
   // Dates pré-remplies par le calendrier : le devis est calculé dès l'arrivée,
   // sans attendre que le visiteur touche au formulaire.
@@ -453,26 +548,38 @@ const cfg = {
   }
 
   /** Échappe une chaîne avant injection dans innerHTML (noms de packs). */
-  function esc(value) {
-    return String(value).replace(/[&<>"']/g, (c) => ({
+  function esc(value: unknown): string {
+    const remplacements: Record<string, string> = {
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
       '"': '&quot;',
       "'": '&#39;',
-    }[c]));
+    };
+    return String(value).replace(/[&<>"']/g, (c) => remplacements[c] ?? c);
   }
 
-  function chosenPacks() {
-    const list = [];
-    document.querySelectorAll('.pack-check').forEach((cb) => {
+  interface ChosenPack {
+    id: string;
+    slug: string;
+    nom: string;
+    prix: number;
+    unite: PackUnite;
+    quantite: number;
+  }
+
+  function chosenPacks(): ChosenPack[] {
+    const list: ChosenPack[] = [];
+    document.querySelectorAll<HTMLInputElement>('.pack-check').forEach((cb) => {
       if (!cb.checked) return;
       const slug = cb.dataset.slug;
       const pack = packs.find((p) => p.slug === slug);
       if (!pack) return;
       let quantite = 1;
       if (pack.unite === 'par_personne') {
-        const sel = document.querySelector(`.pack-qty[data-slug="${slug}"]`);
+        const sel = document.querySelector<HTMLSelectElement>(
+          `.pack-qty[data-slug="${slug}"]`,
+        );
         quantite = sel ? Math.max(1, Number(sel.value) || 1) : 1;
       }
       list.push({
@@ -492,7 +599,9 @@ const cfg = {
     return computeQuote({
       checkIn: checkIn.value,
       checkOut: checkOut.value,
-      guests: Number(guests.value) || 0,
+      adults: Number(adults.value) || 0,
+      minors: Number(minors.value) || 0,
+      capacite,
       saisons,
       packs: chosenPacks(),
       caution,
@@ -500,7 +609,25 @@ const cfg = {
     });
   }
 
-  function show(el, text, ok) {
+  /** true si le total adultes + mineurs dépasse la capacité du logement. */
+  function overCapacity() {
+    return exceedsCapacity(Number(adults.value) || 0, Number(minors.value) || 0, capacite);
+  }
+
+  /**
+   * Plafonne les options « Mineurs » à ce qu'il reste de capacité une fois les
+   * adultes choisis : on ne propose jamais une combinaison impossible
+   * (ex. 2 adultes + 3 mineurs dans un logement de 4).
+   */
+  function capMinorsOptions() {
+    const restant = Math.max(0, capacite - (Number(adults.value) || 0));
+    Array.from(minors.options).forEach((opt) => {
+      opt.disabled = Number(opt.value) > restant;
+    });
+    if (Number(minors.value) > restant) minors.value = String(restant);
+  }
+
+  function show(el: HTMLElement, text: string, ok: boolean): void {
     el.textContent = text;
     el.className =
       'mt-5 text-sm rounded-xl px-4 py-3 ' +
@@ -510,7 +637,7 @@ const cfg = {
     el.classList.remove('hidden');
   }
 
-  function hide(el) {
+  function hide(el: HTMLElement): void {
     el.classList.add('hidden');
   }
 
@@ -550,6 +677,22 @@ const cfg = {
 
   /** Recalcule et réaffiche le devis à chaque changement (dates, voyageurs, packs). */
   function updateEstimate() {
+    // Capacité : plafonne les mineurs puis signale un total impossible.
+    capMinorsOptions();
+    if (overCapacity()) {
+      capacityMsg.textContent = s.capacityError.replace('{n}', String(capacite));
+      capacityMsg.classList.remove('hidden');
+      hide(minMsg);
+      recapHint.classList.remove('hidden');
+      recapDetails.classList.add('hidden');
+      packsField.value = '';
+      totalField.value = '';
+      submitBtn.disabled = true;
+      return;
+    }
+    hide(capacityMsg);
+    if (!blocked) submitBtn.disabled = false;
+
     const quote = currentQuote();
 
     if (!quote) {
@@ -564,7 +707,10 @@ const cfg = {
     // Minimum de nuits par saison (avertissement non bloquant)
     if (quote.tooShort) {
       minMsg.textContent = s.minNights
-        .replace('{saison}', seasonLabels[quote.saisonForte.id] ?? quote.saisonForte.periode)
+        .replace(
+          '{saison}',
+          seasonLabels[quote.saisonForte.id as SaisonId] ?? quote.saisonForte.periode,
+        )
         .replace('{n}', String(quote.saisonForte.nuits_min));
       minMsg.classList.remove('hidden');
     } else {
@@ -606,8 +752,23 @@ const cfg = {
       })
       .join('');
 
-    // Taxe de séjour
-    recapTaxe.textContent = money.format(quote.taxeSejour);
+    // Taxe de séjour : montant dû + détail vérifiable (adultes × nuits × taux).
+    // Taux absent → montant non calculable : on l'annonce, jamais 0 € trompeur.
+    const taxe = quote.taxeSejourDetail;
+    if (taxe.calculable) {
+      recapTaxe.textContent = money.format(taxe.montant);
+      recapTaxeDetail.textContent =
+        s.taxeDetail
+          .replace('{adultes}', String(taxe.adultes))
+          .replace('{nuits}', String(taxe.nuits))
+          .replace('{taux}', money.format(taxe.taux)) +
+        (taxe.mineurs > 0
+          ? ` · ${s.taxeMinorsCount.replace('{mineurs}', String(taxe.mineurs))}`
+          : '');
+    } else {
+      recapTaxe.textContent = s.toConfirm;
+      recapTaxeDetail.textContent = s.taxeNotCalculable;
+    }
 
     // Total dû + caution (remboursable, non incluse)
     recapTotal.textContent = money.format(quote.total);
@@ -644,20 +805,29 @@ const cfg = {
       scheduleAvailability();
     });
   });
-  guests.addEventListener('change', updateEstimate);
+  [adults, minors].forEach((el) => el.addEventListener('change', updateEstimate));
 
-  document.querySelectorAll('.pack-check').forEach((cb) => {
+  document.querySelectorAll<HTMLInputElement>('.pack-check').forEach((cb) => {
     cb.addEventListener('change', () => {
-      const sel = document.querySelector(`.pack-qty[data-slug="${cb.dataset.slug}"]`);
+      const sel = document.querySelector<HTMLSelectElement>(
+        `.pack-qty[data-slug="${cb.dataset.slug}"]`,
+      );
       if (sel) sel.disabled = !cb.checked;
       updateEstimate();
     });
   });
-  document.querySelectorAll('.pack-qty').forEach((sel) => {
+  document.querySelectorAll<HTMLSelectElement>('.pack-qty').forEach((sel) => {
     sel.addEventListener('change', updateEstimate);
   });
 
   form.addEventListener('submit', async (e) => {
+    // Capacité : la règle vaut aussi pour le repli FormSubmit (POST natif).
+    if (overCapacity()) {
+      e.preventDefault();
+      formError.textContent = s.capacityError.replace('{n}', String(capacite));
+      formError.classList.remove('hidden');
+      return;
+    }
     if (!supabaseConfigured) return; // fallback FormSubmit (POST natif)
     e.preventDefault();
 
@@ -677,15 +847,19 @@ const cfg = {
     submitBtn.disabled = true;
     submitBtn.textContent = s.sending;
     try {
+      const client = sb;
+      if (!client) throw new Error('Supabase non configuré');
       const list = chosenPacks();
-      const { error } = await sb.from('bookings').insert({
+      const { error } = await client.from('bookings').insert({
         check_in: checkIn.value,
         check_out: checkOut.value,
-        guests: Number(guests.value),
-        nom: document.getElementById('nom').value,
-        email: document.getElementById('email').value,
-        telephone: document.getElementById('telephone').value || null,
-        message: document.getElementById('message').value || null,
+        // La table ne stocke que le total : adultes et mineurs restent
+        // distingués dans le formulaire et le devis (taxe des seuls adultes).
+        guests: quote.guests,
+        nom: nomField.value,
+        email: emailField.value,
+        telephone: telephoneField.value || null,
+        message: messageField.value || null,
         packs: list,
         total_estime: quote.total,
         statut: 'demande',
@@ -694,7 +868,7 @@ const cfg = {
       if (error) throw error;
 
       // Récapitulatif après envoi de la demande
-      const row = (label, value) =>
+      const row = (label: string, value: string) =>
         '<p class="flex justify-between gap-4">' +
         `<span>${esc(label)}</span>` +
         `<span class="font-semibold tabular-nums">${esc(value)}</span>` +
@@ -704,7 +878,8 @@ const cfg = {
         row(s.checkin, checkIn.value) +
         row(s.checkout, checkOut.value) +
         row(s.nights, `${quote.nights}`) +
-        row(s.guests, `${Number(guests.value)}`) +
+        row(s.adults, `${quote.adults}`) +
+        (quote.minors > 0 ? row(s.minors, `${quote.minors}`) : '') +
         `<p class="flex justify-between gap-4 pt-2 border-t border-emerald-200">` +
         `<span>${esc(s.total)}</span>` +
         `<span class="font-semibold tabular-nums">${money.format(quote.total)}</span></p>` +

@@ -990,8 +990,22 @@ const cfgCalendrier = {
     })();
   </script>
 
-  <script define:vars={{ cfgCalendrier }}>
+  <script type="application/json" id="calendrier-cfg" set:html={JSON.stringify(cfgCalendrier).replace(/</g, '\\u003c')}></script>
+
+  <script>
 import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/calendrier';
+import type { EtatJour, JourCalendrier, Plage } from '../lib/calendrier';
+
+    interface CalendrierCfg {
+      lang: string;
+      aujourdHui: string;
+      slugDefaut: string;
+      moisOptions: string[];
+      plages: Plage[];
+      reserverBase: string;
+      nomsMois: string[];
+      t: Record<string, string>;
+    }
 
     // Le corps est encapsulé dans une IIFE : les scripts Astro sont compilés
     // au niveau racine du module, où un `return` anticipé est interdit.
@@ -1001,16 +1015,21 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
       // Le mois courant est rendu côté serveur (le calendrier reste lisible sans
       // JavaScript) ; le script reconstruit les autres mois avec la même logique
       // pure que le serveur, issue de src/lib/calendrier.ts.
+      // La configuration arrive en JSON (et non `define:vars`, qui impose un
+      // script inline où l'import ci-dessus est interdit : SyntaxError).
+      const cfgScript = document.getElementById('calendrier-cfg');
+      const cfgCalendrier = JSON.parse(cfgScript?.textContent ?? '{}') as CalendrierCfg;
 
       const { lang, aujourdHui, slugDefaut, plages, nomsMois, reserverBase, t } = cfgCalendrier;
 
-      const corps = document.querySelector('[data-cal-corps]');
-      const titre = document.querySelector('[data-cal-titre]');
-      const nuits = document.querySelector('[data-cal-nuits]');
-      const select = document.querySelector('[data-cal-select]');
-      const boutonPrecedent = document.querySelector('[data-cal-precedent]');
-      const boutonSuivant = document.querySelector('[data-cal-suivant]');
+      const corps = document.querySelector<HTMLElement>('[data-cal-corps]');
+      const titre = document.querySelector<HTMLElement>('[data-cal-titre]');
+      const nuits = document.querySelector<HTMLElement>('[data-cal-nuits]');
+      const select = document.querySelector<HTMLSelectElement>('[data-cal-select]');
+      const boutonPrecedent = document.querySelector<HTMLElement>('[data-cal-precedent]');
+      const boutonSuivant = document.querySelector<HTMLElement>('[data-cal-suivant]');
       if (!corps) return;
+      const corpsCal = corps;
 
       const fmtDate = new Intl.DateTimeFormat(lang, {
         day: 'numeric',
@@ -1018,25 +1037,26 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
         year: 'numeric',
         timeZone: 'UTC',
       });
-      const dateLongue = (iso) => fmtDate.format(new Date(`${iso}T00:00:00Z`));
+      const dateLongue = (iso: string) => fmtDate.format(new Date(`${iso}T00:00:00Z`));
 
-      const libelleMois = (slug) => {
+      const libelleMois = (slug: string) => {
         const p = parseMois(slug);
         return p ? `${nomsMois[p.mois - 1]} ${p.annee}` : slug;
       };
 
       const CLASSE_BASE =
         'flex h-14 items-center justify-center border-l border-sand-200/60 text-sm tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sunset-400';
-      const CLASSE_ETAT = {
+      const CLASSE_ETAT: Record<EtatJour, string> = {
         libre: 'bg-emerald-50/60 text-emerald-700 hover:bg-emerald-100',
         occupe: 'bg-rose-50/60 text-rose-700',
         partiel: 'bg-amber-50/60 text-amber-800',
       };
 
-      const lienReserver = (plage) => `${reserverBase}?arrivee=${plage.debut}&depart=${plage.fin}`;
+      const lienReserver = (plage: Plage) =>
+        `${reserverBase}?arrivee=${plage.debut}&depart=${plage.fin}`;
 
       /** Nom du jour + état, ou action « choisir cette plage » (lu par les lecteurs d'écran). */
-      function texteAccessible(j) {
+      function texteAccessible(j: JourCalendrier): string {
         const date = dateLongue(j.iso);
         if (j.plageLibre) {
           const action = t.choisir
@@ -1044,11 +1064,13 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
             .replace('{fin}', dateLongue(j.plageLibre.fin));
           return `${date} · ${action}`;
         }
-        const libelle = { libre: t.etatLibre, occupe: t.etatOccupe, partiel: t.etatPartiel }[j.etat];
+        const libelle = { libre: t.etatLibre, occupe: t.etatOccupe, partiel: t.etatPartiel }[
+          j.etat
+        ];
         return `${date} · ${j.passe ? `${libelle} · ${t.etatPasse}` : libelle}`;
       }
 
-      function cellule(j) {
+      function cellule(j: JourCalendrier): HTMLTableCellElement {
         const td = document.createElement('td');
         td.className = 'p-0';
         const classe = [
@@ -1080,7 +1102,7 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
       }
 
       /** Ajoute l'option du mois courant s'il sort de la liste pré-calculée. */
-      function assurerOption(liste, slug) {
+      function assurerOption(liste: HTMLSelectElement | null, slug: string): void {
         if (!liste || [...liste.options].some((o) => o.value === slug)) return;
         const opt = document.createElement('option');
         opt.value = slug;
@@ -1090,11 +1112,11 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
         else liste.append(opt);
       }
 
-      function rendre(slug) {
+      function rendre(slug: string): void {
         const p = parseMois(slug);
         if (!p) return;
         const mois = construireMois(p.annee, p.mois, plages, { aujourdHui });
-        corps.replaceChildren();
+        corpsCal.replaceChildren();
         for (const semaine of grilleSemaines(p.annee, p.mois, 1)) {
           const tr = document.createElement('tr');
           for (const iso of semaine) {
@@ -1108,7 +1130,7 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
             const jour = mois.jours.find((x) => x.iso === iso);
             if (jour) tr.append(cellule(jour));
           }
-          corps.append(tr);
+          corpsCal.append(tr);
         }
         if (titre) titre.textContent = libelleMois(slug);
         if (nuits) {
