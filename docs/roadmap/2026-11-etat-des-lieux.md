@@ -32,7 +32,7 @@ photographique horodatée.
 | Expiration vérifiée à chaque lecture | ✅ | policy `tenant_read_own_session` (0009) |
 | Purge quotidienne (03:15 UTC) | ✅ | `pg_cron` + `purge-tenant-data` |
 | **Génération du lien depuis l'admin** | ❌ **SQL manuel** | `docs/tenant-checkin-setup.md` §3 |
-| **Conservation de la preuve après purge** | ❌ **tout est supprimé** | `purge-tenant-data` |
+| **Conservation de la preuve après purge** | ✅ **PDF et photos conservés, données personnelles purgées** | `supabase/functions/_shared/purge.ts` |
 | **Comparaison entrée / sortie** | ❌ | — |
 | **Boîte à clés** | ❌ | — |
 
@@ -43,11 +43,13 @@ photographique horodatée.
    main. Kiki ne fera pas ça. Pire : la requête cible `bookings` au statut
    `confirmee`, alors que le back office travaille sur `sejours` (`confirme`) —
    une réservation venue d'Airbnb ou du téléphone n'a aucune ligne `bookings`.
-2. **La purge détruit la preuve.** `purge-tenant-data` supprime photos,
-   checklists, PDF et sessions des réservations expirées. Un état des lieux sert
-   précisément à prouver un dégât **des semaines plus tard**. Le PDF signé doit
-   survivre ; seules les photos brutes et les données personnelles doivent
-   disparaître.
+2. ~~**La purge détruit la preuve.**~~ **Corrigé** : `purge-tenant-data`
+   supprime les données personnelles (sessions, notes de checklist, fichiers
+   hors preuve) et vide les métadonnées des photos, mais **conserve le PDF
+   signé et les photos d'état des lieux** pendant 5 ans après le départ
+   (`RETENTION_PREUVE_ANNEES`), durée distincte de celle des données
+   personnelles (30 jours). Le PDF n'est jamais réécrit : son horodatage de
+   signature reste intact.
 
 ---
 
@@ -171,16 +173,23 @@ locataire.
 mais **conserve le PDF signé** (et ses métadonnées) pendant la durée légale.
 
 **Critères d'acceptation**
-- [ ] Le PDF signé est copié dans un emplacement non purgé avant suppression.
-- [ ] Seules les photos brutes, checklists et sessions sont supprimées.
-- [ ] Le PDF conservé ne contient pas plus de données personnelles que
-      nécessaire (nom, dates, signature) et sa durée est documentée.
-- [ ] La purge reste idempotente et journalise ce qu'elle a conservé/supprimé.
-- [ ] Tests : purge d'une session expirée → PDF conservé, photos supprimées.
+- [x] Le PDF signé est conservé lors de la purge (aucune copie nécessaire : il
+      reste dans le bucket, seuls les fichiers hors preuve sont supprimés).
+- [x] Seules les notes de checklist, les sessions et les fichiers hors preuve
+      sont supprimés ; les photos d'état des lieux sont conservées et
+      anonymisées (`meta` vidé).
+- [x] Le PDF conservé n'est pas réécrit (horodatage de signature intact) et sa
+      durée de conservation est une constante documentée
+      (`RETENTION_PREUVE_ANNEES`, distincte de
+      `RETENTION_DONNEES_PERSONNELLES_JOURS`).
+- [x] La purge reste idempotente et journalise ce qu'elle a conservé/supprimé
+      (`_shared/purge.ts`, `buildPurgeEntry` / `summarizePurge`).
+- [x] Tests : `tests/purge-tenant-data.test.ts` prouve que le PDF et les photos
+      survivent à la purge et qu'aucune donnée personnelle ne reste.
 
 **Fichiers concernés** : `supabase/functions/purge-tenant-data/index.ts`,
-`supabase/functions/generate-pdf/index.ts`, migration (table d'archive),
-`docs/tenant-checkin-setup.md`, `docs/conformite.md`.
+`supabase/functions/_shared/purge.ts`, `tests/purge-tenant-data.test.ts`,
+`docs/tenant-checkin-setup.md`.
 
 ---
 

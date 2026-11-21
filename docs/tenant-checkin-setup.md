@@ -50,9 +50,27 @@ connecte au projet Supabase.
 
 Pour le cron, créer dans **Supabase Vault** un secret portant exactement le nom
 `tenant-purge-cron-secret` et la même valeur que `CRON_SECRET`. La migration
-`0009` programme une purge quotidienne à 03:15 UTC. Elle supprime Storage,
-photos, checklists, rapports et sessions expirées ; l’historique conservé par le
-propriétaire reste dans ses emails.
+`0009` programme une purge quotidienne à 03:15 UTC.
+
+La purge **anonymise, elle n’ampute pas la preuve** (`supabase/functions/_shared/purge.ts`) :
+
+- elle supprime les données personnelles : sessions locataire (email, jeton),
+  notes libres des checklists et fichiers Storage hors preuve ;
+- elle vide les métadonnées libres des photos (`photos.meta`) ;
+- elle **conserve le PDF signé et les photos d’état des lieux**, intacts, pour
+  une durée de preuve de 5 ans après le départ (`RETENTION_PREUVE_ANNEES`),
+  distincte de la durée des données personnelles
+  (`RETENTION_DONNEES_PERSONNELLES_JOURS`, 30 jours) ;
+- une fois ces 5 ans écoulés, le second passage de la purge supprime la preuve
+  à son tour ;
+- chaque passage journalise un rapport : ce qui a été supprimé, anonymisé,
+  conservé et pourquoi.
+
+Le PDF n’est jamais réécrit par la purge : le régénérer ferait perdre
+l’horodatage de signature, donc sa valeur de preuve. Il ne contient aucune
+métadonnée personnelle (pdf-lib n’écrit que le producteur et la date de
+création) ; le nom du locataire n’apparaît que dans le corps du document,
+inséparable de la preuve.
 
 ## 3. Créer un lien de locataire
 
