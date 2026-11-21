@@ -57,47 +57,66 @@ raccrocher dessus.
 
 ---
 
-## 2. Les décisions à trancher (bloquantes)
+## 2. Décisions actées par kiki (2026-11-21)
 
-### D1 — Le site est-il la seule source de vérité des disponibilités, ou est-il synchronisé avec les plateformes ?
+Ces deux décisions sont **fermes**. Elles ne se rediscutent pas : le reste de la
+roadmap s'y adapte. Les incertitudes qui subsistent (mairie, comptable,
+assurance) sont des **vérifications d'exécution**, pas des remises en cause.
 
-| Option | Conséquence | Coût |
+### DA-1 — V1 : le site est seule source de vérité des disponibilités (mono-bien, sans plateforme)
+
+**Acté** : pas de synchro Airbnb/Booking en V1. Le site est l'unique source de
+vérité. « Pas encore, mais plus tard » : l'architecture doit rendre l'ajout d'une
+synchro iCal **peu coûteux**, sans rien coder maintenant.
+
+**Conséquences techniques à respecter dès la V1** (ce sont des contraintes de
+schéma, pas des fonctionnalités) :
+
+| Contrainte | Pourquoi maintenant |
+|---|---|
+| Table de blocages de dates **indépendante des réservations**, type `calendar_blocks` | Un séjour est une réservation ; un blocage est une indisponibilité (travaux, séjour personnel, import plateforme). Les mélanger dans `sejours` rend l'import iCal destructeur : il faudrait créer de faux « clients ». |
+| Colonne `source` sur les blocages : `direct` \| `airbnb` \| `booking` | Permet d'afficher l'origine, de purger un import sans toucher au direct, et de filtrer. Une valeur par défaut `direct` suffit en V1. |
+| Colonne `external_uid` (nullable) | Clé stable d'un événement iCal. Sans elle, une resynchronisation crée des doublons. Nullable en V1, **unique quand non nulle** (index partiel). |
+| Le calcul de disponibilité **lit les deux sources** (séjours bloquants + blocages) | Si on code le calendrier contre `sejours` seul, l'ajout des blocages cassera tout. Poser la bonne abstraction dès le départ coûte quelques heures. |
+| Un **point d'entrée d'import iCal prévu mais désactivé** | Une route ou une Edge Function identifiable, qui répond « non activé » en V1. Documentée dans `docs/`. Objectif : ne pas avoir à redessiner l'architecture plus tard. |
+| Aucune interface de synchro dans le back office en V1 | On ne montre pas un bouton inactif à kiki. La table et la logique existent, l'écran viendra avec la V2. |
+
+**Ce qu'il ne faut PAS faire en V1** : coder un parseur iCal complet, un job de
+synchro, une page de réglages plateformes, ou un bouton « synchroniser »
+désactivé. On prépare le terrain, on ne construit pas la maison.
+
+**Corollaire opérationnel** : puisque le site est seule source de vérité, kiki
+ne doit **rien vendre ailleurs en parallèle** pendant la V1. Si une annonce
+Airbnb reste active, il faut la suspendre ou bloquer les dates à la main dans le
+back office — et le dire explicitement. C'est une règle d'exploitation, pas de
+code.
+
+### DA-2 — Le meublé de tourisme est **non classé**
+
+**Acté** : l'appartement n'est pas classé « meublé de tourisme ». Il n'y a donc
+**ni étoiles, ni label, ni mention de classement** nulle part : ni sur la
+vitrine, ni dans les CGV, ni dans le contrat, ni dans les annonces.
+
+Ce que cela implique, point par point :
+
+| Sujet | Ce qui s'applique | Statut |
 |---|---|---|
-| **A. Site seul** | Kiki bloque à la main dans `/admin/sejours/` ce qu'il vend ailleurs. Risque de double réservation s'il continue à vendre sur Airbnb/Booking en parallèle. | 0 € — S |
-| **B. Synchro iCal** (import + export) | Le site importe les calendriers Airbnb/Booking et exporte le sien. Délai de propagation 15 min à 3 h selon les plateformes : **ne supprime pas le risque**, le réduit. | 0 € — M |
-| **C. Channel manager** (Beds24, Lodgify…) | Vraie synchro temps réel multi-plateformes, mais abonnement mensuel et dépendance externe. Disproportionné pour un bien. | 20–50 €/mois — L |
+| **Déclaration en mairie** | Déclaration obligatoire à la mairie de Gruissan + **numéro d'enregistrement à afficher** sur le site et dans les annonces. Un meublé non classé n'est pas dispensé de déclaration. | **À obtenir** par kiki auprès de la mairie |
+| **Affichage du numéro** | Le numéro doit apparaître sur le site (pied de page, page contact ou mentions légales) et sur toute annonce. C'est une obligation d'affichage, pas une option marketing. | À intégrer dès la tâche « pages légales » |
+| **Taxe de séjour** | Régime des **hébergements non classés** : taxe par nuit et par personne, **plafonnée au tarif de la catégorie la plus basse**, avec **exonération des mineurs**. Le taux communal de Gruissan (délibération de l'année) est **à récupérer auprès de la mairie**. | Le `1.15` de `content/tarifs.json` est **provisoire et sans source** |
+| **Seuil de 120 nuits** | Le seuil de 120 nuits ne concerne **que les meublés classés**. Un non classé n'y est pas soumis : la location reste possible toute l'année. | Acté (conséquence du non classé) |
+| **Fiscalité** | Régime des revenus fonciers / BIC selon les recettes (micro-BIC ou réel). **Choix à faire valider par un comptable** : ne pas trancher ici. | **À valider par un comptable** |
+| **Assurance** | La garantie « propriétaire non occupant » / saisonnière doit couvrir l'accueil de locataires payants. Une multirisque habitation standard ne suffit pas. | **À vérifier par kiki** |
+| **Communication** | Ne jamais écrire « classé », « 3 étoiles », « label » ou afficher un pictogramme d'étoiles. La capacité (4 personnes) et les équipements se décrivent factuellement. | Règle de rédaction pour `gruissan-content` |
 
-**Recommandation** : A pour l'été 2027 si kiki arrête de vendre en parallèle sur
-les plateformes ; sinon B, avec la règle « aucune réservation n'est confirmée
-sans avoir bloqué le séjour dans le back office ». C exclu (voir §5).
-**Décision à prendre par kiki, pas par un agent.**
+**Point d'attention juridique** : le régime des meublés de tourisme a été durci
+récemment (loi dite « Le Meur », fin 2024) et un guichet unique national
+d'enregistrement a été annoncé. **Je ne l'ai pas vérifié en source primaire**
+pour Gruissan : à confirmer en mairie (procédure exacte, pièces, délai, format
+du numéro). Ne pas recopier ce paragraphe dans une page publique avant
+confirmation.
 
-### D2 — Quel est le statut administratif du meublé ?
-
-À faire trancher avant toute mise en vente en ligne, car cela change la taxe de
-séjour, l'affichage des prix, l'assurance et la fiscalité :
-
-- **Classé « meublé de tourisme » (1 à 5 étoiles)** ou **non classé** ? Le
-  classement conditionne le barème de taxe de séjour applicable et l'abattement
-  fiscal. Le taux `1.15` €/nuit/personne de `content/tarifs.json` n'est adossé à
-  aucune délibération dans le dépôt : **à faire confirmer par la mairie de
-  Gruissan** (barème de l'année, exonérations, plafond de nuits par personne).
-- **Déclaration / enregistrement en mairie** : le régime des meublés de
-  tourisme a été durci (loi dite « Le Meur », fin 2024) avec un enregistrement
-  obligatoire, y compris pour les non classés, et un guichet unique national
-  annoncé pour 2026. **À vérifier en mairie de Gruissan** : formulaire,
-  numéro d'enregistrement, affichage obligatoire de ce numéro sur l'annonce.
-- **Assurance** : la multirisque habitation ne couvre pas l'accueil de
-  voyageurs payants. Vérifier l'extension « location saisonnière » / RC
-  locative, et la couverture en cas de dégâts ou de vol.
-- **Fiscalité** : LMNP au réel ou micro-BIC ? Le choix impacte le seuil de
-  chiffre d'affaires à ne pas dépasser et la tenue des justificatifs.
-
-**Aucune de ces réponses ne peut être inventée.** Elles doivent être écrites
-dans le dépôt (par exemple `docs/conformite.md`) avant que la réservation en
-ligne ne soit ouverte au public.
-
-### D3 — Accepte-t-on un prestataire de paiement payant ?
+### D3 — Toujours ouverte : accepte-t-on un prestataire de paiement payant ?
 
 `AGENTS.md` règle 3 pose « open source uniquement, pas de service externe
 payant ». Or **aucun moyen d'encaisser une carte sans PSP** : Stripe facture
@@ -121,26 +140,30 @@ imposent une relance manuelle et font perdre des réservations.
 ### Lot 1 — Avant le premier été (à livrer pour **mars 2027**)
 
 La saison 2027 se commercialise dès décembre-janvier. Objectif : un dossier de
-réservation unique, fiable, et le minimum légal pour vendre en ligne.
+réservation unique, fiable, et le minimum légal pour vendre en ligne — avec la
+**structure de calendrier prévue pour l'iCal futur** et le **statut non classé**
+respecté partout.
 
 | Ordre | Sujet | Pourquoi maintenant |
 |---|---|---|
 | 1 | Boucle **demande → séjour → lien locataire** (`B-01`, `R-01`) | Sans elle, rien d'autre ne peut se raccrocher à une réservation |
-| 2 | **Une seule source de vérité** des disponibilités (`R-02`) | Corrige un bug qui fait perdre des clients et crée des doubles réservations |
-| 3 | **Pages légales + CGV + confidentialité** (`P-01`) | Vendre en ligne sans CGV ni politique RGPD est un risque juridique direct |
-| 4 | **Back office : voir les demandes** (`B-02`) | Kiki ne voit aujourd'hui aucune demande de réservation |
-| 5 | **Lien locataire généré depuis l'admin** (`G-01`) | Débloque l'état des lieux pour les réservations hors site |
-| 6 | **Paiement de l'acompte** (`P-02`, si D3 = option 2) | Le seul moyen de sécuriser une réservation à distance |
-| 7 | **Conservation des états des lieux** (`E-02`) | Aujourd'hui la purge détruit la preuve : inutilisable en cas de litige |
+| 2 | **Une seule source de vérité** des disponibilités, avec `calendar_blocks` dès le schéma (`R-02`, `R-07`) | Corrige le bug actuel **et** prépare l'iCal sans le coder |
+| 3 | **Numéro d'enregistrement en mairie affiché** + **taxe de séjour non classé** (`R-08`, `P-01`) | Obligation légale liée au statut non classé (DA-2) |
+| 4 | **Pages légales + CGV + confidentialité** (`P-01`) | Vendre en ligne sans CGV ni politique RGPD est un risque juridique direct |
+| 5 | **Back office : voir les demandes** (`B-02`) | Kiki ne voit aujourd'hui aucune demande de réservation |
+| 6 | **Lien locataire généré depuis l'admin** (`G-01`) | Débloque l'état des lieux pour les réservations hors site |
+| 7 | **Paiement de l'acompte** (`P-02`, si D3 = option 2) | Le seul moyen de sécuriser une réservation à distance |
+| 8 | **Conservation des états des lieux** (`E-02`) | Aujourd'hui la purge détruit la preuve : inutilisable en cas de litige |
 
 ### Lot 2 — Après le premier été (hiver 2027-2028)
 
 | Sujet | Déclencheur |
 |---|---|
-| Synchro iCal (`R-03`) | Si D1 = B, ou si kiki reprend la vente sur les plateformes |
+| **Activer la synchro iCal** (`R-03`) | Quand kiki décide de vendre aussi sur Airbnb/Booking. **Le schéma est déjà prêt** (DA-1), il ne reste que le parseur, le job et l'écran de réglages |
+| Export iCal du site (`R-09`) | À faire **avec** l'import : les plateformes ont besoin de voir les séjours directs |
 | Guide locataire réellement privé (`G-02`) | Dès que les codes d'accès doivent être dans le guide |
 | Comparaison entrée/sortie des états des lieux (`E-03`) | Après une première saison avec litiges ou doutes |
-| Contrat de location généré + signature (`P-03`) | Après validation du texte par kiki |
+| Contrat de location généré + signature (`P-03`) | Après validation du texte par kiki — **sans aucune mention de classement** |
 | « Qu'est-ce que je dois faire cette semaine » (`B-03`) | Dès que le nombre de séjours dépasse la mémoire de kiki |
 | Messagerie de séjour (`B-04`) | Seulement si WhatsApp ne suffit pas (voir §5) |
 | Tarifs saisonniers éditables sans redéploiement (`R-04`) | Quand kiki veut changer un prix sans passer par une PR |
@@ -160,15 +183,18 @@ seul développeur, avec tests et 4 langues).
 
 | Id | Idée | Valeur (kiki / locataire) | Effort | Dépend de | Risques |
 |---|---|---|---|---|---|
-| `B-01` | Unifier `bookings` et `sejours` en un seul dossier de réservation | Kiki : un seul endroit à tenir. Locataire : suivi cohérent | L | D1 | Migration de données, RLS à revoir, régression sur les pages existantes |
+| `B-01` | Unifier `bookings` et `sejours` en un seul dossier de réservation | Kiki : un seul endroit à tenir. Locataire : suivi cohérent | L | — | Migration de données, RLS à revoir, régression sur les pages existantes |
 | `R-01` | Convertir une demande en séjour en un clic | Kiki : plus de ressaisie, plus d'oubli de blocage du calendrier | M | `B-01` | Doublons si deux demandes identiques |
-| `R-02` | Une seule source de vérité pour les disponibilités | Les deux : plus de demande sur des dates occupées | S | — | Aucun (correction de bug) |
-| `R-03` | Synchro iCal import/export | Kiki : vend sur plusieurs canaux sans double réservation | M | D1 | Délai de propagation, flux iCal non normalisés, job à surveiller |
+| `R-02` | Une seule source de vérité pour les disponibilités (séjours + blocages) | Les deux : plus de demande sur des dates occupées | S | `R-07` | Aucun si `R-07` est fait d'abord (sinon refonte à prévoir) |
+| `R-07` | **Table `calendar_blocks`** (`source`, `external_uid`) dès la V1, sans synchro | Kiki : peut bloquer travaux/séjour perso. Équipe : iCal ajoutable plus tard sans refonte | M | — | Sur-ingénierie si on va au-delà du schéma (ne PAS coder l'import en V1) |
+| `R-03` | Synchro iCal import (Airbnb/Booking) — **V2** | Kiki : vend sur plusieurs canaux sans double réservation | M | `R-07`, DA-1 levée | Délai de propagation, flux non normalisés, job à surveiller |
+| `R-09` | Export iCal du site — **V2, avec l'import** | Les plateformes voient les séjours directs | S | `R-07` | Un flux public expose les dates (pas de données perso : veiller à ne rien ajouter) |
 | `R-04` | Tarifs et saisons éditables en base | Kiki : change un prix sans PR ni redéploiement | M | `B-01` | Historique des prix à conserver pour les séjours passés |
-| `R-05` | Caution : politique claire (montant, restitution, délai) | Les deux : fin des discussions à l'arrivée | S | D2 | Juridique : la retenue doit être justifiée et documentée |
-| `P-01` | Pages légales, CGV, politique de confidentialité | Kiki : conformité. Locataire : confiance | M | D2 | Rédaction à valider, contenu à maintenir |
+| `R-08` | **Taxe de séjour « non classé »** + numéro d'enregistrement mairie | Kiki : conformité légale (DA-2). Locataire : prix juste | M | mairie | Taux communal à obtenir ; plafond « catégorie la plus basse » ; exonération des mineurs |
+| `R-05` | Caution : politique claire (montant, restitution, délai) | Les deux : fin des discussions à l'arrivée | S | — | Juridique : la retenue doit être justifiée et documentée |
+| `P-01` | Pages légales, CGV, politique de confidentialité (+ numéro d'enregistrement) | Kiki : conformité. Locataire : confiance | M | `R-08` (numéro) | Rédaction à valider, contenu à maintenir |
 | `P-02` | Acompte en ligne (Stripe Checkout via Edge Function) | Kiki : réservations sécurisées. Locataire : paiement simple | L | D3, `B-01` | PSP payant, webhooks, remboursements, 3DS, KYC Stripe |
-| `P-03` | Contrat + règles de la maison générés et signés | Les deux : cadre clair, preuve en cas de litige | M | `P-01` | Valeur probante d'une signature tactile, texte à valider |
+| `P-03` | Contrat + règles de la maison générés et signés | Les deux : cadre clair, preuve en cas de litige | M | `P-01` | Valeur probante d'une signature tactile, texte à valider, **aucune mention de classement** |
 | `P-04` | Empreinte de caution | Kiki : protège le bien sans encaisser 800 € | L | D3 | Stripe plafonne l'autorisation à 7 jours ; prestataire dédié nécessaire |
 | `E-01` | Check-in/check-out utilisables sur le terrain | Locataire : 5 min sur place. Kiki : preuve horodatée | S | `G-01` | Photos de mauvaise qualité, locataire sans réseau |
 | `E-02` | Conserver les états des lieux signés (PDF) 5 ans | Kiki : preuve en cas de litige | S | — | RGPD : ne conserver que le PDF, pas les photos brutes |
@@ -182,6 +208,7 @@ seul développeur, avec tests et 4 langues).
 | `B-04` | Fil de messages par séjour | Les deux : historique au même endroit | M | `B-01` | Doublon avec WhatsApp, RGPD (durée de conservation) |
 | `B-05` | Encaissé vs dû, par séjour et par année | Kiki : sait ce qui reste à rentrer | M | `P-02` | Dépend du statut réel des paiements |
 | `B-06` | Alerte nouvelle demande hors du back office | Kiki : réagit en heures, pas en jours | S | — | Déjà documenté dans `docs/notifications.md`, non implémenté faute de secrets |
+| `B-10` | Vue « blocages » dans le back office (travaux, séjour perso) | Kiki : bloque ses dates sans créer un faux séjour | S | `R-07` | Ne pas confondre avec une réservation dans les statistiques |
 
 ---
 
@@ -194,7 +221,9 @@ seul développeur, avec tests et 4 langues).
 | **Messagerie temps réel maison** | WhatsApp existe déjà, kiki l'utilise, et le locataire l'a sur son téléphone. Un fil maison ne sera pas consulté. Utile seulement si kiki veut garder une trace par réservation. |
 | **Moteur de paiement maison / stockage de numéros de carte** | Interdit en pratique (PCI-DSS) et dangereux. Un PSP ou rien. |
 | **Contrat rédigé par un agent** | Un contrat de location saisonnière est un acte juridique. Le modèle doit être validé par kiki (et idéalement un professionnel), pas généré par un LLM. |
-| **Channel manager / PMS complet** (Beds24, Lodgify, Guesty) | 20 à 100 €/mois, interface à apprendre, pour un seul bien. Le back office actuel couvre déjà 80 % du besoin. |
+| **Channel manager / PMS complet** (Beds24, Lodgify, Guesty) | 20 à 100 €/mois, interface à apprendre, pour un seul bien. Écarté par DA-1 (V1 sans plateforme) et par le back office existant. |
+| **Coder la synchro iCal en V1** | Décision DA-1 : « pas encore ». On prépare le schéma (`calendar_blocks`), pas le parseur. Coder une synchro qu'on n'utilise pas, c'est du code mort à maintenir. |
+| **Afficher un classement, des étoiles ou un label** | L'appartement est **non classé** (DA-2). Afficher un classement non détenu est une pratique commerciale trompeuse. |
 | **Boîte à clés connectée** | 150 à 300 €, batterie à changer, panne = locataire dehors. Une boîte à clés mécanique à code + un code de secours couvrent 95 % des cas. |
 | **Avis collectés sur le site** | Interdit d'inventer ou de filtrer les avis (pratique commerciale trompeuse). Les avis existent déjà sur Airbnb/Booking, avec une audience. `content/avis.json` est bien conçu : il ne fait que recopier de vrais avis. |
 | **Tarification dynamique par IA** | Sur 12 semaines de saison et un bien, kiki connaît ses prix mieux qu'un modèle. |
@@ -216,20 +245,22 @@ complète, relation directe, pas de commission de 15 %) et l'**espace séjour**
 
 ---
 
-## 6. À valider par kiki (avant mise en vente en ligne)
+## 6. À valider par kiki / mairie / comptable (vérifications d'exécution)
 
-| Sujet | Question précise | Impact si non tranché |
-|---|---|---|
-| **Statut du meublé** | Classé ou non ? Numéro d'enregistrement ? | Taxe de séjour fausse, affichage non conforme |
-| **Taxe de séjour** | Barème 2027 de Gruissan, exonérations, plafond de nuits | Le taux `1.15` actuel n'a aucune source dans le dépôt |
-| **Assurance** | La multirisque couvre-t-elle l'accueil payant ? | Sinistre non couvert |
-| **Fiscalité** | LMNP réel ou micro-BIC ? | Déclaration erronée |
-| **Paiement** | Accepte-t-on Stripe (payant) malgré la règle « pas de service payant » ? | Pas de réservation en ligne possible |
-| **Caution** | Montant, mode (empreinte / chèque / virement), délai de restitution | Litige à chaque départ |
-| **Annulation** | Valider le barème de `content/annulation.json` (aujourd'hui `a_valider: true`) | CGV inapplicables |
-| **RGPD** | Durée de conservation : combien de temps garder les états des lieux ? | Purge actuelle détruit la preuve au bout de quelques jours |
-| **Mairie** | Déclaration, affichage du numéro, registre du logeur | Amende |
-| **Domaine** | Acheter un domaine (10–15 €/an) avant d'encaisser des paiements ? | Un `github.io` inspire peu confiance pour payer |
+Les décisions DA-1 et DA-2 sont prises. Ce tableau liste ce qu'il reste à
+**obtenir ou faire confirmer** pour les appliquer — pas à rediscuter.
+
+| Sujet | Question précise | Qui | Impact si non obtenu |
+|---|---|---|---|
+| **Numéro d'enregistrement** | Déclaration en mairie de Gruissan : procédure, pièces, format et obtention du numéro | Kiki → mairie | Obligation d'affichage non remplie, amende |
+| **Taxe de séjour non classé** | Taux communal 2027, **plafond « catégorie la plus basse »**, exonération des mineurs | Kiki → mairie | Taxe mal collectée ; le `1.15` actuel est provisoire |
+| **Fiscalité** | Micro-BIC ou réel, selon les recettes ; seuils applicables au non classé | Kiki → comptable | Déclaration erronée |
+| **Assurance** | La garantie PNO/saisonnière couvre-t-elle l'accueil de locataires payants ? | Kiki → assureur | Sinistre non couvert |
+| **Paiement (D3)** | Accepte-t-on Stripe (payant) malgré la règle « pas de service payant » ? | Kiki | Pas de réservation en ligne possible |
+| **Caution** | Montant, mode (empreinte / chèque / virement), délai de restitution | Kiki | Litige à chaque départ |
+| **Annulation** | Valider le barème de `content/annulation.json` (aujourd'hui `a_valider: true`) | Kiki | CGV inapplicables |
+| **RGPD** | Durée de conservation : combien de temps garder les états des lieux ? | Kiki | Purge actuelle détruit la preuve |
+| **Domaine** | Acheter un domaine (10–15 €/an) avant d'encaisser des paiements ? | Kiki | Un `github.io` inspire peu confiance pour payer |
 
 ---
 
@@ -241,13 +272,22 @@ règles du dépôt : 4 langues, tests Vitest, `npm run verify` vert, PR vers `ma
 | # | Tâche | Fichier de détail |
 |---|---|---|
 | 1 | **Unifier le dossier de réservation** (`bookings` → `sejours`), avec migration des données existantes | `2026-11-backoffice-suivi.md` |
-| 2 | **Afficher et traiter les demandes de réservation** dans `/admin/` | `2026-11-backoffice-suivi.md` |
-| 3 | **Une seule source de vérité** : `/reserver/` vérifie `sejours` | `2026-11-reservation-disponibilites.md` |
-| 4 | **Pages légales, CGV et politique de confidentialité** | `2026-11-paiement-contrat.md` |
-| 5 | **Générer le lien locataire depuis `/admin/sejours/`** | `2026-11-guide-acces-temporaire.md` |
-| 6 | **Conserver les états des lieux signés** hors purge | `2026-11-etat-des-lieux.md` |
-| 7 | **Acompte en ligne** (si D3 = option 2) | `2026-11-paiement-contrat.md` |
-| 8 | **Alerte de nouvelle demande** hors back office | `2026-11-backoffice-suivi.md` |
+| 2 | **Table `calendar_blocks`** (`source`, `external_uid`) + calcul de disponibilité sur deux sources | `2026-11-reservation-disponibilites.md` |
+| 3 | **Afficher et traiter les demandes de réservation** dans `/admin/` | `2026-11-backoffice-suivi.md` |
+| 4 | **Une seule source de vérité** : `/reserver/` vérifie séjours + blocages | `2026-11-reservation-disponibilites.md` |
+| 5 | **Taxe de séjour non classé** + numéro d'enregistrement affiché | `2026-11-reservation-disponibilites.md` |
+| 6 | **Pages légales, CGV et politique de confidentialité** (sans mention de classement) | `2026-11-paiement-contrat.md` |
+| 7 | **Générer le lien locataire depuis `/admin/sejours/`** | `2026-11-guide-acces-temporaire.md` |
+| 8 | **Conserver les états des lieux signés** hors purge | `2026-11-etat-des-lieux.md` |
+| 9 | **Acompte en ligne** (si D3 = option 2) | `2026-11-paiement-contrat.md` |
+| 10 | **Alerte de nouvelle demande** hors back office | `2026-11-backoffice-suivi.md` |
+
+### Gelé jusqu'à décision ultérieure (DA-1)
+
+- Parseur iCal, job de synchro, écran de réglages plateformes, bouton
+  « synchroniser » : **V2**, quand kiki décidera de vendre sur Airbnb/Booking.
+- La table `calendar_blocks` et ses colonnes sont en revanche **dans le périmètre
+  V1** : c'est ce qui rend la V2 peu coûteuse.
 
 ---
 
