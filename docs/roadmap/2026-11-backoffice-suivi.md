@@ -4,6 +4,12 @@ Sujet : un seul appartement, une seule personne, et la question « qu'est-ce que
 je dois faire cette semaine ? ». Objectif : que kiki puisse tenir sa saison en
 10 minutes par jour, pas de construire un PMS.
 
+> **Décisions actées (2026-11-21, voir `README.md` §2)** : V1 monoplateforme
+> (site seule source de vérité, iCal en V2 mais `calendar_blocks` prêt dès la
+> V1) ; meublé **non classé** (numéro d'enregistrement à afficher, taxe de
+> séjour au régime non classé). Le back office doit refléter les deux : une vue
+> « blocages » distincte des séjours, et un contrôle de complétude fiscale.
+
 ---
 
 ## 1. État réel : beaucoup d'écrans, aucun dossier de réservation
@@ -21,6 +27,7 @@ Le back office est **déjà riche** :
 | `/admin/disponibilites/` | Statut mensuel (libre / partiel / réservé) | `availability` |
 | `/admin/packs/` | Options de réservation, 4 langues, prix, ordre | `packs` |
 | `/admin/guide/` | Sections du guide, visibilité public/locataire | `guide_sections` |
+| *(à venir)* `/admin/blocages/` | Blocages de dates hors réservation (`calendar_blocks`) | — |
 
 **Le trou béant** : **aucune page ne lit `bookings`.** Vérifié par recherche
 exhaustive : les seules occurrences de `bookings` dans `src/` sont l'écriture
@@ -70,6 +77,8 @@ séjours.
 |---|---|---|---|
 | `B-02` | En tant que kiki, je veux **voir toutes les demandes de réservation** dans le back office, avec leurs dates, leur prix et leurs coordonnées. | Ne perd plus une demande | M |
 | `B-07` | En tant que kiki, je veux qu'une demande devienne un séjour **sans ressaisie**. | Zéro double saisie | M |
+| `B-10` | En tant que kiki, je veux **bloquer des dates** (travaux, séjour personnel) sans créer un faux séjour, et voir la source de chaque blocage. | Données justes, prêt pour l'iCal V2 | S |
+| `B-11` | En tant que kiki, je veux être **alerté si le numéro d'enregistrement mairie ou le taux de taxe non classé manquent**. | Conformité | S |
 | `B-03` | En tant que kiki, je veux ouvrir une page qui me dit **ce que je dois faire cette semaine** (arrivées, départs, ménages, états des lieux manquants, soldes à encaisser). | 10 minutes par jour | M |
 | `B-05` | En tant que kiki, je veux voir **encaissé vs dû** par séjour, pour savoir ce qui reste à rentrer. | Trésorerie | M |
 | `B-08` | En tant que kiki, je veux repérer un séjour **sans coordonnées complètes** ou sans prix, pour ne pas le découvrir à l'arrivée. | Qualité des données | S |
@@ -94,6 +103,8 @@ de bord décoratif.
 | Tâche non faite | `sejour_taches.fait = false` sur un séjour proche | Faire (ménage, clés) |
 | Demande non lue | `messages.lu_at is null` | Répondre |
 | Donnée incomplète | Séjour `confirme` sans prix ou sans e-mail | Compléter |
+| **Taxe de séjour non calculable** | Taux ou plafond non classé absent de `content/tarifs.json` | Renseigner le taux communal (DA-2) |
+| **Numéro d'enregistrement absent** | `content/site.json` sans numéro mairie | Le demander à la mairie et le saisir |
 
 **Règle d'or** : chaque ligne doit être cliquable et mener à l'action. Un
 compteur qui ne mène nulle part est du bruit.
@@ -112,7 +123,7 @@ une action), les statistiques (page revenus), les rappels de « bonne année ».
 | Prix moyen par nuit | ✅ | Déjà là |
 | Part des séjours sans prix | ✅ | Déjà là, très utile pour la qualité des données |
 | Encaisse vs dû | ✅ | **Manquant**, et c'est le plus utile au quotidien |
-| Nombre de réservations par canal (site / Airbnb / Booking) | ⚠️ | Utile seulement si D1 = synchro ; sinon impossible à renseigner |
+| Nombre de réservations par canal (site / Airbnb / Booking) | ⚠️ | **Inutile en V1** (DA-1 : le site est seule source). Devient pertinent en V2, quand `calendar_blocks.source` sera alimenté par les imports |
 | Délai moyen de réponse aux demandes | ⚠️ | Mesurable, mais culpabilisant et peu actionnable sur un seul bien |
 | Note moyenne des avis | ❌ | Les avis sont sur les plateformes, pas ici |
 | « Revenu par m² », « RevPAR », « ADR » | ❌ | Vocabulaire d'hôtellerie. Sur un appartement, kiki raisonne en « semaines louées » |
@@ -239,6 +250,8 @@ jours, chacune cliquable vers l'action.
 - [ ] Une ligne sans action possible n'est pas affichée.
 - [ ] Le calcul est une fonction pure, testée (arrivée J+0, J+7, J+8 ; départ
       passé ; séjour annulé ignoré).
+- [ ] **Deux contrôles DA-2 y figurent** : « numéro d'enregistrement mairie
+      absent » et « taux de taxe non classé absent / non calculable ».
 - [ ] Page vide = message explicite (« rien à faire cette semaine »), pas un
       écran blanc.
 - [ ] 4 langues, `npm run verify` vert.
@@ -287,10 +300,6 @@ GitHub Actions, `src/lib/` si une logique pure est extraite.
 ---
 
 ### Tâche 6 — Nettoyer la double source de disponibilité
-
-**Objectif** : retirer `availability` (statut mensuel) du parcours de décision,
-au profit des séjours datés, et conserver le repli JSON uniquement pour
-l'affichage public.
 
 **Critères d'acceptation**
 - [ ] `/admin/disponibilites/` n'est plus un moyen de bloquer des dates (ou est

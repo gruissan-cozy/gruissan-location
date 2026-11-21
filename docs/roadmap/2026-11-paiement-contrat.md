@@ -335,6 +335,11 @@ migration (colonnes de paiement sur le dossier de réservation),
 - [ ] Le PDF reprend exactement les données du séjour (aucune valeur inventée).
 - [ ] Le texte du contrat vient d'un fichier éditable (`content/contrat.json`),
       pas du code.
+- [ ] Le contrat porte la mention **« meublé de tourisme non classé »** et le
+      **numéro d'enregistrement mairie** ; **aucune mention de classement ni
+      d'étoiles**.
+- [ ] Le détail de la taxe de séjour suit le régime non classé (plafond,
+      mineurs exonérés).
 - [ ] La signature tactile réutilise `attachTenantSignaturePad` ; le PDF
       mentionne la date et l'heure de signature.
 - [ ] Le contrat signé est envoyé au locataire et à kiki, et conservé.
@@ -374,9 +379,11 @@ séjour séparément), téléchargeable par kiki et le locataire.
 
 **Critères d'acceptation**
 - [ ] Numérotation séquentielle, sans trou ni doublon.
-- [ ] La taxe de séjour est une ligne distincte, non soumise à la TVA.
+- [ ] La taxe de séjour est une ligne distincte, calculée au régime **non
+      classé** (taux, plafond, mineurs exonérés), non soumise à la TVA.
 - [ ] Les mentions légales obligatoires sont présentes (identité, SIRET,
-      dates, détail).
+      **numéro d'enregistrement mairie**, dates, détail).
+- [ ] Aucune mention de classement ni d'étoiles.
 - [ ] Le format respecte les règles de conservation comptable.
 - [ ] Tests : numérotation, ventilation de la taxe, séjour à cheval sur deux
       années.
