@@ -850,19 +850,26 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
       const client = sb;
       if (!client) throw new Error('Supabase non configuré');
       const list = chosenPacks();
-      const { error } = await client.from('bookings').insert({
-        check_in: checkIn.value,
-        check_out: checkOut.value,
-        // La table ne stocke que le total : adultes et mineurs restent
-        // distingués dans le formulaire et le devis (taxe des seuls adultes).
-        guests: quote.guests,
-        nom: nomField.value,
-        email: emailField.value,
-        telephone: telephoneField.value || null,
-        message: messageField.value || null,
+      // Depuis la migration 0011, le formulaire écrit dans `sejours` : une
+      // demande est un séjour au statut `demande`, qui ne bloque pas le
+      // calendrier tant que le propriétaire ne l'a pas passée en option ou
+      // confirmée. `origine = 'site'` est exigé par la politique RLS.
+      const { error } = await client.from('sejours').insert({
+        arrivee: checkIn.value,
+        depart: checkOut.value,
+        // Le détail adultes/mineurs est conservé : la taxe de séjour ne porte
+        // que sur les adultes (mineurs exonérés).
+        personnes: quote.guests,
+        adultes: quote.adults,
+        mineurs: quote.minors,
+        client_nom: nomField.value,
+        client_email: emailField.value,
+        client_telephone: telephoneField.value || null,
+        client_message: messageField.value || null,
         packs: list,
-        total_estime: quote.total,
+        prix_estime: quote.total,
         statut: 'demande',
+        origine: 'site',
         lang,
       });
       if (error) throw error;

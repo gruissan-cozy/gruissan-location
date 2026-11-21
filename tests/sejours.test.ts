@@ -4,7 +4,11 @@ import {
   trouverChevauchements,
   nuits,
   plageValide,
+  occupeCalendrier,
+  estDemandeATraiter,
   STATUTS_BLOQUANTS,
+  STATUTS_INACTIFS,
+  STATUTS_SEJOUR,
 } from '../src/lib/sejours';
 
 describe('chevauche', () => {
@@ -69,8 +73,68 @@ describe('trouverChevauchements', () => {
     expect(res).toHaveLength(1);
   });
 
+  it('n’est PAS bloqué par une demande non traitée', () => {
+    // Choix documenté dans src/lib/sejours.ts : une demande ne bloque pas,
+    // sinon un simple formulaire rendrait des dates « occupées ».
+    const res = trouverChevauchements(
+      { arrivee: '2026-07-15', depart: '2026-07-20' },
+      [{ id: 'x', arrivee: '2026-07-10', depart: '2026-07-17', statut: 'demande' }],
+    );
+    expect(res).toEqual([]);
+  });
+
+  it('ignore les séjours terminés', () => {
+    const res = trouverChevauchements(
+      { arrivee: '2026-07-15', depart: '2026-07-20' },
+      [{ id: 'x', arrivee: '2026-07-10', depart: '2026-07-17', statut: 'termine' }],
+    );
+    expect(res).toEqual([]);
+  });
+
+  it('traite un statut absent comme bloquant (comportement historique)', () => {
+    const res = trouverChevauchements(
+      { arrivee: '2026-07-15', depart: '2026-07-20' },
+      [{ id: 'x', arrivee: '2026-07-10', depart: '2026-07-17' }],
+    );
+    expect(res).toHaveLength(1);
+  });
+
   it('les statuts bloquants sont bien option et confirme', () => {
     expect([...STATUTS_BLOQUANTS]).toEqual(['option', 'confirme']);
+  });
+
+  it('les statuts inactifs sont demande, annule et termine', () => {
+    expect([...STATUTS_INACTIFS]).toEqual(['demande', 'annule', 'termine']);
+  });
+});
+
+describe('occupeCalendrier', () => {
+  it('n’occupe le calendrier que pour option et confirme', () => {
+    expect(occupeCalendrier('option')).toBe(true);
+    expect(occupeCalendrier('confirme')).toBe(true);
+    expect(occupeCalendrier('demande')).toBe(false);
+    expect(occupeCalendrier('annule')).toBe(false);
+    expect(occupeCalendrier('termine')).toBe(false);
+  });
+
+  it('reste aligné sur la politique RLS de 0003 (statut absent = bloquant)', () => {
+    expect(occupeCalendrier(null)).toBe(true);
+    expect(occupeCalendrier(undefined)).toBe(true);
+  });
+});
+
+describe('estDemandeATraiter', () => {
+  it('ne signale que le statut demande', () => {
+    expect(estDemandeATraiter('demande')).toBe(true);
+    for (const statut of ['option', 'confirme', 'annule', 'termine']) {
+      expect(estDemandeATraiter(statut)).toBe(false);
+    }
+  });
+});
+
+describe('cycle de vie', () => {
+  it('expose les cinq statuts, demande comprise', () => {
+    expect([...STATUTS_SEJOUR]).toEqual(['demande', 'option', 'confirme', 'annule', 'termine']);
   });
 });
 

@@ -122,14 +122,16 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const [{ data: booking, error: bookingError }, paths, checklistCount, reportCount, photoCount] = await Promise.all([
-        supabase.from('bookings').select('check_out').eq('id', reservationId).maybeSingle(),
+      // Migration 0011 : la réservation vit dans `sejours`, dont le champ de
+      // départ est nommé `depart` (vocabulaire unifié).
+      const [{ data: sejour, error: sejourError }, paths, checklistCount, reportCount, photoCount] = await Promise.all([
+        supabase.from('sejours').select('depart').eq('id', reservationId).maybeSingle(),
         listFiles(supabase, reservationId),
         countRows(supabase, 'checklists', reservationId),
         countRows(supabase, 'pdf_reports', reservationId),
         countRows(supabase, 'photos', reservationId),
       ]);
-      if (bookingError) throw new Error('Lecture du séjour impossible.');
+      if (sejourError) throw new Error('Lecture du séjour impossible.');
 
       const plan = planReservationPurge({
         reservationId,
@@ -138,7 +140,7 @@ Deno.serve(async (req: Request) => {
         checklistCount,
         reportCount,
         photoCount,
-        departure: booking?.check_out ?? null,
+        departure: sejour?.depart ?? null,
         now,
       });
 
@@ -163,40 +165,40 @@ Deno.serve(async (req: Request) => {
     // Second temps : la preuve elle-même, une fois sa durée de conservation
     // atteinte (RETENTION_PREUVE_ANNEES après le départ du locataire).
     const cutoff = evidenceExpiryCutoff(now);
-    const { data: agedBookings, error: agedError } = await supabase
-      .from('bookings')
-      .select('id, check_out')
-      .lt('check_out', cutoff)
-      .order('check_out')
+    const { data: agedSejours, error: agedError } = await supabase
+      .from('sejours')
+      .select('id, depart')
+      .lt('depart', cutoff)
+      .order('depart')
       .limit(BATCH_SIZE * 10);
     if (agedError) throw new Error('Lecture des séjours anciens impossible.');
 
     let expiredEvidenceReservations = 0;
     let expiredEvidenceFiles = 0;
-    for (const booking of agedBookings || []) {
+    for (const sejour of agedSejours || []) {
       const [reportCount, photoCount] = await Promise.all([
-        countRows(supabase, 'pdf_reports', booking.id),
-        countRows(supabase, 'photos', booking.id),
+        countRows(supabase, 'pdf_reports', sejour.id),
+        countRows(supabase, 'photos', sejour.id),
       ]);
       if (!reportCount && !photoCount) continue;
 
       // La durée de conservation de la preuve est atteinte : tout part.
-      const paths = await listFiles(supabase, booking.id);
+      const paths = await listFiles(supabase, sejour.id);
       expiredEvidenceFiles += await removeFiles(supabase, paths);
 
       const [reportDelete, photoDelete] = await Promise.all([
-        supabase.from('pdf_reports').delete().eq('reservation_id', booking.id),
-        supabase.from('photos').delete().eq('reservation_id', booking.id),
+        supabase.from('pdf_reports').delete().eq('reservation_id', sejour.id),
+        supabase.from('photos').delete().eq('reservation_id', sejour.id),
       ]);
       if (reportDelete.error || photoDelete.error) {
-        throw new Error(`Suppression de la preuve impossible pour ${booking.id}.`);
+        throw new Error(`Suppression de la preuve impossible pour ${sejour.id}.`);
       }
       expiredEvidenceReservations += 1;
       report.push({
-        reservationId: booking.id,
+        reservationId: sejour.id,
         retainedUntil: '',
         ...buildEvidenceExpiryEntry({
-          departure: booking.check_out,
+          departure: sejour.depart,
           deletedPdfReports: reportCount,
           deletedPhotos: photoCount,
           deletedFiles: paths.length,
