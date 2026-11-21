@@ -1,12 +1,20 @@
 /**
  * Alimentation du calendrier de disponibilités (chantier 2 — issue #16).
  *
- * Priorité : la table Supabase `sejours` (dates seules, lecture publique
- * limitée par les politiques RLS de migrations/0003_sejours.sql).
+ * Priorité : les tables Supabase `sejours` (réservations) ET `calendar_blocks`
+ * (blocages de dates), lues sur DEUX sources et converties par la fonction
+ * unique `plagesOccupees` de `src/lib/calendrier.ts`. La lecture publique est
+ * limitée par les politiques RLS de migrations/0003_sejours.sql et
+ * migrations/0011_calendar_blocks.sql : seules les dates sortent.
  *
  * Repli : `content/disponibilites.json` (statut mensuel) si Supabase n'est pas
- * configuré, si la requête échoue ou si la table n'existe pas encore — la page
- * ne doit jamais casser. La dégradation est couverte par tests/disponibilites.test.ts.
+ * configuré, si la requête échoue ou si les tables n'existent pas encore — la
+ * page ne doit jamais casser. La dégradation est couverte par
+ * tests/disponibilites.test.ts.
+ *
+ * CONVENTION DE DATES : `sejours.depart` est EXCLUSIF, `calendar_blocks.fin`
+ * est INCLUSIVE. La conversion vit dans `src/lib/calendrier.ts` ; ce module ne
+ * fait que transporter les lignes brutes.
  */
 
 import dispoData from '../../content/disponibilites.json';
@@ -15,13 +23,17 @@ import { getSupabase, isSupabaseConfigured } from './supabase';
 import {
   dernierJourMois,
   fusionnerPlages,
-  moinsUnJour,
   parseMois,
+  plagesDepuisBlocages,
+  plagesDepuisSejours,
   premierJourMois,
   type EtatJour,
+  type LigneBlocage,
+  type LigneSejour,
   type Plage,
 } from './calendrier';
-import { estDateIsoValide } from './confiance';
+
+export type { LigneSejour, LigneBlocage } from './calendrier';
 
 /** D'où viennent les dates affichées (utile pour le libellé de la note). */
 export type SourceDisponibilites = 'supabase' | 'json';
@@ -31,35 +43,10 @@ export interface Source {
   source: SourceDisponibilites;
 }
 
-/** Lignes lues dans `sejours` : seules les dates sont publiques (grant colonne). */
-export interface LigneSejour {
-  arrivee?: unknown;
-  depart?: unknown;
-}
-
 /** Structure de repli de content/disponibilites.json. */
 export interface DisponibilitesJson {
   mois?: Array<{ mois?: unknown; statut?: unknown }>;
   legende?: Record<string, string>;
-}
-
-/**
- * Convertit les séjours en plages occupées.
- *
- * Convention hôtelière : le jour du départ libère le logement, donc un séjour
- * « 10 → 17 » n'occupe que les jours 10 à 16. Les dates invalides, inversées ou
- * vides sont ignorées (une ligne malformée ne doit jamais casser le calendrier).
- */
-export function plagesDepuisSejours(lignes: ReadonlyArray<LigneSejour>): Plage[] {
-  const plages: Plage[] = [];
-  for (const ligne of lignes ?? []) {
-    const arrivee = typeof ligne?.arrivee === 'string' ? ligne.arrivee : '';
-    const depart = typeof ligne?.depart === 'string' ? ligne.depart : '';
-    if (!estDateIsoValide(arrivee) || !estDateIsoValide(depart)) continue;
-    if (depart <= arrivee) continue; // plage vide : aucun jour occupé
-    plages.push({ debut: arrivee, fin: moinsUnJour(depart), etat: 'occupe' });
-  }
-  return fusionnerPlages(plages);
 }
 
 /**
@@ -105,8 +92,13 @@ export interface OptionsChargement {
 /**
  * Charge les disponibilités : Supabase en priorité, repli JSON sinon.
  *
- * Ne lève jamais : toute erreur (table absente, réseau, configuration) retombe
- * sur le fichier statique pour que la page reste affichable.
+ * Les deux sources sont lues indépendamment puis fusionnées par
+ * `plagesOccupees` : un échec de `calendar_blocks` (table absente) ne doit pas
+ * faire perdre les séjours, et inversement. Une source lue avec succès reste
+ * donc utilisée même si l'autre échoue.
+ *
+ * Ne lève jamais : si les DEUX lectures échouent, on retombe sur le fichier
+ * statique pour que la page reste affichable.
  */
 export async function chargerDisponibilites(options: OptionsChargement = {}): Promise<Source> {
   const plagesJson = plagesRepli();
@@ -115,11 +107,38 @@ export async function chargerDisponibilites(options: OptionsChargement = {}): Pr
 
   if (!configure || !client) return { plages: plagesJson, source: 'json' };
 
+  const [sejours, blocages] = await Promise.all([
+    lireDates(client, 'sejours', 'arrivee, depart'),
+    lireDates(client, 'calendar_blocks', 'debut, fin'),
+  ]);
+
+  // Aucune des deux tables lue : repli statique (Supabase absent ou non migré).
+  if (!sejours && !blocages) return { plages: plagesJson, source: 'json' };
+
+  return {
+    plages: fusionnerPlages([
+      ...plagesDepuisSejours((sejours ?? []) as LigneSejour[]),
+      ...plagesDepuisBlocages((blocages ?? []) as LigneBlocage[]),
+    ]),
+    source: 'supabase',
+  };
+}
+
+/**
+ * Lit les dates d'une table ; renvoie null si la lecture échoue (table absente,
+ * réseau, RLS). Une lecture réussie renvoie au pire un tableau vide, ce qui
+ * signifie « aucune ligne » et non « repli ».
+ */
+async function lireDates(
+  client: SupabaseClient,
+  table: 'sejours' | 'calendar_blocks',
+  colonnes: string,
+): Promise<unknown[] | null> {
   try {
-    const { data, error } = await client.from('sejours').select('arrivee, depart');
-    if (error || !data) return { plages: plagesJson, source: 'json' };
-    return { plages: plagesDepuisSejours(data as LigneSejour[]), source: 'supabase' };
+    const { data, error } = await client.from(table).select(colonnes);
+    if (error || !data) return null;
+    return data as unknown[];
   } catch {
-    return { plages: plagesJson, source: 'json' };
+    return null;
   }
 }

@@ -432,6 +432,8 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
 <script>
   import { computeQuote, exceedsCapacity } from '../lib/pricing';
   import type { PackUnite, Saison, SaisonId } from '../lib/pricing';
+  import { datesOccupees, plagesOccupees } from '../lib/calendrier';
+  import type { LigneBlocage, LigneSejour } from '../lib/calendrier';
   import type { SupabaseClient } from '@supabase/supabase-js';
 
   interface BookingPack {
@@ -650,21 +652,25 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
       return;
     }
     show(availMsg, s.checking, true);
-    const { data, error } = await sb
-      .from('availability')
-      .select('start_date, end_date, statut')
-      .eq('statut', 'reserve')
-      .lte('start_date', checkOut.value)
-      .gte('end_date', checkIn.value);
-    if (error) {
+    // Même calendrier que la vitrine : séjours (`depart` exclusif) ET blocages
+    // (`fin` inclusive), convertis par la fonction pure de src/lib/calendrier.ts.
+    // Les deux lectures sont indépendantes : un échec sur l'une (table absente)
+    // ne doit pas annuler l'autre.
+    const [sejours, blocages] = await Promise.all([
+      lireDates('sejours', 'arrivee, depart'),
+      lireDates('calendar_blocks', 'debut, fin'),
+    ]);
+    if (!sejours && !blocages) {
       // En cas d'erreur de lecture on ne bloque pas la demande
       blocked = false;
       show(availMsg, s.toConfirm, true);
       return;
     }
-    const conflict = (data ?? []).some(
-      (row) => row.start_date <= checkOut.value && row.end_date >= checkIn.value
+    const plages = plagesOccupees(
+      (sejours ?? []) as LigneSejour[],
+      (blocages ?? []) as LigneBlocage[],
     );
+    const conflict = datesOccupees(checkIn.value, checkOut.value, plages);
     blocked = conflict;
     if (conflict) {
       show(availMsg, s.unavailable, false);
@@ -672,6 +678,20 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
     } else {
       show(availMsg, s.available, true);
       submitBtn.disabled = false;
+    }
+  }
+
+  /**
+   * Lit les dates d'une table ; `null` si la lecture échoue (table absente,
+   * réseau, RLS). Un tableau vide signifie « aucune ligne », pas une erreur.
+   */
+  async function lireDates(table: string, colonnes: string): Promise<unknown[] | null> {
+    try {
+      const { data, error } = await sb!.from(table).select(colonnes);
+      if (error || !data) return null;
+      return data as unknown[];
+    } catch {
+      return null;
     }
   }
 
