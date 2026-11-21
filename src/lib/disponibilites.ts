@@ -1,12 +1,26 @@
 /**
  * Alimentation du calendrier de disponibilités (chantier 2 — issue #16).
  *
- * Priorité : la table Supabase `sejours` (dates seules, lecture publique
- * limitée par les politiques RLS de migrations/0003_sejours.sql).
+ * Priorité : les tables Supabase `sejours` (réservations) ET `calendar_blocks`
+ * (blocages de dates), lues sur DEUX sources et converties par la fonction
+ * unique `plagesOccupees` de `src/lib/calendrier.ts`. La lecture publique est
+ * limitée par les politiques RLS de migrations/0003_sejours.sql et
+ * migrations/0011_calendar_blocks.sql : seules les dates sortent.
  *
  * Repli : `content/disponibilites.json` (statut mensuel) si Supabase n'est pas
- * configuré, si la requête échoue ou si la table n'existe pas encore — la page
- * ne doit jamais casser. La dégradation est couverte par tests/disponibilites.test.ts.
+ * configuré, si les deux requêtes échouent ou si les tables n'existent pas
+ * encore — la page ne doit jamais casser. La dégradation est couverte par
+ * tests/disponibilites.test.ts.
+ *
+ * Une lecture PARTIELLE (une table lue, l'autre illisible) n'est jamais
+ * assimilée à « tout est libre » : les dates lues sont conservées et les plages
+ * du repli statique y sont ajoutées (elles bloquent juillet et août). C'est
+ * volontairement conservateur : mieux vaut afficher « sur demande » qu'annoncer
+ * libre un logement dont une source n'a pas répondu.
+ *
+ * CONVENTION DE DATES : `sejours.depart` est EXCLUSIF, `calendar_blocks.fin`
+ * est INCLUSIVE. La conversion vit dans `src/lib/calendrier.ts`
+ * (`plagesOccupees`) ; ce module ne fait que transporter les lignes brutes.
  */
 
 import dispoData from '../../content/disponibilites.json';
@@ -15,13 +29,14 @@ import { getSupabase, isSupabaseConfigured } from './supabase';
 import {
   dernierJourMois,
   fusionnerPlages,
-  moinsUnJour,
   parseMois,
+  plagesOccupees,
   premierJourMois,
   type EtatJour,
+  type LigneBlocage,
+  type LigneSejour,
   type Plage,
 } from './calendrier';
-import { estDateIsoValide } from './confiance';
 
 /** D'où viennent les dates affichées (utile pour le libellé de la note). */
 export type SourceDisponibilites = 'supabase' | 'json';
@@ -31,35 +46,10 @@ export interface Source {
   source: SourceDisponibilites;
 }
 
-/** Lignes lues dans `sejours` : seules les dates sont publiques (grant colonne). */
-export interface LigneSejour {
-  arrivee?: unknown;
-  depart?: unknown;
-}
-
 /** Structure de repli de content/disponibilites.json. */
 export interface DisponibilitesJson {
   mois?: Array<{ mois?: unknown; statut?: unknown }>;
   legende?: Record<string, string>;
-}
-
-/**
- * Convertit les séjours en plages occupées.
- *
- * Convention hôtelière : le jour du départ libère le logement, donc un séjour
- * « 10 → 17 » n'occupe que les jours 10 à 16. Les dates invalides, inversées ou
- * vides sont ignorées (une ligne malformée ne doit jamais casser le calendrier).
- */
-export function plagesDepuisSejours(lignes: ReadonlyArray<LigneSejour>): Plage[] {
-  const plages: Plage[] = [];
-  for (const ligne of lignes ?? []) {
-    const arrivee = typeof ligne?.arrivee === 'string' ? ligne.arrivee : '';
-    const depart = typeof ligne?.depart === 'string' ? ligne.depart : '';
-    if (!estDateIsoValide(arrivee) || !estDateIsoValide(depart)) continue;
-    if (depart <= arrivee) continue; // plage vide : aucun jour occupé
-    plages.push({ debut: arrivee, fin: moinsUnJour(depart), etat: 'occupe' });
-  }
-  return fusionnerPlages(plages);
 }
 
 /**
@@ -105,8 +95,15 @@ export interface OptionsChargement {
 /**
  * Charge les disponibilités : Supabase en priorité, repli JSON sinon.
  *
- * Ne lève jamais : toute erreur (table absente, réseau, configuration) retombe
- * sur le fichier statique pour que la page reste affichable.
+ * Les deux tables sont lues indépendamment puis fusionnées par la fonction
+ * unique `plagesOccupees`. Une lecture PARTIELLE n'est jamais assimilée à
+ * « tout est libre » : si `sejours` OU `calendar_blocks` échoue, les dates
+ * réellement lues sont conservées ET les plages du repli statique y sont
+ * ajoutées (`source: 'json'`, donc note « calendrier indicatif »). Le repli
+ * bloque juillet et août : la dégradation reste conservatrice, ce qui écarte le
+ * double booking qu'une table vide ferait apparaître.
+ *
+ * Ne lève jamais : la page reste toujours affichable.
  */
 export async function chargerDisponibilites(options: OptionsChargement = {}): Promise<Source> {
   const plagesJson = plagesRepli();
@@ -115,11 +112,48 @@ export async function chargerDisponibilites(options: OptionsChargement = {}): Pr
 
   if (!configure || !client) return { plages: plagesJson, source: 'json' };
 
+  const [sejours, blocages] = await Promise.all([
+    lireDates(client, 'sejours', 'arrivee, depart'),
+    lireDates(client, 'calendar_blocks', 'debut, fin'),
+  ]);
+
+  // Les deux tables sont lisibles : Supabase fait foi, même si elles sont vides.
+  if (sejours && blocages) {
+    return {
+      plages: plagesOccupees(sejours as LigneSejour[], blocages as LigneBlocage[]),
+      source: 'supabase',
+    };
+  }
+
+  // Lecture partielle ou totale en échec : on garde ce qui a été lu et on y
+  // ajoute le repli statique (conservateur), sans jamais conclure « libre ».
+  const lues = plagesOccupees(
+    (sejours ?? []) as LigneSejour[],
+    (blocages ?? []) as LigneBlocage[],
+  );
+  return { plages: fusionnerPlages([...plagesJson, ...lues]), source: 'json' };
+}
+
+/**
+ * Lit les dates d'une table ; renvoie null si la lecture échoue (table absente,
+ * réseau, RLS). Une lecture réussie renvoie au pire un tableau vide, ce qui
+ * signifie « aucune ligne » et non « repli ».
+ *
+ * DUPLIQUÉ volontairement de `lireDates` dans src/components/Reservation.astro :
+ * le formulaire s'exécute dans le navigateur et ne peut pas importer ce module
+ * (qui lit `import.meta.env` côté serveur). Même contrat des deux côtés
+ * (`null` = échec, `[]` = aucune ligne) : garder les deux en phase.
+ */
+async function lireDates(
+  client: SupabaseClient,
+  table: 'sejours' | 'calendar_blocks',
+  colonnes: string,
+): Promise<unknown[] | null> {
   try {
-    const { data, error } = await client.from('sejours').select('arrivee, depart');
-    if (error || !data) return { plages: plagesJson, source: 'json' };
-    return { plages: plagesDepuisSejours(data as LigneSejour[]), source: 'supabase' };
+    const { data, error } = await client.from(table).select(colonnes);
+    if (error || !data) return null;
+    return data as unknown[];
   } catch {
-    return { plages: plagesJson, source: 'json' };
+    return null;
   }
 }

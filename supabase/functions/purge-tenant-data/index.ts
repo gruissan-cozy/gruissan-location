@@ -1,4 +1,13 @@
 import { BUCKET, corsHeaders, createServiceClient, jsonResponse } from '../_shared/tenant.ts';
+import {
+  RETENTION_DONNEES_PERSONNELLES_JOURS,
+  RETENTION_PREUVE_ANNEES,
+  buildEvidenceExpiryEntry,
+  evidenceExpiryCutoff,
+  planReservationPurge,
+  summarizePurge,
+  type PurgeEntry,
+} from '../_shared/purge.ts';
 
 const BATCH_SIZE = 100;
 
@@ -25,6 +34,41 @@ async function listFiles(supabase: ReturnType<typeof createServiceClient>, prefi
   return files;
 }
 
+async function removeFiles(supabase: ReturnType<typeof createServiceClient>, paths: readonly string[]): Promise<number> {
+  let removed = 0;
+  for (let i = 0; i < paths.length; i += BATCH_SIZE) {
+    const batch = paths.slice(i, i + BATCH_SIZE);
+    const { error } = await supabase.storage.from(BUCKET).remove(batch);
+    if (error) throw new Error('Suppression Storage impossible.');
+    removed += batch.length;
+  }
+  return removed;
+}
+
+async function countRows(
+  supabase: ReturnType<typeof createServiceClient>,
+  table: 'pdf_reports' | 'photos' | 'checklists',
+  reservationId: string,
+): Promise<number> {
+  const { count, error } = await supabase.from(table).select('id', { count: 'exact', head: true }).eq('reservation_id', reservationId);
+  if (error) throw new Error('Lecture des données locataire impossible.');
+  return count || 0;
+}
+
+/**
+ * Purge quotidienne des données locataire.
+ *
+ * Deux temps, volontairement séparés :
+ *  1. données personnelles (session expirée) : email, jeton, notes de
+ *     checklist et fichiers hors preuve sont supprimés ; le PDF signé et
+ *     les photos d'état des lieux sont CONSERVÉS et anonymisés (métadonnées
+ *     vidées), parce qu'ils constituent la preuve en cas de litige ;
+ *  2. preuve arrivée au terme de sa durée de conservation
+ *     (RETENTION_PREUVE_ANNEES après le départ) : elle est supprimée à son
+ *     tour, et seulement là.
+ *
+ * La purge est idempotente : la relancer ne supprime rien de plus.
+ */
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return jsonResponse({ error: 'Méthode non autorisée.' }, 405);
@@ -37,11 +81,13 @@ Deno.serve(async (req: Request) => {
 
   try {
     const supabase = createServiceClient();
+    const now = new Date();
+    const nowIso = now.toISOString();
     const expired: Array<{ id: string; reservation_id: string }> = [];
     for (let offset = 0; ; offset += BATCH_SIZE) {
       const { data, error } = await supabase.from('tenant_sessions')
         .select('id, reservation_id')
-        .lt('expires_at', new Date().toISOString())
+        .lt('expires_at', nowIso)
         .range(offset, offset + BATCH_SIZE - 1);
       if (error) return jsonResponse({ error: 'Lecture des accès expirés impossible.' }, 500);
       expired.push(...(data || []));
@@ -58,12 +104,14 @@ Deno.serve(async (req: Request) => {
     let removedSessions = 0;
     let removedFiles = 0;
     const deferred: string[] = [];
+    const report: Array<PurgeEntry & { reservationId: string; retainedUntil: string }> = [];
+
     for (const [reservationId, sessionIds] of byReservation) {
       const { count, error: activeError } = await supabase
         .from('tenant_sessions')
         .select('id', { count: 'exact', head: true })
         .eq('reservation_id', reservationId)
-        .gt('expires_at', new Date().toISOString());
+        .gt('expires_at', nowIso);
       if (activeError) throw new Error('Vérification des accès actifs impossible.');
 
       if ((count || 0) > 0) {
@@ -74,27 +122,115 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const paths = await listFiles(supabase, reservationId);
-      for (let i = 0; i < paths.length; i += BATCH_SIZE) {
-        const { error: storageError } = await supabase.storage.from(BUCKET).remove(paths.slice(i, i + BATCH_SIZE));
-        if (storageError) throw new Error(`Suppression Storage impossible pour ${reservationId}.`);
-        removedFiles += Math.min(BATCH_SIZE, paths.length - i);
-      }
-
-      const [photoResult, reportResult, checklistResult, sessionResult] = await Promise.all([
-        supabase.from('photos').delete().eq('reservation_id', reservationId),
-        supabase.from('pdf_reports').delete().eq('reservation_id', reservationId),
-        supabase.from('checklists').delete().eq('reservation_id', reservationId),
-        supabase.from('tenant_sessions').delete().in('id', sessionIds),
+      const [{ data: booking, error: bookingError }, paths, checklistCount, reportCount, photoCount] = await Promise.all([
+        supabase.from('bookings').select('check_out').eq('id', reservationId).maybeSingle(),
+        listFiles(supabase, reservationId),
+        countRows(supabase, 'checklists', reservationId),
+        countRows(supabase, 'pdf_reports', reservationId),
+        countRows(supabase, 'photos', reservationId),
       ]);
-      if (photoResult.error || reportResult.error || checklistResult.error || sessionResult.error) {
+      if (bookingError) throw new Error('Lecture du séjour impossible.');
+
+      const plan = planReservationPurge({
+        reservationId,
+        paths,
+        sessionCount: sessionIds.length,
+        checklistCount,
+        reportCount,
+        photoCount,
+        departure: booking?.check_out ?? null,
+        now,
+      });
+
+      // Anonymisation : rien ne réécrit le PDF signé (horodatage de signature
+      // intact) ; seules les métadonnées libres des photos sont vidées.
+      removedFiles += await removeFiles(supabase, plan.disposablePaths);
+
+      const [checklistResult, photoResult, reportResult, sessionResult] = await Promise.all([
+        supabase.from('checklists').delete().eq('reservation_id', reservationId).select('id'),
+        supabase.from('photos').update({ meta: {} }).eq('reservation_id', reservationId).select('id'),
+        supabase.from('pdf_reports').update({ error: null }).eq('reservation_id', reservationId).select('id'),
+        supabase.from('tenant_sessions').delete().in('id', sessionIds).select('id'),
+      ]);
+      if (checklistResult.error || photoResult.error || reportResult.error || sessionResult.error) {
         throw new Error(`Purge des données SQL impossible pour ${reservationId}.`);
       }
+
       removedSessions += sessionIds.length;
+      report.push({ reservationId, retainedUntil: plan.retainedUntil, ...plan.entry });
     }
 
-    console.info(JSON.stringify({ event: 'tenant_data_purge', removedSessions, removedFiles, deferredReservations: deferred.length }));
-    return jsonResponse({ ok: true, removedSessions, removedFiles, deferredReservations: deferred.length });
+    // Second temps : la preuve elle-même, une fois sa durée de conservation
+    // atteinte (RETENTION_PREUVE_ANNEES après le départ du locataire).
+    const cutoff = evidenceExpiryCutoff(now);
+    const { data: agedBookings, error: agedError } = await supabase
+      .from('bookings')
+      .select('id, check_out')
+      .lt('check_out', cutoff)
+      .order('check_out')
+      .limit(BATCH_SIZE * 10);
+    if (agedError) throw new Error('Lecture des séjours anciens impossible.');
+
+    let expiredEvidenceReservations = 0;
+    let expiredEvidenceFiles = 0;
+    for (const booking of agedBookings || []) {
+      const [reportCount, photoCount] = await Promise.all([
+        countRows(supabase, 'pdf_reports', booking.id),
+        countRows(supabase, 'photos', booking.id),
+      ]);
+      if (!reportCount && !photoCount) continue;
+
+      // La durée de conservation de la preuve est atteinte : tout part.
+      const paths = await listFiles(supabase, booking.id);
+      expiredEvidenceFiles += await removeFiles(supabase, paths);
+
+      const [reportDelete, photoDelete] = await Promise.all([
+        supabase.from('pdf_reports').delete().eq('reservation_id', booking.id),
+        supabase.from('photos').delete().eq('reservation_id', booking.id),
+      ]);
+      if (reportDelete.error || photoDelete.error) {
+        throw new Error(`Suppression de la preuve impossible pour ${booking.id}.`);
+      }
+      expiredEvidenceReservations += 1;
+      report.push({
+        reservationId: booking.id,
+        retainedUntil: '',
+        ...buildEvidenceExpiryEntry({
+          departure: booking.check_out,
+          deletedPdfReports: reportCount,
+          deletedPhotos: photoCount,
+          deletedFiles: paths.length,
+        }),
+      });
+    }
+
+    const retention = {
+      personalDataDays: RETENTION_DONNEES_PERSONNELLES_JOURS,
+      evidenceYears: RETENTION_PREUVE_ANNEES,
+    };
+    const summary = summarizePurge(report);
+    console.info(JSON.stringify({
+      event: 'tenant_data_purge',
+      removedSessions,
+      removedFiles,
+      expiredEvidenceReservations,
+      expiredEvidenceFiles,
+      deferredReservations: deferred.length,
+      retention,
+      summary,
+      report,
+    }));
+    return jsonResponse({
+      ok: true,
+      removedSessions,
+      removedFiles,
+      expiredEvidenceReservations,
+      expiredEvidenceFiles,
+      deferredReservations: deferred.length,
+      retention,
+      summary,
+      report,
+    });
   } catch {
     console.error('Erreur interne purge-tenant-data (détails omis).');
     return jsonResponse({ error: 'La purge automatique a échoué et sera réessayée.' }, 500);

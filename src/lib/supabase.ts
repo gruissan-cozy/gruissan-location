@@ -110,6 +110,28 @@ export interface Sejour {
 }
 
 /**
+ * Blocage de dates (travaux, séjour personnel, futur import iCal), table
+ * `calendar_blocks` — migrations/0011_calendar_blocks.sql.
+ *
+ * Indépendant de `Sejour` : un blocage n'a ni client ni prix, et n'apparaît
+ * donc jamais dans les revenus ni le taux d'occupation.
+ *
+ * ATTENTION — convention de dates inverse de `Sejour` : `debut` et `fin` sont
+ * des bornes INCLUSES (`fin` est le dernier jour bloqué), alors que
+ * `Sejour.depart` est exclusif. La conversion vit dans `src/lib/calendrier.ts`.
+ */
+export interface CalendarBlock {
+  id: string;
+  created_at: string;
+  debut: string;
+  fin: string;
+  source: 'direct' | 'airbnb' | 'booking';
+  /** UID iCal de l'événement importé ; null pour un blocage manuel. */
+  external_uid: string | null;
+  note: string | null;
+}
+
+/**
  * Tâche entre séjours (chantier 8 — #22), table `sejour_taches`.
  *
  * Le libellé de la liste type est dupliqué dans `libelles` (jsonb des 4
