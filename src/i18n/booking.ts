@@ -13,13 +13,17 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.datesTitle': 'Vos dates',
     'booking.checkin': 'Arrivée',
     'booking.checkout': 'Départ',
-    'booking.guests': 'Voyageurs',
     'booking.adults': 'Adultes',
     'booking.minors': 'Mineurs (0–17 ans)',
+    'booking.capacityHint': 'Capacité du logement : {n} personnes au total (adultes et mineurs).',
+    'booking.capacityError':
+      'La capacité du logement est de {n} personnes au total : réduisez le nombre d’adultes ou de mineurs.',
     'booking.taxeMinorsExempt':
       'La taxe de séjour ne s’applique qu’aux adultes : les mineurs en sont exonérés.',
     'booking.taxeDetail': 'Taxe de séjour : {adultes} adulte(s) × {nuits} nuit(s) × {taux}',
     'booking.taxeMinorsCount': '{mineurs} mineur(s) exonéré(s)',
+    'booking.taxeNotCalculable':
+      'Taux communal à confirmer auprès de la mairie : montant non calculable pour le moment.',
     'booking.packsTitle': 'Les options',
     'booking.packsSubtitle': 'Pour un séjour encore plus doux — à ajouter à votre demande.',
     'booking.perPerson': 'par personne',
@@ -75,13 +79,17 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.datesTitle': 'Your dates',
     'booking.checkin': 'Check-in',
     'booking.checkout': 'Check-out',
-    'booking.guests': 'Guests',
     'booking.adults': 'Adults',
     'booking.minors': 'Minors (0–17)',
+    'booking.capacityHint': 'Sleeping capacity: {n} people in total (adults and minors).',
+    'booking.capacityError':
+      'The flat sleeps {n} people in total: reduce the number of adults or minors.',
     'booking.taxeMinorsExempt':
       'The tourist tax only applies to adults: minors are exempt.',
     'booking.taxeDetail': 'Tourist tax: {adultes} adult(s) × {nuits} night(s) × {taux}',
     'booking.taxeMinorsCount': '{mineurs} minor(s) exempt',
+    'booking.taxeNotCalculable':
+      'Municipal rate to be confirmed with the town hall: amount not calculable for now.',
     'booking.packsTitle': 'Options',
     'booking.packsSubtitle': 'For an even softer stay — add them to your request.',
     'booking.perPerson': 'per person',
@@ -137,13 +145,17 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.datesTitle': 'Tus fechas',
     'booking.checkin': 'Llegada',
     'booking.checkout': 'Salida',
-    'booking.guests': 'Huéspedes',
     'booking.adults': 'Adultos',
     'booking.minors': 'Menores (0–17 años)',
+    'booking.capacityHint': 'Capacidad del alojamiento: {n} personas en total (adultos y menores).',
+    'booking.capacityError':
+      'La capacidad del alojamiento es de {n} personas en total: reduce el número de adultos o de menores.',
     'booking.taxeMinorsExempt':
       'La tasa turística solo se aplica a los adultos: los menores están exentos.',
     'booking.taxeDetail': 'Tasa turística: {adultes} adulto(s) × {nuits} noche(s) × {taux}',
     'booking.taxeMinorsCount': '{mineurs} menor(es) exento(s)',
+    'booking.taxeNotCalculable':
+      'Tasa municipal pendiente de confirmar con el ayuntamiento: importe no calculable por ahora.',
     'booking.packsTitle': 'Opciones',
     'booking.packsSubtitle': 'Para una estancia aún más dulce — añádelas a tu solicitud.',
     'booking.perPerson': 'por persona',
@@ -199,13 +211,17 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.datesTitle': 'Ihre Daten',
     'booking.checkin': 'Anreise',
     'booking.checkout': 'Abreise',
-    'booking.guests': 'Gäste',
     'booking.adults': 'Erwachsene',
     'booking.minors': 'Minderjährige (0–17)',
+    'booking.capacityHint': 'Kapazität der Wohnung: insgesamt {n} Personen (Erwachsene und Minderjährige).',
+    'booking.capacityError':
+      'Die Wohnung bietet insgesamt {n} Personen Platz: reduzieren Sie die Zahl der Erwachsenen oder Minderjährigen.',
     'booking.taxeMinorsExempt':
       'Die Kurtaxe gilt nur für Erwachsene: Minderjährige sind befreit.',
     'booking.taxeDetail': 'Kurtaxe: {adultes} Erwachsene(r) × {nuits} Nacht/Nächte × {taux}',
     'booking.taxeMinorsCount': '{mineurs} Minderjährige befreit',
+    'booking.taxeNotCalculable':
+      'Gemeindesatz noch mit der Stadtverwaltung zu bestätigen: Betrag derzeit nicht berechenbar.',
     'booking.packsTitle': 'Optionen',
     'booking.packsSubtitle': 'Für einen noch angenehmeren Aufenthalt — fügen Sie sie Ihrer Anfrage hinzu.',
     'booking.perPerson': 'pro Person',

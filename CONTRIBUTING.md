@@ -207,6 +207,12 @@ l'unique constante `TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE` (lue dans
 `content/tarifs.json`) ; sa valeur actuelle est provisoire et reste à
 confirmer auprès de la mairie de Gruissan.
 
+Le devis public applique en plus la **capacité du logement**
+(`content/site.json`, clé `capacite`) : `computeQuote` retourne `null` dès que
+`adultes + mineurs` la dépasse, et le formulaire plafonne les options
+« Mineurs » à ce qu'il reste de capacité. Un devis sans `capacite` fournie
+n'est pas plafonné (le calcul ne l'invente pas).
+
 - Un taux absent n'est **jamais remplacé par une valeur approchante** :
   le séjour reste visible, le montant est « non calculable » et le cas
   est signalé au propriétaire.

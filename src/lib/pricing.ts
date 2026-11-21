@@ -146,6 +146,52 @@ function normalizeGuests(value: number): number {
   return Math.floor(n);
 }
 
+/**
+ * Taux de taxe de séjour exploitable, ou `null` s'il est absent ou illisible.
+ *
+ * Règle du dépôt : un taux absent n'est JAMAIS remplacé par une valeur
+ * approchante — le montant devient « non calculable » et l'interface
+ * l'indique (« à confirmer ») au lieu d'afficher 0 €.
+ */
+export function normalizeTauxTaxe(
+  value: number | string | undefined | null,
+): number | null {
+  if (value === undefined || value === null) return null;
+  const raw = typeof value === 'string' ? value.trim() : value;
+  if (raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return round2(n);
+}
+
+/**
+ * Capacité du logement normalisée (entier > 0), ou `null` si elle n'est pas
+ * exploitable : une capacité absente ou aberrante ne doit pas inventer de
+ * plafond (elle est simplement ignorée, comme le prévoit l'appelant).
+ */
+function normalizeCapacite(value: number | undefined): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.floor(n);
+}
+
+/**
+ * true si le total adultes + mineurs dépasse la capacité du logement.
+ *
+ * `capacite` omise (ou illisible) → aucun plafond : le calcul ne refuse rien.
+ * Cette garde évite qu'un formulaire proposant adultes et mineurs séparément
+ * accepte 8 personnes dans un logement déclaré pour 4.
+ */
+export function exceedsCapacity(
+  adults: number,
+  minors: number,
+  capacite?: number,
+): boolean {
+  const cap = normalizeCapacite(capacite);
+  if (cap === null) return false;
+  return normalizeGuests(adults) + normalizeGuests(minors) > cap;
+}
+
 export interface PackSelection {
   id: string;
   slug: string;
@@ -178,6 +224,8 @@ export interface DevisInput {
   adults: number;
   /** Mineurs, exonérés de la taxe de séjour (0 par défaut). */
   minors?: number;
+  /** Capacité du logement : au-delà, le devis est refusé. Omise → pas de plafond. */
+  capacite?: number;
   saisons: Saison[];
   packs?: PackSelection[];
   caution?: number;
@@ -191,10 +239,16 @@ export interface DevisTaxeSejour {
   /** Mineurs exonérés (jamais facturés). */
   mineurs: number;
   nuits: number;
-  /** Taux par nuit et par adulte, en euros. */
+  /** Taux par nuit et par adulte, en euros (0 si non calculable). */
   taux: number;
   /** Montant dû = adultes × nuits × taux. */
   montant: number;
+  /**
+   * false si le taux est absent ou illisible : le montant n'est alors PAS
+   * calculable. On ne le remplace jamais par une valeur approchante
+   * (règle du dépôt) — l'interface affiche « à confirmer ».
+   */
+  calculable: boolean;
 }
 
 export interface Devis {
@@ -231,8 +285,9 @@ export interface Devis {
  * contient) + packs (selon leur unité) + taxe de séjour appliquée aux SEULS
  * adultes (les mineurs sont exonérés).
  * La caution est renseignée mais reste hors du total dû (elle est remboursable).
- * Retourne `null` si les dates sont manquantes, invalides ou inversées, ou
- * s'il n'y a aucun adulte (un séjour sans adulte n'est pas une réservation).
+ * Retourne `null` si les dates sont manquantes, invalides ou inversées, s'il
+ * n'y a aucun adulte (un séjour sans adulte n'est pas une réservation) ou si
+ * adultes + mineurs dépassent la capacité du logement.
  */
 export function computeQuote(input: DevisInput): Devis | null {
   const { checkIn, checkOut, saisons } = input;
@@ -241,13 +296,18 @@ export function computeQuote(input: DevisInput): Devis | null {
   const adults = normalizeGuests(input.adults);
   if (adults < 1) return null;
   const minors = normalizeGuests(input.minors ?? 0);
+  if (exceedsCapacity(adults, minors, input.capacite)) return null;
   const guests = adults + minors;
   const packs = (input.packs ?? []).filter(
     (p) => p && Number.isFinite(Number(p.prix)) && p.unite,
   );
   const caution = round2(Number(input.caution ?? 0) || 0);
-  const taxeRate = round2(
-    Number(input.taxeSejourParNuitPersonne ?? TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE) || 0,
+  // `undefined` = non fourni → on lit la constante du contenu ; `null` explicite
+  // = taux volontairement absent → montant non calculable (jamais 0 €).
+  const taxeRate = normalizeTauxTaxe(
+    input.taxeSejourParNuitPersonne === undefined
+      ? TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE
+      : input.taxeSejourParNuitPersonne,
   );
 
   const nights = nightsBetween(checkIn, checkOut);
@@ -295,7 +355,12 @@ export function computeQuote(input: DevisInput): Devis | null {
   const packsTotal = round2(devisPacks.reduce((sum, p) => sum + p.total, 0));
 
   // --- Taxe de séjour : adultes × nuits × taux (mineurs exonérés).
-  const taxeSejour = round2(nights * adults * taxeRate);
+  // Taux absent → montant NON calculable (jamais remplacé par 0 €) : il n'est
+  // pas ajouté au total, et `taxeSejourDetail.calculable` vaut false pour que
+  // l'interface l'annonce au visiteur.
+  const taxeCalculable = taxeRate !== null;
+  const taxeTaux = taxeRate ?? 0;
+  const taxeSejour = taxeCalculable ? round2(nights * adults * taxeTaux) : 0;
 
   const total = round2(stay + packsTotal + taxeSejour);
 
@@ -317,8 +382,9 @@ export function computeQuote(input: DevisInput): Devis | null {
       adultes: adults,
       mineurs: minors,
       nuits: nights,
-      taux: taxeRate,
+      taux: taxeTaux,
       montant: taxeSejour,
+      calculable: taxeCalculable,
     },
     total,
     caution,
