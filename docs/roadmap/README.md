@@ -244,6 +244,17 @@ seul développeur, avec tests et 4 langues).
 complète, relation directe, pas de commission de 15 %) et l'**espace séjour**
 (état des lieux, guide, consignes), pas à remplacer Airbnb.
 
+**Nuance V1 (DA-1)** : en V1, il n'y a **aucune** vente sur Airbnb/Booking. Le
+site n'est pas « en plus » des plateformes, il est **à leur place** pendant la
+première saison. Ce tableau sert à savoir ce qu'on ne réplique pas *si* kiki
+revient vers elles en V2 — pas à justifier une cohabitation qui n'existe pas
+encore.
+
+**Conséquence** : la visibilité que les plateformes apportaient doit être
+compensée autrement en V1 (référencement local, bouche-à-oreille, lien depuis
+les avis existants, page Google Business). Ce n'est pas un sujet de code, mais
+c'est un risque commercial réel : un site sans trafic ne loue rien.
+
 ---
 
 ## 6. À valider par kiki / mairie / comptable (vérifications d'exécution)
@@ -294,8 +305,8 @@ règles du dépôt : 4 langues, tests Vitest, `npm run verify` vert, PR vers `ma
 
 ## 8. Index des fichiers
 
-- [`2026-11-reservation-disponibilites.md`](./2026-11-reservation-disponibilites.md) — moteur de réservation, source de vérité, iCal, tarifs, caution, taxe de séjour.
-- [`2026-11-paiement-contrat.md`](./2026-11-paiement-contrat.md) — Stripe, acompte et solde, empreinte de caution, contrat, signature, ce qu'il ne faut pas coder.
+- [`2026-11-reservation-disponibilites.md`](./2026-11-reservation-disponibilites.md) — moteur de réservation, source de vérité, `calendar_blocks`, iCal (V2), tarifs, caution, taxe de séjour non classé, numéro d'enregistrement.
+- [`2026-11-paiement-contrat.md`](./2026-11-paiement-contrat.md) — Stripe, acompte et solde, empreinte de caution, contrat (mention non classé), signature, ce qu'il ne faut pas coder.
 - [`2026-11-etat-des-lieux.md`](./2026-11-etat-des-lieux.md) — check-in/check-out autonome, photos, PDF, comparaison entrée/sortie, boîte à clés.
 - [`2026-11-guide-acces-temporaire.md`](./2026-11-guide-acces-temporaire.md) — espace séjour, lien signé, expiration, code de secours, RGPD.
-- [`2026-11-backoffice-suivi.md`](./2026-11-backoffice-suivi.md) — back office mono-bien, demandes, statuts, encaissé vs dû, statistiques.
+- [`2026-11-backoffice-suivi.md`](./2026-11-backoffice-suivi.md) — back office mono-bien, demandes, blocages, statuts, encaissé vs dû, statistiques.
