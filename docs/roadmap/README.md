@@ -124,14 +124,20 @@ payant ». Or **aucun moyen d'encaisser une carte sans PSP** : Stripe facture
 Les alternatives gratuites (virement, chèque, espèces) fonctionnent mais
 imposent une relance manuelle et font perdre des réservations.
 
-**C'est un arbitrage de kiki, pas une décision technique.** Trois niveaux :
+**C'est un arbitrage de kiki, pas une décision technique.** Trois niveaux
+(numérotation alignée sur `2026-11-paiement-contrat.md` §2) :
 
-1. **Aucun paiement en ligne** (virement + acompte manuel) — 0 €, effort S,
-   mais conversion faible et suivi manuel.
-2. **Acompte en ligne (30 %) + solde par virement** — PSP nécessaire, effort L.
-3. **Tout en ligne + empreinte de caution** — PSP + prestataire de caution
-   (voir `2026-11-paiement-contrat.md`, §4 : Stripe ne sait pas bloquer 800 €
-   pendant trois semaines).
+- **Niveau 0 — Aucun paiement en ligne** (virement + acompte manuel) — 0 €,
+  effort S, mais conversion faible et suivi manuel.
+- **Niveau 1 — Acompte en ligne (30 %) + solde par virement** — PSP nécessaire,
+  effort L.
+- **Niveau 2 — Tout en ligne + empreinte de caution** — PSP + prestataire de
+  caution (voir `2026-11-paiement-contrat.md`, §4 : Stripe ne sait pas bloquer
+  800 € pendant trois semaines).
+
+Tant que D3 n'est pas tranchée, la roadmap suppose le **niveau 0** : le parcours
+« demande → kiki confirme → acompte par virement » fonctionne sans PSP et doit
+rester livrable seul.
 
 ---
 
@@ -152,7 +158,7 @@ respecté partout.
 | 4 | **Pages légales + CGV + confidentialité** (`P-01`) | Vendre en ligne sans CGV ni politique RGPD est un risque juridique direct |
 | 5 | **Back office : voir les demandes** (`B-02`) | Kiki ne voit aujourd'hui aucune demande de réservation |
 | 6 | **Lien locataire généré depuis l'admin** (`G-01`) | Débloque l'état des lieux pour les réservations hors site |
-| 7 | **Paiement de l'acompte** (`P-02`, si D3 = option 2) | Le seul moyen de sécuriser une réservation à distance |
+| 7 | **Paiement de l'acompte** (`P-02`, si D3 = niveau 1 ou 2) | Le seul moyen de sécuriser une réservation à distance |
 | 8 | **Conservation des états des lieux** (`E-02`) | Aujourd'hui la purge détruit la preuve : inutilisable en cas de litige |
 
 ### Lot 2 — Après le premier été (hiver 2027-2028)
@@ -187,7 +193,7 @@ seul développeur, avec tests et 4 langues).
 | `R-01` | Convertir une demande en séjour en un clic | Kiki : plus de ressaisie, plus d'oubli de blocage du calendrier | M | `B-01` | Doublons si deux demandes identiques |
 | `R-02` | Une seule source de vérité pour les disponibilités (séjours + blocages) | Les deux : plus de demande sur des dates occupées | S | `R-07` | Aucun si `R-07` est fait d'abord (sinon refonte à prévoir) |
 | `R-07` | **Table `calendar_blocks`** (`source`, `external_uid`) dès la V1, sans synchro | Kiki : peut bloquer travaux/séjour perso. Équipe : iCal ajoutable plus tard sans refonte | M | — | Sur-ingénierie si on va au-delà du schéma (ne PAS coder l'import en V1) |
-| `R-03` | Synchro iCal import (Airbnb/Booking) — **V2** | Kiki : vend sur plusieurs canaux sans double réservation | M | `R-07`, DA-1 levée | Délai de propagation, flux non normalisés, job à surveiller |
+| `R-03` | Synchro iCal import (Airbnb/Booking) — **V2** | Kiki : vend sur plusieurs canaux sans double réservation | M | `R-07` + décision de vendre sur les plateformes | Délai de propagation, flux non normalisés, job à surveiller |
 | `R-09` | Export iCal du site — **V2, avec l'import** | Les plateformes voient les séjours directs | S | `R-07` | Un flux public expose les dates (pas de données perso : veiller à ne rien ajouter) |
 | `R-04` | Tarifs et saisons éditables en base | Kiki : change un prix sans PR ni redéploiement | M | `B-01` | Historique des prix à conserver pour les séjours passés |
 | `R-08` | **Taxe de séjour « non classé »** + numéro d'enregistrement mairie | Kiki : conformité légale (DA-2). Locataire : prix juste | M | mairie | Taux communal à obtenir ; plafond « catégorie la plus basse » ; exonération des mineurs |
@@ -291,7 +297,7 @@ règles du dépôt : 4 langues, tests Vitest, `npm run verify` vert, PR vers `ma
 | 6 | **Pages légales, CGV et politique de confidentialité** (sans mention de classement) | `2026-11-paiement-contrat.md` |
 | 7 | **Générer le lien locataire depuis `/admin/sejours/`** | `2026-11-guide-acces-temporaire.md` |
 | 8 | **Conserver les états des lieux signés** hors purge | `2026-11-etat-des-lieux.md` |
-| 9 | **Acompte en ligne** (si D3 = option 2) | `2026-11-paiement-contrat.md` |
+| 9 | **Acompte en ligne** (si D3 = niveau 1 ou 2) | `2026-11-paiement-contrat.md` |
 | 10 | **Alerte de nouvelle demande** hors back office | `2026-11-backoffice-suivi.md` |
 
 ### Gelé jusqu'à décision ultérieure (DA-1)
@@ -300,6 +306,10 @@ règles du dépôt : 4 langues, tests Vitest, `npm run verify` vert, PR vers `ma
   « synchroniser » : **V2**, quand kiki décidera de vendre sur Airbnb/Booking.
 - La table `calendar_blocks` et ses colonnes sont en revanche **dans le périmètre
   V1** : c'est ce qui rend la V2 peu coûteuse.
+
+**Note de séquencement** : la tâche 2 (`R-07`, `calendar_blocks`) **ne dépend
+d'aucune autre** et peut démarrer en parallèle de la tâche 1. La faire d'abord
+évite d'écrire le calcul de disponibilité deux fois.
 
 ---
 
