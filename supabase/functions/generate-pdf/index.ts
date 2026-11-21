@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
 import { BUCKET, corsHeaders, createServiceClient, jsonResponse, normalizePdfText, readTenantToken, validateTenantToken } from '../_shared/tenant.ts';
+import { estReservationAutorisee } from '../_shared/reservation.ts';
 
 const A4: [number, number] = [595.28, 841.89];
 const REQUIRED_ROOMS = ['living', 'kitchen', 'bedroom', 'mezzanine', 'bathroom', 'entrance'];
@@ -43,15 +44,28 @@ Deno.serve(async (req: Request) => {
     const signatureBytes = Uint8Array.from(atob(signatureMatch[1]), (char) => char.charCodeAt(0));
 
     const supabase = createServiceClient();
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .select('check_in, check_out, nom, email, statut, lang')
+    // Migration 0011 : la réservation est un `sejour` (statuts `confirme` /
+    // `termine`). La règle vient de _shared/reservation.ts, partagée avec les
+    // trois autres fonctions locataire.
+    const { data: sejour, error: sejourError } = await supabase
+      .from('sejours')
+      .select('arrivee, depart, client_nom, client_email, statut, lang')
       .eq('id', reservationId)
       .maybeSingle();
-    if (bookingError || !booking) return jsonResponse({ error: 'Réservation introuvable.' }, 404);
-    if (!['confirmee', 'terminee'].includes(booking.statut)) {
+    if (sejourError || !sejour) return jsonResponse({ error: 'Réservation introuvable.' }, 404);
+    if (!estReservationAutorisee(sejour.statut)) {
       return jsonResponse({ error: 'Cette réservation n’est pas confirmée.' }, 403);
     }
+    // Le PDF garde son vocabulaire de rendu (`check_in`, `nom`, `email`) :
+    // seule la lecture change, pas le document produit.
+    const booking = {
+      check_in: sejour.arrivee,
+      check_out: sejour.depart,
+      nom: sejour.client_nom,
+      email: sejour.client_email,
+      statut: sejour.statut,
+      lang: sejour.lang,
+    };
 
     const [{ data: checklist, error: checklistError }, { data: photos, error: photosError }, { data: guide, error: guideError }] = await Promise.all([
       supabase.from('checklists').select('room, item, ok, note').eq('reservation_id', reservationId).eq('moment', moment).order('room'),

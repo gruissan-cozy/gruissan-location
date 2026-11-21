@@ -90,6 +90,29 @@ magique, sans mot de passe) : messages, calendrier, packs et guide.
 | `/admin/packs/` | Options proposées à la réservation (4 langues, prix, unité, ordre, actif) |
 | `/admin/guide/` | Guide d'accueil numérique (titre + contenu HTML en 4 langues) |
 
+### Un seul dossier de réservation
+
+Depuis la migration [`0011_unifier_bookings_sejours.sql`](migrations/0011_unifier_bookings_sejours.sql),
+il n'existe **qu'une seule table de réservation** : `sejours`. L'ancienne table
+`bookings` (demandes du formulaire public) y a été fusionnée, identifiants
+conservés, et reste en lecture seule jusqu'à son retrait après une saison.
+
+Un séjour suit un cycle de vie unique, et **un seul vocabulaire** :
+
+| Statut | Sens | Bloque le calendrier |
+|---|---|---|
+| `demande` | Demande reçue depuis `/reserver/` | Non |
+| `option` | Dates tenues, demande en cours de traitement | Oui |
+| `confirme` | Réservation confirmée | Oui |
+| `termine` | Séjour passé | Non (n'apparaît plus) |
+| `annule` | Séjour annulé | Non |
+
+Les quatre Edge Functions locataire (`tenant-upload`, `generate-pdf`,
+`send-email`, `purge-tenant-data`) n'acceptent l'état des lieux que pour les
+statuts `confirme` et `termine`. Cette règle est centralisée dans
+[`supabase/functions/_shared/reservation.ts`](supabase/functions/_shared/reservation.ts)
+et testée : ne jamais la dupliquer dans une fonction.
+
 ### Mode dégradé (sans Supabase)
 
 Si les variables Supabase ne sont pas définies :

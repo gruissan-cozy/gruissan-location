@@ -107,6 +107,7 @@ export const DISPO_STATUT_CLS: Record<string, string> = {
 
 /** Couleurs des badges de statut des séjours. */
 export const SEJOUR_STATUT_CLS: Record<string, string> = {
+  demande: 'bg-sky-50 text-sky-700 ring-sky-200',
   option: 'bg-amber-50 text-amber-700 ring-amber-200',
   confirme: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
   annule: 'bg-rose-50 text-rose-700 ring-rose-200',

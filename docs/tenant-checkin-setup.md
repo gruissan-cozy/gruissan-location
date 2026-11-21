@@ -50,29 +50,52 @@ connecte au projet Supabase.
 
 Pour le cron, créer dans **Supabase Vault** un secret portant exactement le nom
 `tenant-purge-cron-secret` et la même valeur que `CRON_SECRET`. La migration
-`0009` programme une purge quotidienne à 03:15 UTC. Elle supprime Storage,
-photos, checklists, rapports et sessions expirées ; l’historique conservé par le
-propriétaire reste dans ses emails.
+`0009` programme une purge quotidienne à 03:15 UTC.
+
+La purge **anonymise, elle n’ampute pas la preuve** (`supabase/functions/_shared/purge.ts`) :
+
+- elle supprime les données personnelles : sessions locataire (email, jeton),
+  notes libres des checklists et fichiers Storage hors preuve ;
+- elle vide les métadonnées libres des photos (`photos.meta`) ;
+- elle **conserve le PDF signé et les photos d’état des lieux**, intacts, pour
+  une durée de preuve de 5 ans après le départ (`RETENTION_PREUVE_ANNEES`),
+  distincte de la durée des données personnelles
+  (`RETENTION_DONNEES_PERSONNELLES_JOURS`, 30 jours) ;
+- une fois ces 5 ans écoulés, le second passage de la purge supprime la preuve
+  à son tour ;
+- chaque passage journalise un rapport : ce qui a été supprimé, anonymisé,
+  conservé et pourquoi.
+
+Le PDF n’est jamais réécrit par la purge : le régénérer ferait perdre
+l’horodatage de signature, donc sa valeur de preuve. Il ne contient aucune
+métadonnée personnelle (pdf-lib n’écrit que le producteur et la date de
+création) ; le nom du locataire n’apparaît que dans le corps du document,
+inséparable de la preuve.
 
 ## 3. Créer un lien de locataire
 
-Une fois `0007`, `0008` et `0009` appliquées, l’espace `/admin/` ne crée pas encore ces liens. Pour
-un séjour confirmé, exécuter dans le SQL Editor la requête ci-dessous en
-remplaçant le placeholder par l’UUID du séjour. Elle génère un jeton aléatoire
-unique, lié à l’email du séjour, et l’expire au début du lendemain du départ
-(heure de Paris) :
+Une fois `0007`, `0008`, `0009` et `0011` appliquées, l’espace `/admin/` ne crée
+pas encore ces liens. Pour un séjour confirmé, exécuter dans le SQL Editor la
+requête ci-dessous en remplaçant le placeholder par l’UUID du séjour. Elle
+génère un jeton aléatoire unique, lié à l’email du séjour, et l’expire au début
+du lendemain du départ (heure de Paris) :
 
 ```sql
 insert into public.tenant_sessions (reservation_id, email, token, expires_at)
 select id,
-       email,
+       client_email,
        encode(gen_random_bytes(32), 'hex'),
-       ((check_out + 1)::timestamp at time zone 'Europe/Paris')
-from public.bookings
+       ((depart + 1)::timestamp at time zone 'Europe/Paris')
+from public.sejours
 where id = 'REMPLACER_PAR_UUID_DU_SEJOUR'
-  and statut = 'confirmee'
+  and statut = 'confirme'
 returning token, reservation_id, expires_at;
 ```
+
+Depuis la migration `0011`, la réservation vit dans `sejours` : la colonne de
+départ s’appelle `depart`, le statut confirmé s’écrit `confirme`, et l’email du
+client est `client_email`. Un séjour saisi à la main dans `/admin/sejours/` peut
+désormais recevoir un lien, ce qui n’était pas possible avant la fusion.
 
 Copier le jeton retourné dans le lien privé, sans le publier ni le placer dans
 un ticket ou un journal :
