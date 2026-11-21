@@ -315,6 +315,12 @@ conserver le repli JSON uniquement pour l'affichage public.
 - [ ] Aucune régression sur la vitrine.
 - [ ] 4 langues, `npm run verify` vert.
 
+**Fichiers concernés** : `src/pages/admin/disponibilites.astro`,
+`src/layouts/AdminLayout.astro`, `src/components/Reservation.astro`,
+`src/lib/disponibilites.ts`, `src/lib/calendrier.ts`, `src/i18n/admin.ts`.
+
+---
+
 ### Tâche 7 — Vue « Blocages » dans le back office
 
 **Objectif** : créer la page de gestion des blocages de dates (`calendar_blocks`)

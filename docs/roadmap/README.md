@@ -3,7 +3,7 @@
 Index priorisé de la feuille de route. Un fichier par sujet, ce README fait foi
 pour l'ordre de traitement.
 
-- **Date** : novembre 2026
+- **Date** : novembre 2026 (révisé le **2026-11-21** après les décisions de kiki)
 - **Périmètre** : un seul bien (appartement en duplex, Gruissan Plage), un seul
   propriétaire (kiki), un site statique Astro + Supabase.
 - **Auteur** : rôle produit/roadmap. Aucune ligne de code, aucune migration,
@@ -28,7 +28,7 @@ reliés entre eux**.
 | Back office : messages prospects, pipeline de statuts, lu/non lu, modèles de réponse | ✅ | `src/pages/admin/messages.astro`, `src/lib/pipeline.ts`, `src/lib/modeles.ts` |
 | Back office : revenus (CA, taux d'occupation, exports CSV), taxe de séjour, tâches entre séjours | ✅ | `src/lib/revenus.ts`, `src/lib/taxe-sejour.ts`, `src/lib/taches.ts` |
 | Espace locataire : checklist par pièce, photos horodatées, signature, PDF, e-mail | ✅ code livré | `src/pages/tenant/index.astro`, `supabase/functions/*` |
-| Paiement, contrat, messagerie de séjour, pages légales, iCal | ❌ absent | — |
+| Paiement, contrat, messagerie de séjour, pages légales, iCal, blocages de dates | ❌ absent | — |
 
 ### Les trois trous qui coûtent le plus cher aujourd'hui
 
@@ -209,6 +209,7 @@ seul développeur, avec tests et 4 langues).
 | `B-05` | Encaissé vs dû, par séjour et par année | Kiki : sait ce qui reste à rentrer | M | `P-02` | Dépend du statut réel des paiements |
 | `B-06` | Alerte nouvelle demande hors du back office | Kiki : réagit en heures, pas en jours | S | — | Déjà documenté dans `docs/notifications.md`, non implémenté faute de secrets |
 | `B-10` | Vue « blocages » dans le back office (travaux, séjour perso) | Kiki : bloque ses dates sans créer un faux séjour | S | `R-07` | Ne pas confondre avec une réservation dans les statistiques |
+| `B-11` | Contrôle de complétude fiscale (numéro mairie, taux non classé) | Kiki : voit ce qui manque avant de vendre | S | — | Aucun ; c'est un signalement, pas un blocage |
 
 ---
 

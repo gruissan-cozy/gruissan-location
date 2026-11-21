@@ -6,6 +6,10 @@ photographique horodatée.
 > **Bonne nouvelle** : c'est la brique la plus avancée du dépôt. Le code
 > existe, il est testé, il fonctionne. Les problèmes sont ailleurs : le lien est
 > impossible à générer depuis l'admin, et la purge détruit la preuve.
+>
+> **Rappel DA-2** : le meublé est **non classé**. Aucun document d'état des
+> lieux, de contrat ou de guide ne doit mentionner un classement ou des étoiles.
+> L'état des lieux décrit factuellement l'état des pièces, rien de plus.
 
 ---
 

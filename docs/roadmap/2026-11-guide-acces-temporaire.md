@@ -4,6 +4,14 @@ Sujet : donner au locataire, **et à lui seul**, les informations du séjour
 (Wi-Fi, codes, consignes, urgences) pendant une fenêtre de temps limitée, sans
 créer de compte.
 
+> **Rappel DA-1** : le site est seule source de vérité en V1. L'espace locataire
+> ne doit donc **pas** afficher de numéro de réservation Airbnb/Booking ni
+> dépendre d'une plateforme. Il est entièrement autonome.
+
+> **Rappel DA-2** : le meublé est **non classé**. Le guide ne mentionne aucun
+> classement. En revanche, il peut rappeler le numéro d'enregistrement mairie
+> pour rassurer le locataire (information factuelle, déjà publique sur le site).
+
 ---
 
 ## 1. État réel
