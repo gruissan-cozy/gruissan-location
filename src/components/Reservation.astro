@@ -98,7 +98,11 @@ const cfg = {
     totalNote: b['booking.totalNote'],
     checkin: b['booking.checkin'],
     checkout: b['booking.checkout'],
-    guests: b['booking.guests'],
+    adults: b['booking.adults'],
+    minors: b['booking.minors'],
+    taxeDetail: b['booking.taxeDetail'],
+    taxeMinorsExempt: b['booking.taxeMinorsExempt'],
+    taxeMinorsCount: b['booking.taxeMinorsCount'],
     recapRequestTitle: b['booking.recapRequestTitle'],
     replyDelay: b['booking.replyDelay'],
   },
@@ -129,7 +133,7 @@ const cfg = {
           <h2 class="font-display text-2xl font-semibold text-ocean-800 mb-6">
             {b['booking.datesTitle']}
           </h2>
-          <div class="grid sm:grid-cols-3 gap-5">
+          <div class="grid sm:grid-cols-4 gap-5">
             <div>
               <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="check_in">
                 {b['booking.checkin']}
@@ -157,18 +161,31 @@ const cfg = {
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="guests">
-                {b['booking.guests']}
+              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="adults">
+                {b['booking.adults']}
               </label>
               <select
-                id="guests"
-                name="guests"
+                id="adults"
+                name="adults"
                 class="w-full rounded-xl border border-sand-200 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
               >
                 {[1, 2, 3, 4].map((n) => <option value={n} selected={n === 2}>{n}</option>)}
               </select>
             </div>
+            <div>
+              <label class="block text-sm font-medium text-ocean-700 mb-1.5" for="minors">
+                {b['booking.minors']}
+              </label>
+              <select
+                id="minors"
+                name="minors"
+                class="w-full rounded-xl border border-sand-200 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-transparent transition"
+              >
+                {[0, 1, 2, 3, 4].map((n) => <option value={n} selected={n === 0}>{n}</option>)}
+              </select>
+            </div>
           </div>
+          <p class="mt-3 text-xs text-ocean-700/60">{b['booking.taxeMinorsExempt']}</p>
           <p
             id="availability-msg"
             role="status"
@@ -319,11 +336,14 @@ const cfg = {
           </p>
           <div id="recap-packs-lines" class="space-y-1 pl-3 text-xs text-ocean-100/70"></div>
 
-          <!-- Taxe de séjour -->
-          <p class="flex justify-between gap-4">
-            <span class="text-ocean-100/80">{b['booking.taxeSejour']}</span>
-            <span id="recap-taxe" class="font-semibold text-white tabular-nums"></span>
-          </p>
+          <!-- Taxe de séjour : appliquée aux seuls adultes (mineurs exonérés) -->
+          <div class="space-y-1.5">
+            <p class="flex justify-between gap-4">
+              <span class="text-ocean-100/80">{b['booking.taxeSejour']}</span>
+              <span id="recap-taxe" class="font-semibold text-white tabular-nums"></span>
+            </p>
+            <p id="recap-taxe-detail" class="pl-3 text-xs text-ocean-100/70"></p>
+          </div>
 
           <!-- Total dû -->
           <p class="flex justify-between items-baseline gap-4 pt-4 border-t border-ocean-700">
@@ -404,7 +424,8 @@ const cfg = {
   const form = document.getElementById('booking-form');
   const checkIn = document.getElementById('check_in');
   const checkOut = document.getElementById('check_out');
-  const guests = document.getElementById('guests');
+  const adults = document.getElementById('adults');
+  const minors = document.getElementById('minors');
   const availMsg = document.getElementById('availability-msg');
   const minMsg = document.getElementById('min-nights-msg');
   const recapHint = document.getElementById('recap-hint');
@@ -415,6 +436,7 @@ const cfg = {
   const recapPacks = document.getElementById('recap-packs');
   const recapPacksLines = document.getElementById('recap-packs-lines');
   const recapTaxe = document.getElementById('recap-taxe');
+  const recapTaxeDetail = document.getElementById('recap-taxe-detail');
   const recapTotal = document.getElementById('recap-total');
   const recapCaution = document.getElementById('recap-caution');
   const packsField = document.getElementById('packs-field');
@@ -492,7 +514,8 @@ const cfg = {
     return computeQuote({
       checkIn: checkIn.value,
       checkOut: checkOut.value,
-      guests: Number(guests.value) || 0,
+      adults: Number(adults.value) || 0,
+      minors: Number(minors.value) || 0,
       saisons,
       packs: chosenPacks(),
       caution,
@@ -606,8 +629,15 @@ const cfg = {
       })
       .join('');
 
-    // Taxe de séjour
-    recapTaxe.textContent = money.format(quote.taxeSejour);
+    // Taxe de séjour : montant dû + détail vérifiable (adultes × nuits × taux)
+    const taxe = quote.taxeSejourDetail;
+    recapTaxe.textContent = money.format(taxe.montant);
+    recapTaxeDetail.textContent =
+      s.taxeDetail
+        .replace('{adultes}', String(taxe.adultes))
+        .replace('{nuits}', String(taxe.nuits))
+        .replace('{taux}', money.format(taxe.taux)) +
+      (taxe.mineurs > 0 ? ` · ${s.taxeMinorsCount.replace('{mineurs}', String(taxe.mineurs))}` : '');
 
     // Total dû + caution (remboursable, non incluse)
     recapTotal.textContent = money.format(quote.total);
@@ -644,7 +674,7 @@ const cfg = {
       scheduleAvailability();
     });
   });
-  guests.addEventListener('change', updateEstimate);
+  [adults, minors].forEach((el) => el.addEventListener('change', updateEstimate));
 
   document.querySelectorAll('.pack-check').forEach((cb) => {
     cb.addEventListener('change', () => {
@@ -681,7 +711,9 @@ const cfg = {
       const { error } = await sb.from('bookings').insert({
         check_in: checkIn.value,
         check_out: checkOut.value,
-        guests: Number(guests.value),
+        // La table ne stocke que le total : adultes et mineurs restent
+        // distingués dans le formulaire et le devis (taxe des seuls adultes).
+        guests: quote.guests,
         nom: document.getElementById('nom').value,
         email: document.getElementById('email').value,
         telephone: document.getElementById('telephone').value || null,
@@ -704,7 +736,8 @@ const cfg = {
         row(s.checkin, checkIn.value) +
         row(s.checkout, checkOut.value) +
         row(s.nights, `${quote.nights}`) +
-        row(s.guests, `${Number(guests.value)}`) +
+        row(s.adults, `${quote.adults}`) +
+        (quote.minors > 0 ? row(s.minors, `${quote.minors}`) : '') +
         `<p class="flex justify-between gap-4 pt-2 border-t border-emerald-200">` +
         `<span>${esc(s.total)}</span>` +
         `<span class="font-semibold tabular-nums">${money.format(quote.total)}</span></p>` +

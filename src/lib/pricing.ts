@@ -3,6 +3,26 @@
  * et le script client de la page /reserver (aucune dépendance externe).
  */
 
+import tarifsContenu from '../../content/tarifs.json';
+
+/**
+ * Taux de la taxe de séjour, par nuit et par personne assujettie (en euros).
+ *
+ * ⚠️ Le taux communal de Gruissan reste À CONFIRMER auprès de la mairie
+ * (délibération de l'année en cours) : la valeur actuelle n'a AUCUNE source
+ * officielle dans ce dépôt, elle est provisoire.
+ *
+ * Source unique de vérité : `content/tarifs.json`, clé
+ * `taxe_sejour_par_nuit_personne` (éditable par le propriétaire). Aucun
+ * autre nombre ne doit être codé en dur ailleurs : le formulaire de
+ * réservation, les tests métier et l'affichage lisent cette constante.
+ *
+ * Rappel : seuls les ADULTES sont assujettis — les mineurs sont exonérés.
+ */
+export const TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE = Number(
+  tarifsContenu.taxe_sejour_par_nuit_personne,
+);
+
 export interface Saison {
   id: string;
   periode: string;
@@ -154,15 +174,37 @@ export interface DevisPack {
 export interface DevisInput {
   checkIn: string;
   checkOut: string;
-  guests: number;
+  /** Adultes assujettis à la taxe de séjour (au moins 1). */
+  adults: number;
+  /** Mineurs, exonérés de la taxe de séjour (0 par défaut). */
+  minors?: number;
   saisons: Saison[];
   packs?: PackSelection[];
   caution?: number;
   taxeSejourParNuitPersonne?: number;
 }
 
+/** Détail vérifiable de la taxe de séjour (affiché dans le récapitulatif). */
+export interface DevisTaxeSejour {
+  /** Adultes assujettis — base du calcul. */
+  adultes: number;
+  /** Mineurs exonérés (jamais facturés). */
+  mineurs: number;
+  nuits: number;
+  /** Taux par nuit et par adulte, en euros. */
+  taux: number;
+  /** Montant dû = adultes × nuits × taux. */
+  montant: number;
+}
+
 export interface Devis {
   nights: number;
+  /** Nombre total de voyageurs (adultes + mineurs), base des packs. */
+  guests: number;
+  /** Adultes assujettis à la taxe de séjour. */
+  adults: number;
+  /** Mineurs exonérés de la taxe de séjour. */
+  minors: number;
   /** Sous-total du séjour (toutes saisons confondues). */
   stay: number;
   /** Détail nuit par nuit, regroupé par saison traversée. */
@@ -170,6 +212,8 @@ export interface Devis {
   packs: DevisPack[];
   packsTotal: number;
   taxeSejour: number;
+  /** Détail de la taxe : adultes × nuits × taux (mineurs exonérés). */
+  taxeSejourDetail: DevisTaxeSejour;
   /** Total dû = séjour + packs + taxe de séjour (caution exclue). */
   total: number;
   /** Caution à prévoir à l'arrivée — remboursable, non incluse dans le total. */
@@ -184,20 +228,27 @@ export interface Devis {
 
 /**
  * Devis instantané : séjour (chaque nuit facturée selon la saison qui la
- * contient) + packs (selon leur unité) + taxe de séjour (nuits × voyageurs).
+ * contient) + packs (selon leur unité) + taxe de séjour appliquée aux SEULS
+ * adultes (les mineurs sont exonérés).
  * La caution est renseignée mais reste hors du total dû (elle est remboursable).
- * Retourne `null` si les dates sont manquantes, invalides ou inversées.
+ * Retourne `null` si les dates sont manquantes, invalides ou inversées, ou
+ * s'il n'y a aucun adulte (un séjour sans adulte n'est pas une réservation).
  */
 export function computeQuote(input: DevisInput): Devis | null {
   const { checkIn, checkOut, saisons } = input;
   if (!checkIn || !checkOut || saisons.length === 0) return null;
 
-  const guests = normalizeGuests(input.guests);
+  const adults = normalizeGuests(input.adults);
+  if (adults < 1) return null;
+  const minors = normalizeGuests(input.minors ?? 0);
+  const guests = adults + minors;
   const packs = (input.packs ?? []).filter(
     (p) => p && Number.isFinite(Number(p.prix)) && p.unite,
   );
   const caution = round2(Number(input.caution ?? 0) || 0);
-  const taxeRate = round2(Number(input.taxeSejourParNuitPersonne ?? 0) || 0);
+  const taxeRate = round2(
+    Number(input.taxeSejourParNuitPersonne ?? TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE) || 0,
+  );
 
   const nights = nightsBetween(checkIn, checkOut);
   if (nights <= 0 || nights > MAX_NUITES) return null;
@@ -243,8 +294,8 @@ export function computeQuote(input: DevisInput): Devis | null {
   });
   const packsTotal = round2(devisPacks.reduce((sum, p) => sum + p.total, 0));
 
-  // --- Taxe de séjour : nuits × voyageurs × taux (à zéro si non configurée).
-  const taxeSejour = round2(nights * guests * taxeRate);
+  // --- Taxe de séjour : adultes × nuits × taux (mineurs exonérés).
+  const taxeSejour = round2(nights * adults * taxeRate);
 
   const total = round2(stay + packsTotal + taxeSejour);
 
@@ -254,11 +305,21 @@ export function computeQuote(input: DevisInput): Devis | null {
 
   return {
     nights,
+    guests,
+    adults,
+    minors,
     stay,
     stayBySeason,
     packs: devisPacks,
     packsTotal,
     taxeSejour,
+    taxeSejourDetail: {
+      adultes: adults,
+      mineurs: minors,
+      nuits: nights,
+      taux: taxeRate,
+      montant: taxeSejour,
+    },
     total,
     caution,
     toPay: round2(total + caution),

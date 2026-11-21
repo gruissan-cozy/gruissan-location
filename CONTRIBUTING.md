@@ -199,6 +199,14 @@ affiche aussi un récapitulatif par année (total collecté, séjours
 assujettis, nuits) pour la déclaration en mairie, avec un filtre par
 année et un export CSV.
 
+Côté **devis de la page `/reserver`** (`src/lib/pricing.ts`), le calcul est
+distinct : la taxe ne s'applique qu'aux **adultes** — les mineurs sont
+exonérés. Le formulaire collecte donc adultes et mineurs séparément, et le
+récapitulatif affiche le détail `adultes × nuits × taux`. Le taux vient de
+l'unique constante `TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE` (lue dans
+`content/tarifs.json`) ; sa valeur actuelle est provisoire et reste à
+confirmer auprès de la mairie de Gruissan.
+
 - Un taux absent n'est **jamais remplacé par une valeur approchante** :
   le séjour reste visible, le montant est « non calculable » et le cas
   est signalé au propriétaire.

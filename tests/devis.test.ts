@@ -6,20 +6,22 @@ import {
   seasonIdForDate,
   round2,
   MAX_NUITES,
+  TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE,
   type PackSelection,
   type Saison,
 } from '../src/lib/pricing';
 
 const saisons = tarifsData.saisons as Saison[];
 const CAUTION = 800;
-const TAXE = 1.15;
+const TAXE = TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE;
 
 /** Construit un devis avec des valeurs par défaut cohérentes. */
 function devis(params: Partial<Parameters<typeof computeQuote>[0]>) {
   return computeQuote({
     checkIn: '',
     checkOut: '',
-    guests: 0,
+    adults: 2,
+    minors: 0,
     saisons,
     packs: [],
     caution: CAUTION,
@@ -64,16 +66,31 @@ describe('seasonIdForDate', () => {
   });
 });
 
+describe('TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE (source unique)', () => {
+  it('provient de content/tarifs.json', () => {
+    expect(TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE).toBe(tarifsData.taxe_sejour_par_nuit_personne);
+    expect(TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE).toBeGreaterThan(0);
+  });
+});
+
 describe('computeQuote — chemin nominal', () => {
   it('calcule une semaine en haute saison avec taxe de séjour', () => {
-    const d = devis({ checkIn: '2027-07-10', checkOut: '2027-07-17', guests: 2 });
+    const d = devis({ checkIn: '2027-07-10', checkOut: '2027-07-17', adults: 2 });
     expect(d).not.toBeNull();
     expect(d!.nights).toBe(7);
+    expect(d!.guests).toBe(2);
     expect(d!.stay).toBe(1449.98); // 7 × 207.14
     expect(d!.stayBySeason).toEqual([
       { saisonId: 'haute', periode: 'Juillet – Août', nuits: 7, prixNuit: 207.14, total: 1449.98 },
     ]);
-    expect(d!.taxeSejour).toBe(16.1); // 7 × 2 × 1.15
+    expect(d!.taxeSejour).toBe(16.1); // 7 × 2 adultes × 1.15
+    expect(d!.taxeSejourDetail).toEqual({
+      adultes: 2,
+      mineurs: 0,
+      nuits: 7,
+      taux: TAXE,
+      montant: 16.1,
+    });
     expect(d!.packsTotal).toBe(0);
     expect(d!.total).toBe(1466.08);
     expect(d!.caution).toBe(800);
@@ -83,25 +100,76 @@ describe('computeQuote — chemin nominal', () => {
   });
 
   it('calcule une semaine en basse saison', () => {
-    const d = devis({ checkIn: '2027-10-10', checkOut: '2027-10-17', guests: 4 });
+    const d = devis({ checkIn: '2027-10-10', checkOut: '2027-10-17', adults: 4 });
     expect(d!.nights).toBe(7);
     expect(d!.stay).toBe(689.99); // 7 × 98.57
-    expect(d!.taxeSejour).toBe(32.2); // 7 × 4 × 1.15
+    expect(d!.taxeSejour).toBe(32.2); // 7 × 4 adultes × 1.15
     expect(d!.total).toBe(722.19);
     expect(d!.tooShort).toBe(false);
     expect(d!.saisonForte.id).toBe('basse');
   });
 
   it('évite les artefacts flottants sur la taxe de séjour', () => {
-    const d = devis({ checkIn: '2027-07-10', checkOut: '2027-07-17', guests: 3 });
-    expect(d!.taxeSejour).toBe(24.15); // 7 × 3 × 1.15
+    const d = devis({ checkIn: '2027-07-10', checkOut: '2027-07-17', adults: 3 });
+    expect(d!.taxeSejour).toBe(24.15); // 7 × 3 adultes × 1.15
     expect(d!.total).toBe(1474.13); // 1449.98 + 24.15
+  });
+});
+
+describe('computeQuote — mineurs exonérés de la taxe de séjour', () => {
+  it('famille 2 adultes + 2 enfants : taxe = 2 × nuits × taux', () => {
+    const d = devis({
+      checkIn: '2027-07-10',
+      checkOut: '2027-07-17',
+      adults: 2,
+      minors: 2,
+    });
+    expect(d!.adults).toBe(2);
+    expect(d!.minors).toBe(2);
+    expect(d!.guests).toBe(4);
+    expect(d!.taxeSejour).toBe(round2(2 * 7 * TAXE)); // 16.1, pas 32.2
+    expect(d!.taxeSejourDetail).toEqual({
+      adultes: 2,
+      mineurs: 2,
+      nuits: 7,
+      taux: TAXE,
+      montant: round2(2 * 7 * TAXE),
+    });
+    expect(d!.total).toBe(1466.08); // séjour + taxe des seuls adultes
+  });
+
+  it('4 adultes : taxe = 4 × nuits × taux', () => {
+    const d = devis({ checkIn: '2027-07-10', checkOut: '2027-07-17', adults: 4 });
+    expect(d!.taxeSejour).toBe(round2(4 * 7 * TAXE)); // 32.2
+  });
+
+  it('les mineurs restent exonérés quel que soit leur nombre', () => {
+    for (const mineurs of [1, 2, 3, 5, 10]) {
+      const d = devis({
+        checkIn: '2027-10-10',
+        checkOut: '2027-10-17',
+        adults: 1,
+        minors: mineurs,
+      });
+      expect(d!.taxeSejour, `${mineurs} mineur(s)`).toBe(round2(1 * 7 * TAXE));
+      expect(d!.taxeSejourDetail.adultes).toBe(1);
+      expect(d!.taxeSejourDetail.mineurs).toBe(mineurs);
+    }
+  });
+
+  it('un séjour sans adulte est refusé (0 adulte impossible)', () => {
+    expect(
+      devis({ checkIn: '2027-07-10', checkOut: '2027-07-17', adults: 0, minors: 3 }),
+    ).toBeNull();
+    expect(
+      devis({ checkIn: '2027-07-10', checkOut: '2027-07-17', adults: -1, minors: 0 }),
+    ).toBeNull();
   });
 });
 
 describe('computeQuote — chevauchement de deux saisons', () => {
   it('facture chaque nuit selon la saison qui la contient', () => {
-    const d = devis({ checkIn: '2027-06-28', checkOut: '2027-07-04', guests: 2 });
+    const d = devis({ checkIn: '2027-06-28', checkOut: '2027-07-04', adults: 2 });
     expect(d!.nights).toBe(6);
     expect(d!.stayBySeason).toEqual([
       { saisonId: 'moyenne', periode: 'Juin – Septembre', nuits: 3, prixNuit: 150, total: 450 },
@@ -110,11 +178,11 @@ describe('computeQuote — chevauchement de deux saisons', () => {
     expect(d!.stay).toBe(1071.42);
     expect(d!.saisonForte.id).toBe('haute');
     expect(d!.tooShort).toBe(true); // 6 nuits < 7 (min haute saison)
-    expect(d!.total).toBe(1085.22); // 1071.42 + 6 × 2 × 1.15
+    expect(d!.total).toBe(1085.22); // 1071.42 + 6 × 2 adultes × 1.15
   });
 
   it('chevauche moyenne puis basse (fin septembre / début octobre)', () => {
-    const d = devis({ checkIn: '2027-09-28', checkOut: '2027-10-05', guests: 2 });
+    const d = devis({ checkIn: '2027-09-28', checkOut: '2027-10-05', adults: 2 });
     expect(d!.nights).toBe(7);
     expect(d!.stayBySeason.map((s) => s.saisonId)).toEqual(['moyenne', 'basse']);
     expect(d!.stay).toBe(844.28); // 3 × 150 + 4 × 98.57
@@ -134,7 +202,7 @@ describe('computeQuote — packs (unités)', () => {
     const d = devis({
       checkIn: '2027-10-10',
       checkOut: '2027-10-17',
-      guests: 4,
+      adults: 4,
       packs,
     });
     expect(d!.packs).toEqual([
@@ -144,14 +212,26 @@ describe('computeQuote — packs (unités)', () => {
       { id: 'gratuit', slug: 'gratuit', prix: 0, unite: 'par_sejour', quantite: 1, total: 0 },
     ]);
     expect(d!.packsTotal).toBe(465);
-    expect(d!.total).toBe(1187.19); // 689.99 (séjour) + 465 + 32.2 (taxe)
+    expect(d!.total).toBe(1187.19); // 689.99 (séjour) + 465 + 32.2 (taxe des 4 adultes)
+  });
+
+  it('un pack « par personne » compte adultes ET mineurs', () => {
+    const d = devis({
+      checkIn: '2027-10-10',
+      checkOut: '2027-10-17',
+      adults: 2,
+      minors: 2,
+      packs: [{ id: 'velo', slug: 'velo', prix: 45, unite: 'par_personne', quantite: 1 }],
+    });
+    expect(d!.packs[0].total).toBe(180); // 45 × 4 personnes × 1
+    expect(d!.taxeSejour).toBe(16.1); // seuls les 2 adultes sont taxés
   });
 
   it('ramène une quantité invalide à 1 pour les packs par personne', () => {
     const d = devis({
       checkIn: '2027-10-10',
       checkOut: '2027-10-17',
-      guests: 4,
+      adults: 4,
       packs: [{ id: 'velo', slug: 'velo', prix: 45, unite: 'par_personne', quantite: 0 }],
     });
     expect(d!.packs[0].quantite).toBe(1);
@@ -162,7 +242,7 @@ describe('computeQuote — packs (unités)', () => {
     const d = devis({
       checkIn: '2027-10-10',
       checkOut: '2027-10-17',
-      guests: 4,
+      adults: 4,
       packs: [{ id: 'gratuit', slug: 'gratuit', prix: 0, unite: 'par_sejour', quantite: 1 }],
     });
     expect(d!.packsTotal).toBe(0);
@@ -172,52 +252,60 @@ describe('computeQuote — packs (unités)', () => {
 
 describe('computeQuote — cas limites', () => {
   it('retourne null sans date de départ ou d’arrivée', () => {
-    expect(devis({ checkIn: '', checkOut: '2027-07-17', guests: 2 })).toBeNull();
-    expect(devis({ checkIn: '2027-07-10', checkOut: '', guests: 2 })).toBeNull();
+    expect(devis({ checkIn: '', checkOut: '2027-07-17', adults: 2 })).toBeNull();
+    expect(devis({ checkIn: '2027-07-10', checkOut: '', adults: 2 })).toBeNull();
   });
 
   it('retourne null pour 0 nuit (dates identiques)', () => {
-    expect(devis({ checkIn: '2027-07-10', checkOut: '2027-07-10', guests: 2 })).toBeNull();
+    expect(devis({ checkIn: '2027-07-10', checkOut: '2027-07-10', adults: 2 })).toBeNull();
   });
 
   it('retourne null pour des dates inversées', () => {
-    expect(devis({ checkIn: '2027-07-17', checkOut: '2027-07-10', guests: 2 })).toBeNull();
+    expect(devis({ checkIn: '2027-07-17', checkOut: '2027-07-10', adults: 2 })).toBeNull();
   });
 
   it('retourne null pour une date invalide', () => {
-    expect(devis({ checkIn: 'pas-une-date', checkOut: '2027-07-17', guests: 2 })).toBeNull();
-    expect(devis({ checkIn: '2027-07-10', checkOut: 'invalide', guests: 2 })).toBeNull();
+    expect(devis({ checkIn: 'pas-une-date', checkOut: '2027-07-17', adults: 2 })).toBeNull();
+    expect(devis({ checkIn: '2027-07-10', checkOut: 'invalide', adults: 2 })).toBeNull();
   });
 
   it('retourne null sans saisons configurées', () => {
-    expect(devis({ checkIn: '2027-07-10', checkOut: '2027-07-17', guests: 2, saisons: [] })).toBeNull();
+    expect(
+      devis({ checkIn: '2027-07-10', checkOut: '2027-07-17', adults: 2, saisons: [] }),
+    ).toBeNull();
   });
 
   it(`refuse un séjour au-delà de ${MAX_NUITES} nuits`, () => {
-    expect(devis({ checkIn: '2027-01-01', checkOut: '2028-05-01', guests: 2 })).toBeNull();
+    expect(devis({ checkIn: '2027-01-01', checkOut: '2028-05-01', adults: 2 })).toBeNull();
   });
 
   it('taxe de séjour à zéro (non configurée)', () => {
     const d = devis({
       checkIn: '2027-10-10',
       checkOut: '2027-10-17',
-      guests: 4,
+      adults: 4,
       taxeSejourParNuitPersonne: 0,
     });
     expect(d!.taxeSejour).toBe(0);
+    expect(d!.taxeSejourDetail.montant).toBe(0);
     expect(d!.total).toBe(d!.stay);
   });
 
-  it('aucun voyageur → taxe de séjour à zéro', () => {
-    const d = devis({ checkIn: '2027-10-10', checkOut: '2027-10-17', guests: 0 });
-    expect(d!.taxeSejour).toBe(0);
+  it('sans taux fourni, applique la constante du contenu', () => {
+    const d = devis({
+      checkIn: '2027-10-10',
+      checkOut: '2027-10-17',
+      adults: 4,
+      taxeSejourParNuitPersonne: undefined,
+    });
+    expect(d!.taxeSejour).toBe(round2(4 * 7 * TAXE));
   });
 
   it('sans caution fournie → caution à zéro', () => {
     const d = devis({
       checkIn: '2027-10-10',
       checkOut: '2027-10-17',
-      guests: 4,
+      adults: 4,
       caution: undefined,
     });
     expect(d!.caution).toBe(0);
@@ -225,9 +313,9 @@ describe('computeQuote — cas limites', () => {
   });
 
   it('signale un séjour plus court que le minimum de la saison', () => {
-    const courte = devis({ checkIn: '2027-07-10', checkOut: '2027-07-12', guests: 2 });
+    const courte = devis({ checkIn: '2027-07-10', checkOut: '2027-07-12', adults: 2 });
     expect(courte!.tooShort).toBe(true);
-    const unJour = devis({ checkIn: '2027-10-10', checkOut: '2027-10-11', guests: 2 });
+    const unJour = devis({ checkIn: '2027-10-10', checkOut: '2027-10-11', adults: 2 });
     expect(unJour!.tooShort).toBe(true); // basse saison : 2 nuits min
   });
 });
