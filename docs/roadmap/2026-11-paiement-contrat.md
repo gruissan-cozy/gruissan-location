@@ -8,6 +8,12 @@ ne faut surtout pas coder soi-même**.
 > prestataire) de ce qui est une **hypothèse à confirmer**. Les montants et
 > délais cités sont des ordres de grandeur : ils doivent être revérifiés au
 > moment de la mise en œuvre, tarifs et conditions changeant.
+>
+> **Décision actée (DA-2, 2026-11-21)** : le meublé est **non classé**. Donc :
+> aucune mention de classement, d'étoiles ni de label nulle part ; numéro
+> d'enregistrement mairie à afficher sur le site et dans les annonces ; taxe de
+> séjour au régime des non classés. Les CGV et le contrat doivent refléter ce
+> statut, pas un classement supposé.
 
 ---
 
@@ -121,8 +127,13 @@ n'a de sens qu'à partir d'un volume où la logistique du chèque devient pénib
 ### Contenu minimal d'un contrat de location saisonnière
 
 - Identification des parties (bailleur, locataire), adresse du logement.
+- **Numéro d'enregistrement mairie** du meublé (obligatoire, et c'est la preuve
+  du statut déclaré).
+- **Mention explicite « meublé de tourisme non classé »** — et surtout
+  **aucune** mention de classement, d'étoiles ou de label.
 - Dates et heures d'arrivée et de départ, nombre de personnes (capacité max 4).
-- Prix détaillé : nuits, options, taxe de séjour, caution, total.
+- Prix détaillé : nuits, options, **taxe de séjour (régime non classé)**, caution,
+  total.
 - Modalités de paiement (acompte, solde, échéances) et de remboursement.
 - **Conditions d'annulation** (le barème de `content/annulation.json` doit être
   validé avant d'être contractuel).
@@ -130,11 +141,13 @@ n'a de sens qu'à partir d'un volume où la logistique du chèque devient pénib
   résidence (calme après 22 h, non-fumeur, animaux à convenir), capacité.
 - Obligations du bailleur : logement en état, équipements listés, accès.
 - Caution : montant, mode, délai de restitution, motifs de retenue.
-- Assurance : le locataire doit être couvert en responsabilité civile.
+- Assurance : le locataire doit être couvert en responsabilité civile ; le
+  bailleur doit avoir une garantie couvrant l'accueil de locataires payants
+  (**à vérifier par kiki**, une multirisque habitation standard ne suffit pas).
 - Litiges, droit applicable, médiation de la consommation (obligatoire pour un
   professionnel vendant à des consommateurs).
 - **Annexes** : état des lieux d'entrée, règles de la maison, informations
-  taxe de séjour.
+  taxe de séjour (taux, plafond, exonération des mineurs).
 
 ### Ce qu'il ne faut pas faire
 
@@ -194,6 +207,13 @@ PDF existant. Ne pas ajouter de prestataire de signature.
 
 ### Juridique
 - **SIRET requis** pour ouvrir un compte PSP. **À trancher par kiki.**
+- **Statut non classé (DA-2)** : les CGV doivent dire « meublé de tourisme non
+  classé » et **jamais** laisser entendre un classement. Le numéro
+  d'enregistrement mairie doit y figurer. Une mention de classement non détenu
+  est une pratique commerciale trompeuse.
+- **Taxe de séjour non classé** : taux communal + plafond « catégorie la plus
+  basse » + exonération des mineurs. Un montant erroné dans une facture est une
+  irrégularité. Le `1.15` actuel est provisoire et sans source.
 - **Médiation de la consommation** : un professionnel vendant à des
   consommateurs doit adhérer à un service de médiation et le mentionner dans ses
   CGV. **À vérifier.**
@@ -205,8 +225,8 @@ PDF existant. Ne pas ajouter de prestataire de signature.
   confidentialité et, si kiki est un professionnel, dans un registre des
   traitements.
 - **Facturation** : chaque séjour doit donner lieu à une facture (numérotée,
-  mention de la taxe de séjour). Aujourd'hui le site produit un récapitulatif,
-  pas une facture.
+  mention de la taxe de séjour, numéro d'enregistrement). Aujourd'hui le site
+  produit un récapitulatif, pas une facture.
 
 ### Opérationnel
 - **Un paiement en ligne crée une obligation de délai** : confirmation
@@ -243,6 +263,12 @@ au pied de page (le libellé existe déjà, le lien n'existe pas).
 - [ ] Les 3 pages existent en fr/en/es/de et sont accessibles depuis le footer.
 - [ ] Les CGV reprennent : prix, acompte, annulation (barème validé),
       caution, règles de la maison, médiation, droit applicable.
+- [ ] Les CGV mentionnent **« meublé de tourisme non classé »** et le
+      **numéro d'enregistrement mairie** (DA-2), lu depuis `content/site.json`.
+- [ ] **Aucune mention de classement, d'étoiles ni de label** nulle part
+      (vérifié par une recherche textuelle dans les 4 langues).
+- [ ] La taxe de séjour est présentée au régime **non classé** : taux, plafond,
+      exonération des mineurs.
 - [ ] La politique de confidentialité liste les données collectées, les
       destinataires (Supabase, Resend, PSP si activé), les durées de
       conservation et les droits.
@@ -253,7 +279,7 @@ au pied de page (le libellé existe déjà, le lien n'existe pas).
 
 **Fichiers concernés** : `src/pages/legal/*.astro` (ou 3 pages),
 `src/i18n.ts` (ou `src/i18n/legal.ts`), `src/layouts/Layout.astro` (footer),
-`content/` pour les textes éditables.
+`content/site.json` (numéro d'enregistrement), `content/` pour les textes.
 
 ---
 
