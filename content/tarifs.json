@@ -38,5 +38,8 @@
     { "nom": "Forfait plage (parasol + transats)", "prix": 70 }
   ],
   "caution": 800,
-  "taxe_sejour_par_nuit_personne": 1.15
+  "taxe_sejour_par_nuit_personne": 1.15,
+  "plafond_par_nuit_et_personne": 1.15,
+  "a_valider": true,
+  "$note_taxe_sejour": "Meublé de tourisme NON CLASSÉ : le montant de la taxe de séjour par nuit et par personne est plafonné au tarif de la catégorie la plus basse. Les deux valeurs (taux et plafond) sont PROVISOIRES et sans source officielle : le barème communal de Gruissan (délibération de l'année) est à récupérer auprès de la mairie. Tant que 'a_valider' vaut true, ne pas présenter ces montants comme définitifs. Le plafond est appliqué par src/lib/pricing.ts (min(taux, plafond), adultes seulement)."
 }
