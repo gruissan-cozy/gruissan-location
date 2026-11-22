@@ -18,8 +18,9 @@ communal de Gruissan auprès de la mairie :
   personne : si le taux communal dépasse ce plafond, c'est le plafond qui
   s'applique. Le détail du récapitulatif de `/reserver` l'indique.
 
-Si le plafond est retiré du fichier, aucun plafonnement n'est inventé : le taux
-brut s'applique tel quel.
+Cette clé est **optionnelle** : si le plafond est retiré du fichier, aucun
+plafonnement n'est inventé, le taux brut s'applique tel quel et le site continue
+de se construire normalement (aucune modification du code n'est nécessaire).
 
 ## disponibilites.json
 Calendrier des disponibilités, mois par mois (à jour à la main).

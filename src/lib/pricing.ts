@@ -36,7 +36,11 @@ export const TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE = Number(
  * n'est appliqué (on n'invente jamais une valeur légale).
  */
 export const PLAFOND_TAXE_SEJOUR_PAR_NUIT_PERSONNE = normalizePlafondTaxe(
-  tarifsContenu.plafond_par_nuit_et_personne,
+  // Lecture défensive : la clé est OPTIONNELLE dans le contenu. Le propriétaire
+  // peut la retirer sans casser `astro check` (et donc la CI) — le calcul
+  // retombe alors sur le taux brut, sans plafond inventé.
+  (tarifsContenu as { plafond_par_nuit_et_personne?: number | string | null })
+    .plafond_par_nuit_et_personne,
 );
 
 export interface Saison {

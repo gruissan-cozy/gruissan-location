@@ -94,8 +94,13 @@ describe('content/tarifs.json', () => {
     // au tarif de la catégorie la plus basse. La valeur est provisoire, donc
     // le fichier doit rester marqué `a_valider` tant que kiki n'a pas confirmé
     // le barème communal.
-    expect(typeof tarifs.plafond_par_nuit_et_personne).toBe('number');
-    expect(tarifs.plafond_par_nuit_et_personne).toBeGreaterThanOrEqual(0);
+    // La clé est OPTIONNELLE (cf. content/README.md) : si elle est retirée,
+    // le calcul applique le taux brut sans plafond inventé — ce test ne doit
+    // donc pas bloquer la CI dans ce cas.
+    if (tarifs.plafond_par_nuit_et_personne !== undefined) {
+      expect(typeof tarifs.plafond_par_nuit_et_personne).toBe('number');
+      expect(tarifs.plafond_par_nuit_et_personne).toBeGreaterThanOrEqual(0);
+    }
     expect(tarifs.a_valider).toBe(true);
   });
 });

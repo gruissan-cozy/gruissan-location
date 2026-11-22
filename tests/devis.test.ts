@@ -83,11 +83,35 @@ describe('TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE (source unique)', () => {
 
   it('le plafond « non classé » provient aussi de content/tarifs.json', () => {
     expect(PLAFOND_TAXE_SEJOUR_PAR_NUIT_PERSONNE).toBe(
-      tarifsData.plafond_par_nuit_et_personne,
+      (tarifsData as { plafond_par_nuit_et_personne?: number | string | null })
+        .plafond_par_nuit_et_personne,
     );
     expect(PLAFOND_TAXE_SEJOUR_PAR_NUIT_PERSONNE).not.toBeNull();
     // Le fichier de contenu porte le marqueur de validation.
     expect(tarifsData.a_valider).toBe(true);
+  });
+
+  it('la clé du plafond est OPTIONNELLE : son retrait ne casse pas le contrat', () => {
+    // Contrat de lecture défensive : le propriétaire peut supprimer la clé de
+    // content/tarifs.json (README) sans casser `astro check` ni la CI. La
+    // constante vaut alors null et le calcul applique le taux brut, sans
+    // plafond inventé.
+    const contenuSansPlafond: { plafond_par_nuit_et_personne?: number | string | null } = {};
+    expect(normalizePlafondTaxe(contenuSansPlafond.plafond_par_nuit_et_personne)).toBeNull();
+
+    const d = devis({
+      checkIn: '2027-07-10',
+      checkOut: '2027-07-17',
+      adults: 2,
+      taxeSejourParNuitPersonne: 2.5,
+      plafondTaxeParNuitPersonne: normalizePlafondTaxe(
+        contenuSansPlafond.plafond_par_nuit_et_personne,
+      ),
+    });
+    expect(d!.taxeSejourDetail.plafond).toBeNull();
+    expect(d!.taxeSejourDetail.tauxApplique).toBe(2.5);
+    expect(d!.taxeSejourDetail.plafondApplique).toBe(false);
+    expect(d!.taxeSejour).toBe(round2(7 * 2 * 2.5));
   });
 });
 

@@ -61,7 +61,9 @@ const cfg = {
   capacite: site.capacite,
   caution: tarifsData.caution,
   taxeSejour: tarifsData.taxe_sejour_par_nuit_personne,
-  plafondTaxe: tarifsData.plafond_par_nuit_et_personne,
+  plafondTaxe:
+    (tarifsData as { plafond_par_nuit_et_personne?: number | string | null })
+      .plafond_par_nuit_et_personne ?? null,
   saisons: tarifsData.saisons.map((s) => ({
     id: s.id,
     periode: s.periode,
