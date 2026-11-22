@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   controlerDates,
+  controlerLectures,
   sejoursBloquants,
   type LigneSejourStatut,
 } from '../src/lib/reservation-disponibilite';
@@ -16,6 +17,8 @@ const SEJOUR_CONFIRME: LigneSejourStatut = {
   depart: '2026-07-17',
   statut: 'confirme',
 };
+
+const BLOCAGE_TEST: LigneBlocage = { debut: '2026-08-03', fin: '2026-08-08' };
 
 describe('sejoursBloquants', () => {
   it('garde option et confirme', () => {
@@ -143,6 +146,44 @@ describe('controlerDates — lecture partielle et repli', () => {
     // chargent (message d'erreur dédié). Ici on ne bloque pas par accident.
     expect(controlerDates('2026-09-08', '2026-09-01', [], []).verdict).toBe('libre');
     expect(controlerDates('', '', [], []).verdict).toBe('libre');
+  });
+});
+
+describe('controlerLectures — câblage du formulaire (null préservé)', () => {
+  // Ces cas reproduisent EXACTEMENT l'appel du composant : les tableaux rendus
+  // par la lecture Supabase, `null` compris. Le bug corrigé était un `?? []`
+  // dans Reservation.astro qui transformait « lecture en échec » en « vide »,
+  // rendant le verdict `a_confirmer` inatteignable.
+
+  it('calendar_blocks illisible + sejours vide → « à confirmer »', () => {
+    const res = controlerLectures('2026-09-01', '2026-09-08', [], null);
+    expect(res.verdict).toBe('a_confirmer');
+    expect(res.lecturePartielle).toBe(true);
+  });
+
+  it('les deux tables illisibles → « à confirmer »', () => {
+    const res = controlerLectures('2026-09-01', '2026-09-08', null, null);
+    expect(res.verdict).toBe('a_confirmer');
+    expect(res.lecturePartielle).toBe(true);
+  });
+
+  it('sejours illisible seul → « à confirmer »', () => {
+    expect(controlerLectures('2026-09-01', '2026-09-08', null, []).verdict).toBe('a_confirmer');
+  });
+
+  it('un conflit lisible bloque même si l’autre source est illisible', () => {
+    const res = controlerLectures('2026-07-12', '2026-07-20', null, []);
+    expect(res.verdict).toBe('a_confirmer');
+    expect(controlerLectures('2026-08-05', '2026-08-10', null, [BLOCAGE_TEST]).verdict).toBe(
+      'occupe',
+    );
+    expect(
+      controlerLectures('2026-07-12', '2026-07-20', [SEJOUR_CONFIRME], null).verdict,
+    ).toBe('occupe');
+  });
+
+  it('les deux lectures complètes et vides → « libre »', () => {
+    expect(controlerLectures('2026-09-01', '2026-09-08', [], []).verdict).toBe('libre');
   });
 });
 

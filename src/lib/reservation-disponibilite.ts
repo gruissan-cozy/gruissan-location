@@ -54,7 +54,11 @@ export interface LigneSejourStatut extends LigneSejour {
 
 export interface ControleDates {
   verdict: VerdictDates;
-  /** Plages occupées réellement lues, après conversion des deux conventions. */
+  /**
+   * Plages occupées réellement lues, après conversion des deux conventions.
+   * Exposé pour les tests et le diagnostic : le formulaire ne s'en sert pas
+   * (il ne lit que `verdict`), ce n'est donc pas du code mort.
+   */
   plages: Plage[];
   /** Au moins une des deux lectures a échoué (table absente, RLS, réseau). */
   lecturePartielle: boolean;
@@ -104,4 +108,29 @@ export function controlerDates(
     return { verdict: 'a_confirmer', plages, lecturePartielle };
   }
   return { verdict: 'libre', plages, lecturePartielle };
+}
+
+/**
+ * Point d'entrée du formulaire : mêmes règles que `controlerDates`, mais à
+ * partir des tableaux BRUTS rendus par la lecture Supabase (`unknown[] | null`).
+ *
+ * C'est le SEUL endroit qui convertit le résultat d'une requête en lignes
+ * typées — et il conserve `null` tel quel. Ne jamais écrire
+ * `controlerDates(…, (sejours ?? []) as …)` dans un composant : le `?? []`
+ * transformerait « lecture en échec » en « aucune ligne », donc `libre` au lieu
+ * de `a_confirmer`, et le visiteur lirait « Ces dates semblent libres » alors
+ * que rien n'a pu être vérifié.
+ */
+export function controlerLectures(
+  arrivee: string,
+  depart: string,
+  sejours: ReadonlyArray<unknown> | null,
+  blocages: ReadonlyArray<unknown> | null,
+): ControleDates {
+  return controlerDates(
+    arrivee,
+    depart,
+    sejours as ReadonlyArray<LigneSejourStatut> | null,
+    blocages as ReadonlyArray<LigneBlocage> | null,
+  );
 }

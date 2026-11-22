@@ -63,4 +63,25 @@ describe('scripts client des composants Astro', () => {
     expect(code).toContain('id="calendrier-cfg"');
     expect(code).toMatch(/<script>\s*\nimport \{ ajouterMois/);
   });
+
+  it('/reserver passe les lectures brutes au contrôle, sans écraser null par []', () => {
+    // `controlerLectures` distingue null (lecture en échec → « à confirmer »)
+    // de [] (aucune ligne → « libre »). Un `?? []` dans le composant efface
+    // cette distinction et affiche « libre » alors que rien n'a été vérifié.
+    const code = readFileSync(join(SRC, 'components/Reservation.astro'), 'utf8');
+    expect(code).toContain('controlerLectures(');
+    expect(code).not.toContain('sejours ?? []');
+    expect(code).not.toContain('blocages ?? []');
+  });
+
+  it('/reserver rend les trois verdicts de disponibilité atteignables', () => {
+    // libre → available · occupe → unavailable · a_confirmer (et absence de
+    // Supabase) → toConfirm. Aucun des trois ne doit disparaître du script.
+    const code = readFileSync(join(SRC, 'components/Reservation.astro'), 'utf8');
+    for (const cle of ['s.available', 's.unavailable', 's.toConfirm']) {
+      expect(code, `${cle} doit rester affiché`).toContain(cle);
+    }
+    expect(code).toContain("verdict === 'a_confirmer'");
+    expect(code).toContain("verdict === 'occupe'");
+  });
 });
