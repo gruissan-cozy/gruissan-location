@@ -7,6 +7,19 @@
  * Convention hôtelière : un séjour « 10 → 17 » occupe les nuits du 10 au 16 ;
  * le jour du départ (17) libère le logement et redevient réservable. C'est la
  * même convention que `src/lib/sejours.ts` (utilisée par le back office).
+ *
+ * DEUX CONVENTIONS DE DATES COEXISTENT DANS CE DÉPÔT — ne jamais les mélanger
+ * sans conversion :
+ *
+ *   | table            | colonnes          | borne de fin          |
+ *   |------------------|-------------------|-----------------------|
+ *   | `sejours`        | `arrivee`/`depart`| `depart` **EXCLUSIF**  |
+ *   | `calendar_blocks`| `debut`/`fin`     | `fin` **INCLUSIVE**   |
+ *
+ * Un séjour « 10 → 17 » occupe donc 10..16, tandis qu'un blocage « 10 → 17 »
+ * occupe 10..17. `plagesDepuisSejours` fait la conversion (départ exclusif →
+ * veille inclusive) ; `plagesDepuisBlocages` n'en fait aucune. `plagesOccupees`
+ * est le point d'entrée unique : séjours + blocages → plages occupées.
  */
 
 import { estDateIsoValide } from './confiance';
@@ -233,6 +246,106 @@ export function fusionnerPlages(plages: ReadonlyArray<Plage>): Plage[] {
     }
   }
   return resultat;
+}
+
+// ---------------------------------------------------------------------------
+// Conversion des deux sources de dates en plages occupées
+//
+// C'est ici que se fait l'unique conversion entre les deux conventions du
+// dépôt : `sejours.depart` (exclusif) → `fin` inclusive, et `calendar_blocks`
+// (`debut`/`fin` déjà inclusives) → tel quel.
+// ---------------------------------------------------------------------------
+
+/** Ligne lue dans `sejours` : seules les dates sont publiques (grant colonne). */
+export interface LigneSejour {
+  arrivee?: unknown;
+  depart?: unknown;
+}
+
+/** Ligne lue dans `calendar_blocks` : seules les dates sont publiques. */
+export interface LigneBlocage {
+  debut?: unknown;
+  fin?: unknown;
+}
+
+/** Extrait une date ISO d'une valeur inconnue, ou null si elle est inutilisable. */
+function dateLigne(valeur: unknown): string | null {
+  return typeof valeur === 'string' && estDateIsoValide(valeur) ? valeur : null;
+}
+
+/**
+ * Convertit des séjours en plages occupées.
+ *
+ * Convention hôtelière : le jour du départ libère le logement, donc un séjour
+ * « 10 → 17 » n'occupe que les jours 10 à 16 — c'est la conversion explicite
+ * `depart` exclusif → `fin` inclusif (veille du départ). Les dates invalides,
+ * inversées ou vides sont ignorées : une ligne malformée ne casse jamais le
+ * calendrier.
+ */
+export function plagesDepuisSejours(lignes: ReadonlyArray<LigneSejour>): Plage[] {
+  const plages: Plage[] = [];
+  for (const ligne of lignes ?? []) {
+    const arrivee = dateLigne(ligne?.arrivee);
+    const depart = dateLigne(ligne?.depart);
+    if (!arrivee || !depart) continue;
+    if (depart <= arrivee) continue; // aucune nuit : aucun jour occupé
+    plages.push({ debut: arrivee, fin: moinsUnJour(depart), etat: 'occupe' });
+  }
+  return fusionnerPlages(plages);
+}
+
+/**
+ * Convertit des blocages (`calendar_blocks`) en plages occupées.
+ *
+ * AUCUNE conversion de borne : `debut` et `fin` sont déjà inclusives, c'est la
+ * convention inverse de `sejours`. Un blocage d'un seul jour a `debut = fin`.
+ */
+export function plagesDepuisBlocages(lignes: ReadonlyArray<LigneBlocage>): Plage[] {
+  const plages: Plage[] = [];
+  for (const ligne of lignes ?? []) {
+    const debut = dateLigne(ligne?.debut);
+    const fin = dateLigne(ligne?.fin);
+    if (!debut || !fin) continue;
+    if (fin < debut) continue; // plage inversée : ignorée
+    plages.push({ debut, fin, etat: 'occupe' });
+  }
+  return fusionnerPlages(plages);
+}
+
+/**
+ * Point d'entrée unique du calendrier : séjours + blocages → plages occupées.
+ *
+ * Les deux sources sont fusionnées après conversion, de sorte qu'un séjour et
+ * un blocage contigus n'apparaissent que comme une seule plage occupée.
+ */
+export function plagesOccupees(
+  sejours: ReadonlyArray<LigneSejour>,
+  blocages: ReadonlyArray<LigneBlocage> = [],
+): Plage[] {
+  return fusionnerPlages([
+    ...plagesDepuisSejours(sejours),
+    ...plagesDepuisBlocages(blocages),
+  ]);
+}
+
+/**
+ * Vrai si une demande de séjour (`arrivee` → `depart`, départ exclusif)
+ * touche une plage occupée.
+ *
+ * Le dernier jour demandé est la veille du départ : une arrivée le jour où un
+ * blocage commence est bien occupée, tandis qu'un séjour finissant la veille
+ * reste libre.
+ */
+export function datesOccupees(
+  arrivee: string,
+  depart: string,
+  plages: ReadonlyArray<Plage>,
+): boolean {
+  if (!estDateIsoValide(arrivee) || !estDateIsoValide(depart) || depart <= arrivee) return false;
+  const dernierJour = moinsUnJour(depart);
+  return plages.some(
+    (p) => p?.etat === 'occupe' && p.debut <= dernierJour && arrivee <= p.fin,
+  );
 }
 
 /** État d'un jour : l'état de la plage qui le couvre, la plus prioritaire gagne. */

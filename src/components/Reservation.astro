@@ -432,6 +432,8 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
 <script>
   import { computeQuote, exceedsCapacity } from '../lib/pricing';
   import type { PackUnite, Saison, SaisonId } from '../lib/pricing';
+  import { datesOccupees, plagesOccupees } from '../lib/calendrier';
+  import type { LigneBlocage, LigneSejour } from '../lib/calendrier';
   import type { SupabaseClient } from '@supabase/supabase-js';
 
   interface BookingPack {
@@ -650,28 +652,52 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
       return;
     }
     show(availMsg, s.checking, true);
-    const { data, error } = await sb
-      .from('availability')
-      .select('start_date, end_date, statut')
-      .eq('statut', 'reserve')
-      .lte('start_date', checkOut.value)
-      .gte('end_date', checkIn.value);
-    if (error) {
-      // En cas d'erreur de lecture on ne bloque pas la demande
-      blocked = false;
-      show(availMsg, s.toConfirm, true);
-      return;
-    }
-    const conflict = (data ?? []).some(
-      (row) => row.start_date <= checkOut.value && row.end_date >= checkIn.value
+    // Même calendrier que la vitrine : séjours (`depart` exclusif) ET blocages
+    // (`fin` inclusive), convertis par la fonction unique `plagesOccupees` de
+    // src/lib/calendrier.ts. Les deux lectures sont indépendantes : un échec sur
+    // l'une (table absente, RLS, réseau) ne doit pas annuler l'autre.
+    const [sejours, blocages] = await Promise.all([
+      lireDates('sejours', 'arrivee, depart'),
+      lireDates('calendar_blocks', 'debut, fin'),
+    ]);
+    // Lecture partielle : on ne sait pas tout. On garde les dates réellement
+    // lues, mais on annonce « à confirmer » au lieu de « libre » — jamais de
+    // « Ces dates semblent libres » sur une source manquante.
+    const lecturePartielle = !sejours || !blocages;
+    const plages = plagesOccupees(
+      (sejours ?? []) as LigneSejour[],
+      (blocages ?? []) as LigneBlocage[],
     );
+    const conflict = datesOccupees(checkIn.value, checkOut.value, plages);
     blocked = conflict;
     if (conflict) {
       show(availMsg, s.unavailable, false);
       submitBtn.disabled = true;
+    } else if (lecturePartielle) {
+      show(availMsg, s.toConfirm, true);
+      submitBtn.disabled = false;
     } else {
       show(availMsg, s.available, true);
       submitBtn.disabled = false;
+    }
+  }
+
+  /**
+   * Lit les dates d'une table ; `null` si la lecture échoue (table absente,
+   * réseau, RLS). Un tableau vide signifie « aucune ligne », pas une erreur.
+   *
+   * DUPLIQUÉ volontairement de `lireDates` dans src/lib/disponibilites.ts : ce
+   * script est exécuté dans le navigateur et ne peut pas importer un module qui
+   * lit `import.meta.env` côté serveur. Toute évolution de la lecture doit être
+   * reportée dans les deux fichiers (même contrat : `null` = échec).
+   */
+  async function lireDates(table: string, colonnes: string): Promise<unknown[] | null> {
+    try {
+      const { data, error } = await sb!.from(table).select(colonnes);
+      if (error || !data) return null;
+      return data as unknown[];
+    } catch {
+      return null;
     }
   }
 
