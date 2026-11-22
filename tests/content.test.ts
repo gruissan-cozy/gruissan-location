@@ -88,6 +88,16 @@ describe('content/tarifs.json', () => {
     const prix = tarifs.saisons.map((s: any) => s.prix_semaine);
     expect(prix).toEqual([...prix].sort((a, b) => b - a));
   });
+
+  it('porte un plafond de taxe « non classé » marqué à valider', () => {
+    // Le meublé est non classé : le taux par nuit et par personne est plafonné
+    // au tarif de la catégorie la plus basse. La valeur est provisoire, donc
+    // le fichier doit rester marqué `a_valider` tant que kiki n'a pas confirmé
+    // le barème communal.
+    expect(typeof tarifs.plafond_par_nuit_et_personne).toBe('number');
+    expect(tarifs.plafond_par_nuit_et_personne).toBeGreaterThanOrEqual(0);
+    expect(tarifs.a_valider).toBe(true);
+  });
 });
 
 describe('content/disponibilites.json', () => {

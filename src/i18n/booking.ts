@@ -22,6 +22,7 @@ export const booking: Record<Lang, Record<string, string>> = {
       'La taxe de séjour ne s’applique qu’aux adultes : les mineurs en sont exonérés.',
     'booking.taxeDetail': 'Taxe de séjour : {adultes} adulte(s) × {nuits} nuit(s) × {taux}',
     'booking.taxeMinorsCount': '{mineurs} mineur(s) exonéré(s)',
+    'booking.taxePlafond': 'plafonnée à {plafond} par nuit et par personne (meublé non classé)',
     'booking.taxeNotCalculable':
       'Taux communal à confirmer auprès de la mairie : montant non calculable pour le moment.',
     'booking.packsTitle': 'Les options',
@@ -88,6 +89,7 @@ export const booking: Record<Lang, Record<string, string>> = {
       'The tourist tax only applies to adults: minors are exempt.',
     'booking.taxeDetail': 'Tourist tax: {adultes} adult(s) × {nuits} night(s) × {taux}',
     'booking.taxeMinorsCount': '{mineurs} minor(s) exempt',
+    'booking.taxePlafond': 'capped at {plafond} per night and per person (unclassified dwelling)',
     'booking.taxeNotCalculable':
       'Municipal rate to be confirmed with the town hall: amount not calculable for now.',
     'booking.packsTitle': 'Options',
@@ -154,6 +156,7 @@ export const booking: Record<Lang, Record<string, string>> = {
       'La tasa turística solo se aplica a los adultos: los menores están exentos.',
     'booking.taxeDetail': 'Tasa turística: {adultes} adulto(s) × {nuits} noche(s) × {taux}',
     'booking.taxeMinorsCount': '{mineurs} menor(es) exento(s)',
+    'booking.taxePlafond': 'limitada a {plafond} por noche y por persona (vivienda no clasificada)',
     'booking.taxeNotCalculable':
       'Tasa municipal pendiente de confirmar con el ayuntamiento: importe no calculable por ahora.',
     'booking.packsTitle': 'Opciones',
@@ -220,6 +223,7 @@ export const booking: Record<Lang, Record<string, string>> = {
       'Die Kurtaxe gilt nur für Erwachsene: Minderjährige sind befreit.',
     'booking.taxeDetail': 'Kurtaxe: {adultes} Erwachsene(r) × {nuits} Nacht/Nächte × {taux}',
     'booking.taxeMinorsCount': '{mineurs} Minderjährige befreit',
+    'booking.taxePlafond': 'gedeckelt auf {plafond} pro Nacht und Person (nicht klassifizierte Unterkunft)',
     'booking.taxeNotCalculable':
       'Gemeindesatz noch mit der Stadtverwaltung zu bestätigen: Betrag derzeit nicht berechenbar.',
     'booking.packsTitle': 'Optionen',

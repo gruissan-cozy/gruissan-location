@@ -7,6 +7,20 @@ Identité du bien, coordonnées, réseaux/plateformes de réservation.
 ## tarifs.json
 Tarification par saison (haute / moyenne / basse), en euros par semaine ou par nuit.
 
+La taxe de séjour figure à deux clés, toutes deux **provisoires et marquées
+`a_valider: true`** tant que le propriétaire n'a pas confirmé le barème
+communal de Gruissan auprès de la mairie :
+
+- `taxe_sejour_par_nuit_personne` : le taux appliqué (adultes seulement, les
+  mineurs sont exonérés) ;
+- `plafond_par_nuit_et_personne` : le plafond « catégorie la plus basse » du
+  régime **non classé**. Le calcul retient `min(taux, plafond)` par nuit et par
+  personne : si le taux communal dépasse ce plafond, c'est le plafond qui
+  s'applique. Le détail du récapitulatif de `/reserver` l'indique.
+
+Si le plafond est retiré du fichier, aucun plafonnement n'est inventé : le taux
+brut s'applique tel quel.
+
 ## disponibilites.json
 Calendrier des disponibilités, mois par mois (à jour à la main).
 
