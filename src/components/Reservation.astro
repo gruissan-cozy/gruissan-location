@@ -61,6 +61,9 @@ const cfg = {
   capacite: site.capacite,
   caution: tarifsData.caution,
   taxeSejour: tarifsData.taxe_sejour_par_nuit_personne,
+  plafondTaxe:
+    (tarifsData as { plafond_par_nuit_et_personne?: number | string | null })
+      .plafond_par_nuit_et_personne ?? null,
   saisons: tarifsData.saisons.map((s) => ({
     id: s.id,
     periode: s.periode,
@@ -106,6 +109,7 @@ const cfg = {
     adults: b['booking.adults'],
     minors: b['booking.minors'],
     taxeDetail: b['booking.taxeDetail'],
+    taxePlafond: b['booking.taxePlafond'],
     taxeMinorsExempt: b['booking.taxeMinorsExempt'],
     taxeMinorsCount: b['booking.taxeMinorsCount'],
     taxeNotCalculable: b['booking.taxeNotCalculable'],
@@ -454,6 +458,7 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
     capacite: number;
     caution: number;
     taxeSejour: number;
+    plafondTaxe: number | null;
     saisons: Saison[];
     packs: BookingPack[];
     s: Record<string, string>;
@@ -483,6 +488,7 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
     packs,
     caution,
     taxeSejour,
+    plafondTaxe,
     s,
     lang,
   } = cfg;
@@ -607,6 +613,7 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
       packs: chosenPacks(),
       caution,
       taxeSejourParNuitPersonne: taxeSejour,
+      plafondTaxeParNuitPersonne: plafondTaxe,
     });
   }
 
@@ -780,8 +787,11 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
       })
       .join('');
 
-    // Taxe de séjour : montant dû + détail vérifiable (adultes × nuits × taux).
-    // Taux absent → montant non calculable : on l'annonce, jamais 0 € trompeur.
+    // Taxe de séjour : montant dû + détail vérifiable (adultes × nuits × taux
+    // plafonné). Le meublé étant non classé, le taux affiché est celui
+    // RÉELLEMENT appliqué (min(taux, plafond)) et le plafond est mentionné
+    // quand il mord. Taux absent → montant non calculable : on l'annonce,
+    // jamais 0 € trompeur.
     const taxe = quote.taxeSejourDetail;
     if (taxe.calculable) {
       recapTaxe.textContent = money.format(taxe.montant);
@@ -789,9 +799,12 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
         s.taxeDetail
           .replace('{adultes}', String(taxe.adultes))
           .replace('{nuits}', String(taxe.nuits))
-          .replace('{taux}', money.format(taxe.taux)) +
+          .replace('{taux}', money.format(taxe.tauxApplique)) +
         (taxe.mineurs > 0
           ? ` · ${s.taxeMinorsCount.replace('{mineurs}', String(taxe.mineurs))}`
+          : '') +
+        (taxe.plafondApplique && taxe.plafond !== null
+          ? ` · ${s.taxePlafond.replace('{plafond}', money.format(taxe.plafond))}`
           : '');
     } else {
       recapTaxe.textContent = s.toConfirm;
