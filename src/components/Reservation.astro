@@ -432,8 +432,7 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
 <script>
   import { computeQuote, exceedsCapacity } from '../lib/pricing';
   import type { PackUnite, Saison, SaisonId } from '../lib/pricing';
-  import { datesOccupees, plagesOccupees } from '../lib/calendrier';
-  import type { LigneBlocage, LigneSejour } from '../lib/calendrier';
+  import { controlerLectures } from '../lib/reservation-disponibilite';
   import type { SupabaseClient } from '@supabase/supabase-js';
 
   interface BookingPack {
@@ -523,12 +522,12 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
   if (supabaseConfigured) {
     import('@supabase/supabase-js').then(({ createClient }) => {
       sb = createClient(supabaseUrl, supabaseKey);
-      if (checkIn.value && checkOut.value) checkAvailability();
+      if (checkIn.value && checkOut.value) verifierDates();
     });
   }
 
   let blocked = false; // dates réservées → soumission refusée
-  let availabilityTimer: ReturnType<typeof setTimeout> | undefined;
+  let dispoTimer: ReturnType<typeof setTimeout> | undefined;
 
   const seasonLabels: Record<SaisonId, string> = {
     haute: s.seasonHaute,
@@ -643,7 +642,7 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
     el.classList.add('hidden');
   }
 
-  async function checkAvailability() {
+  async function verifierDates() {
     if (!checkIn.value || !checkOut.value) return;
     if (!sb) {
       // Sans Supabase : on accepte, mention "à confirmer"
@@ -654,26 +653,29 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
     show(availMsg, s.checking, true);
     // Même calendrier que la vitrine : séjours (`depart` exclusif) ET blocages
     // (`fin` inclusive), convertis par la fonction unique `plagesOccupees` de
-    // src/lib/calendrier.ts. Les deux lectures sont indépendantes : un échec sur
-    // l'une (table absente, RLS, réseau) ne doit pas annuler l'autre.
+    // src/lib/calendrier.ts, puis tranchés par `controlerLectures`. Ce formulaire
+    // n'interroge PLUS `availability` (mensuel) ni content/disponibilites.json :
+    // ces sources ne servent qu'au repli d'affichage de la vitrine.
+    // Les deux lectures sont indépendantes : un échec sur l'une (table absente,
+    // RLS, réseau) ne doit pas annuler l'autre.
+    // Seules les colonnes de dates sont lisibles par le public (RLS 0003) :
+    // demander `statut` ferait échouer la requête. Le filtre de statut est donc
+    // appliqué par la politique RLS, puis par `sejoursBloquants` côté pur.
     const [sejours, blocages] = await Promise.all([
       lireDates('sejours', 'arrivee, depart'),
       lireDates('calendar_blocks', 'debut, fin'),
     ]);
     // Lecture partielle : on ne sait pas tout. On garde les dates réellement
     // lues, mais on annonce « à confirmer » au lieu de « libre » — jamais de
-    // « Ces dates semblent libres » sur une source manquante.
-    const lecturePartielle = !sejours || !blocages;
-    const plages = plagesOccupees(
-      (sejours ?? []) as LigneSejour[],
-      (blocages ?? []) as LigneBlocage[],
-    );
-    const conflict = datesOccupees(checkIn.value, checkOut.value, plages);
-    blocked = conflict;
-    if (conflict) {
+    // « Ces dates semblent libres » sur une source manquante. `controlerLectures`
+    // reçoit les tableaux tels quels, `null` compris : ne jamais les remplacer
+    // par `[]` ici, cela effacerait justement la distinction échec / vide.
+    const controle = controlerLectures(checkIn.value, checkOut.value, sejours, blocages);
+    blocked = controle.verdict === 'occupe';
+    if (blocked) {
       show(availMsg, s.unavailable, false);
       submitBtn.disabled = true;
-    } else if (lecturePartielle) {
+    } else if (controle.verdict === 'a_confirmer') {
       show(availMsg, s.toConfirm, true);
       submitBtn.disabled = false;
     } else {
@@ -815,8 +817,8 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
   }
 
   function scheduleAvailability() {
-    if (availabilityTimer) clearTimeout(availabilityTimer);
-    availabilityTimer = setTimeout(checkAvailability, 400);
+    if (dispoTimer) clearTimeout(dispoTimer);
+    dispoTimer = setTimeout(verifierDates, 400);
   }
 
   [checkIn, checkOut].forEach((el) => {
