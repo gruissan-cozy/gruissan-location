@@ -64,3 +64,36 @@ describe('scripts client des composants Astro', () => {
     expect(code).toMatch(/<script>\s*\nimport \{ ajouterMois/);
   });
 });
+
+/**
+ * Garde sur la page taxe de séjour : depuis la fusion `bookings` → `sejours`,
+ * une simple DEMANDE arrive dans `sejours` et s'affiche dans ce tableau. Le
+ * rendu doit passer par `ligneTaxe()` (qui neutralise taux et montant d'un
+ * séjour non assujetti), sinon il affiche une taxe due sur une demande et
+ * contredit le récapitulatif annuel.
+ */
+describe('page /admin/taxe-sejour — aucune taxe sur une demande', () => {
+  const code = readFileSync(join(SRC, 'pages/admin/taxe-sejour.astro'), 'utf8');
+
+  it('calcule ses lignes avec `ligneTaxe`, pas directement', () => {
+    expect(code).toContain('ligneTaxe(s as SejourTaxe, TAUX)');
+    expect(code).not.toContain('calculerTaxeSejour(s as SejourTaxe');
+  });
+
+  it('affiche le libellé « non assujetti » quand il n’y a pas de montant', () => {
+    expect(code).toContain("AT['taxe.notApplicable']");
+    expect(code).toContain("AT['taxe.notCalculable']");
+  });
+
+  it('n’exporte ni taux ni montant sans assujettissement', () => {
+    const exportLignes = (code.match(/const lignes = sejoursDuPerimetre\(\)[\s\S]*?\n    \}\);/) ?? [''])[0];
+    expect(exportLignes).toContain('ligneTaxe(');
+    expect(exportLignes).toMatch(/ligne\.taux === null \? '' : String\(ligne\.taux\)/);
+    expect(exportLignes).toMatch(/ligne\.montant === null \? '' : String\(ligne\.montant\)/);
+  });
+
+  it('libelle la colonne « Pers. » comme l’assiette adultes', () => {
+    expect(code).toContain("AT['taxe.colAdults']");
+    expect(code).not.toContain("AT['taxe.colPeople']");
+  });
+});

@@ -116,7 +116,20 @@ function ajouterJours(dateIso: string, jours: number): string {
 /**
  * Transforme une demande `bookings` en séjour `sejours`, SANS PERTE.
  *
- * Règles (miroir exact de `migrations/0011_unifier_bookings_sejours.sql`) :
+ * ⚠️ MODÈLE DE RÉFÉRENCE, PAS UNE IMPLÉMENTATION DE PRODUCTION. Aucune Edge
+ * Function n'appelle cette fonction : la reprise réelle des lignes est faite
+ * par le SQL de `migrations/0011_unifier_bookings_sejours.sql`. Elle est
+ * conservée comme spécification EXÉCUTABLE de cette migration — les tests
+ * décrivent ainsi le comportement attendu en TypeScript lisible, et la
+ * correspondance des statuts partagée (`statutUnifie`) est, elle, réellement
+ * utilisée par les quatre fonctions.
+ *
+ * Conséquence assumée : rien ne détecte automatiquement une divergence entre
+ * ce modèle et le SQL. Une modification de l'un doit être reportée dans
+ * l'autre ; `tests/reservation.test.ts` et `tests/migration-0011.test.ts`
+ * vérifient les deux côtés séparément, pas leur égalité.
+ *
+ * Règles reprises du SQL :
  * - l'identifiant est conservé : les liens locataire déjà émis continuent de
  *   fonctionner, et la migration est idempotente (`on conflict (id)`);
  * - `check_in`/`check_out` deviennent `arrivee`/`depart`;

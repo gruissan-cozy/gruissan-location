@@ -5,6 +5,26 @@ Le code du chantier 10 doit être livré avec `0007_tenant_checkin.sql`,
 pas exécutées par le dépôt ou par GitHub Pages : elles doivent être appliquées
 manuellement dans le SQL Editor Supabase, dans cet ordre.
 
+## 0. Ordre de mise en service de la migration 0011 (à lire en premier)
+
+`0011_unifier_bookings_sejours.sql` fusionne `bookings` dans `sejours`. Le
+déploiement GitHub Pages est **automatique au merge sur `main`** : si l’ordre
+n’est pas respecté, des demandes sont perdues silencieusement. Séquence
+obligatoire :
+
+1. **Appliquer `0011`** dans le SQL Editor Supabase (colonne `origine`,
+   `adultes`, `mineurs`, `prix_estime`, politique `public_insert_sejours`…).
+2. **Déployer les quatre Edge Functions** (§1.3 ci-dessous) : elles lisent
+   désormais `sejours` et les statuts `confirme` / `termine`.
+3. **Merger la branche sur `main`** — c’est ce merge qui publie le formulaire
+   public écrivant dans `sejours`.
+
+Entre le merge et l’exécution de `0011`, le formulaire `/reserver/` échoue : il
+envoie des colonnes qui n’existent pas encore et la politique d’insertion
+publique n’est pas créée. La demande retombe sur le message d’erreur générique
+(`booking.error`) et **n’est pas enregistrée**. Ne jamais merger avant d’avoir
+appliqué la migration et déployé les fonctions.
+
 ## 1. Préparer Supabase
 
 1. Dans **Storage**, créer le bucket `etats-des-lieux` en mode **privé**.

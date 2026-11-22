@@ -9,10 +9,24 @@
 -- `bookings` n'est PAS supprimée ici : elle passe en LECTURE SEULE et
 -- sera retirée par une migration de nettoyage, après une saison.
 --
--- ⚠️ ACTION MANUELLE REQUISE
+-- ⚠️ ACTION MANUELLE REQUISE — ET DANS CET ORDRE
 -- Le token d'administration Supabase n'est pas disponible pour les
 -- agents de code : CE FICHIER DOIT ÊTRE EXÉCUTÉ À LA MAIN.
 --   Dashboard Supabase → SQL Editor → New query → coller ce fichier → Run.
+--
+-- ORDRE DE MISE EN SERVICE (le merge déploie le site automatiquement) :
+--   1. exécuter CE FICHIER dans le SQL Editor ;
+--   2. déployer les quatre Edge Functions (voir docs/tenant-checkin-setup.md) ;
+--   3. seulement ensuite merger sur `main` (le déploiement GitHub Pages est
+--      déclenché par le merge).
+--
+-- Fenêtre de casse si l'ordre n'est pas respecté : entre le merge et
+-- l'exécution de ce fichier, le formulaire public écrit dans `sejours` avec
+-- `origine` / `adultes` / `mineurs` / `prix_estime`, colonnes qui n'existent
+-- pas encore, et la politique `public_insert_sejours` non plus. Toute demande
+-- envoyée depuis /reserver/ échoue alors sur son message d'erreur générique :
+-- elle est PERDUE silencieusement. Les Edge Functions déployées avant la
+-- migration échouent de la même façon (statuts `confirme`/`termine` absents).
 --
 -- Le script est IDEMPOTENT : il peut être relancé sans effet de bord.
 --
