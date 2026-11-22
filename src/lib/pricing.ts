@@ -98,16 +98,6 @@ export function computeStay(
   };
 }
 
-/** Chevauchement période demandée / ligne availability (réservée). */
-export function overlaps(
-  startDate: string,
-  endDate: string,
-  checkIn: string,
-  checkOut: string,
-): boolean {
-  return startDate <= checkOut && endDate >= checkIn;
-}
-
 // ---------------------------------------------------------------------------
 // Devis instantané (issue #17)
 // ---------------------------------------------------------------------------
