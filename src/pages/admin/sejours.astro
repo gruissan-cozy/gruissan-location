@@ -78,167 +78,238 @@ const STATUTS = ['demande', 'option', 'confirme', 'annule', 'termine'] as const;
             </div>
           </div>
 
-          <!-- ===== Formulaire ===== -->
-          <div id="sejours-form-panel" class="hidden rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card sm:p-6">
-            <div class="flex items-start justify-between gap-3">
-              <h2 id="sejours-form-title" class="font-display text-lg font-semibold text-ocean-900">
-                {AT['sejours.createTitle']}
-              </h2>
-              <button
-                id="sejours-form-close"
-                type="button"
-                class="rounded-full p-1.5 text-ocean-700/60 transition-colors hover:bg-sand-50 hover:text-ocean-800"
-                aria-label={AT['common.close']}
-              >
-                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
-                </svg>
-              </button>
+          <!-- ===== Colonne de droite : formulaire + lien locataire ===== -->
+          <div class="space-y-5">
+            <!-- ===== Formulaire ===== -->
+            <div id="sejours-form-panel" class="hidden rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card sm:p-6">
+              <div class="flex items-start justify-between gap-3">
+                <h2 id="sejours-form-title" class="font-display text-lg font-semibold text-ocean-900">
+                  {AT['sejours.createTitle']}
+                </h2>
+                <button
+                  id="sejours-form-close"
+                  type="button"
+                  class="rounded-full p-1.5 text-ocean-700/60 transition-colors hover:bg-sand-50 hover:text-ocean-800"
+                  aria-label={AT['common.close']}
+                >
+                  <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
+                  </svg>
+                </button>
+              </div>
+
+              <form id="sejours-form" class="mt-4 space-y-4" novalidate>
+                <input type="hidden" id="sejour-id" />
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-arrivee">
+                      {AT['sejours.arrivee']}
+                    </label>
+                    <input
+                      id="sejour-arrivee"
+                      type="date"
+                      required
+                      class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-depart">
+                      {AT['sejours.depart']}
+                    </label>
+                    <input
+                      id="sejour-depart"
+                      type="date"
+                      required
+                      class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                    />
+                  </div>
+                </div>
+                <p id="err-sejour-dates" class="hidden text-xs text-rose-700"></p>
+
+                <!-- Alerte de chevauchement (affichée par le script) -->
+                <div id="sejour-overlap" class="hidden rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200"></div>
+
+                <div>
+                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-client-nom">
+                    {AT['sejours.clientNom']}
+                  </label>
+                  <input
+                    id="sejour-client-nom"
+                    type="text"
+                    required
+                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                  />
+                  <p id="err-sejour-nom" class="mt-1 hidden text-xs text-rose-700"></p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-client-email">
+                    {AT['sejours.clientEmail']}
+                  </label>
+                  <input
+                    id="sejour-client-email"
+                    type="email"
+                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-client-telephone">
+                    {AT['sejours.clientTelephone']}
+                  </label>
+                  <input
+                    id="sejour-client-telephone"
+                    type="tel"
+                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                  />
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-personnes">
+                      {AT['sejours.personnes']}
+                    </label>
+                    <input
+                      id="sejour-personnes"
+                      type="number"
+                      min="1"
+                      max="8"
+                      step="1"
+                      value="2"
+                      class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-statut">
+                      {AT['sejours.statut']}
+                    </label>
+                    <select
+                      id="sejour-statut"
+                      class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                    >
+                      {STATUTS.map((s) => <option value={s}>{AT[`statut.${s}`]}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-prix">
+                    {AT['sejours.prix']}
+                  </label>
+                  <input
+                    id="sejour-prix"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-note">
+                    {AT['sejours.note']}
+                  </label>
+                  <textarea
+                    id="sejour-note"
+                    rows="2"
+                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                  ></textarea>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    id="sejours-form-submit"
+                    type="submit"
+                    class="inline-flex items-center justify-center gap-2 rounded-full bg-sunset-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sunset-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {AT['common.save']}
+                  </button>
+                  <button
+                    id="sejours-form-cancel"
+                    type="button"
+                    class="inline-flex items-center justify-center gap-2 rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-medium text-ocean-800 transition-colors hover:bg-sand-50"
+                  >
+                    {AT['common.cancel']}
+                  </button>
+                  <button
+                    id="sejours-form-delete"
+                    type="button"
+                    class="ml-auto hidden inline-flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50"
+                  >
+                    {AT['common.delete']}
+                  </button>
+                </div>
+              </form>
             </div>
 
-            <form id="sejours-form" class="mt-4 space-y-4" novalidate>
-              <input type="hidden" id="sejour-id" />
-
-              <div class="grid grid-cols-2 gap-3">
+            <!-- ===== Lien locataire ===== -->
+            <div id="sejours-link-panel" class="hidden rounded-2xl border border-sand-200/70 bg-white p-5 shadow-card sm:p-6">
+              <div class="flex items-start justify-between gap-3">
                 <div>
-                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-arrivee">
-                    {AT['sejours.arrivee']}
-                  </label>
-                  <input
-                    id="sejour-arrivee"
-                    type="date"
-                    required
-                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
-                  />
+                  <h2 class="font-display text-lg font-semibold text-ocean-900">{AT['sejours.linkTitle']}</h2>
+                  <p id="sejours-link-for" class="mt-1 text-sm text-ocean-700/80"></p>
                 </div>
-                <div>
-                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-depart">
-                    {AT['sejours.depart']}
-                  </label>
-                  <input
-                    id="sejour-depart"
-                    type="date"
-                    required
-                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
-                  />
-                </div>
-              </div>
-              <p id="err-sejour-dates" class="hidden text-xs text-rose-700"></p>
-
-              <!-- Alerte de chevauchement (affichée par le script) -->
-              <div id="sejour-overlap" class="hidden rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200"></div>
-
-              <div>
-                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-client-nom">
-                  {AT['sejours.clientNom']}
-                </label>
-                <input
-                  id="sejour-client-nom"
-                  type="text"
-                  required
-                  class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
-                />
-                <p id="err-sejour-nom" class="mt-1 hidden text-xs text-rose-700"></p>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-client-email">
-                  {AT['sejours.clientEmail']}
-                </label>
-                <input
-                  id="sejour-client-email"
-                  type="email"
-                  class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-client-telephone">
-                  {AT['sejours.clientTelephone']}
-                </label>
-                <input
-                  id="sejour-client-telephone"
-                  type="tel"
-                  class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
-                />
-              </div>
-
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-personnes">
-                    {AT['sejours.personnes']}
-                  </label>
-                  <input
-                    id="sejour-personnes"
-                    type="number"
-                    min="1"
-                    max="8"
-                    step="1"
-                    value="2"
-                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-statut">
-                    {AT['sejours.statut']}
-                  </label>
-                  <select
-                    id="sejour-statut"
-                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
-                  >
-                    {STATUTS.map((s) => <option value={s}>{AT[`statut.${s}`]}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-prix">
-                  {AT['sejours.prix']}
-                </label>
-                <input
-                  id="sejour-prix"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejour-note">
-                  {AT['sejours.note']}
-                </label>
-                <textarea
-                  id="sejour-note"
-                  rows="2"
-                  class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
-                ></textarea>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-2 pt-1">
                 <button
-                  id="sejours-form-submit"
-                  type="submit"
-                  class="inline-flex items-center justify-center gap-2 rounded-full bg-sunset-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sunset-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {AT['common.save']}
-                </button>
-                <button
-                  id="sejours-form-cancel"
+                  id="sejours-link-close"
                   type="button"
-                  class="inline-flex items-center justify-center gap-2 rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-medium text-ocean-800 transition-colors hover:bg-sand-50"
+                  class="rounded-full p-1.5 text-ocean-700/60 transition-colors hover:bg-sand-50 hover:text-ocean-800"
+                  aria-label={AT['common.close']}
                 >
-                  {AT['common.cancel']}
-                </button>
-                <button
-                  id="sejours-form-delete"
-                  type="button"
-                  class="ml-auto hidden inline-flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50"
-                >
-                  {AT['common.delete']}
+                  <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M5 5l10 10M15 5L5 15" stroke-linecap="round" />
+                  </svg>
                 </button>
               </div>
-            </form>
+
+              <p class="mt-3 text-xs leading-relaxed text-ocean-700/70">{AT['sejours.linkHint']}</p>
+
+              <p id="sejours-link-status" class="mt-4 text-sm font-medium text-ocean-800"></p>
+
+              <div id="sejours-link-value-box" class="mt-3 hidden">
+                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejours-link-value">
+                  {AT['sejours.link']}
+                </label>
+                <div class="flex items-start gap-2">
+                  <input
+                    id="sejours-link-value"
+                    type="text"
+                    readonly
+                    spellcheck="false"
+                    class="w-full rounded-lg border border-sand-300 bg-sand-50 px-3 py-2 text-xs font-mono text-ocean-900 focus:outline-none"
+                  />
+                  <button id="sejours-link-copy" type="button" class="inline-flex shrink-0 items-center justify-center rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-medium text-ocean-800 transition-colors hover:bg-sand-50">
+                    {AT['sejours.linkCopy']}
+                  </button>
+                </div>
+              </div>
+
+              <div id="sejours-link-expiry-box" class="mt-4 hidden">
+                <label class="block text-sm font-medium text-ocean-800 mb-1.5" for="sejours-link-expiry">
+                  {AT['sejours.linkExpiry']}
+                </label>
+                <div class="flex items-start gap-2">
+                  <input
+                    id="sejours-link-expiry"
+                    type="date"
+                    class="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-ocean-900 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 focus:outline-none transition"
+                  />
+                  <button id="sejours-link-save-expiry" type="button" class="inline-flex shrink-0 items-center justify-center rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-medium text-ocean-800 transition-colors hover:bg-sand-50">
+                    {AT['sejours.linkSaveExpiry']}
+                  </button>
+                </div>
+                <p class="mt-1.5 text-xs text-ocean-700/60">{AT['sejours.linkExpiryHelp']}</p>
+              </div>
+
+              <div class="mt-5 flex flex-wrap items-center gap-2">
+                <button id="sejours-link-create" type="button" class="inline-flex items-center justify-center gap-2 rounded-full bg-sunset-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sunset-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {AT['sejours.linkCreate']}
+                </button>
+                <button id="sejours-link-revoke" type="button" class="ml-auto hidden inline-flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50">
+                  {AT['sejours.linkRevoke']}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </>
@@ -252,6 +323,7 @@ const STATUTS = ['demande', 'option', 'confirme', 'annule', 'termine'] as const;
     CLS,
     esc,
     fmtDate,
+    fmtDateTime,
     fmtPrice,
     toast,
     errText,
@@ -261,6 +333,7 @@ const STATUTS = ['demande', 'option', 'confirme', 'annule', 'termine'] as const;
   import { AT } from '../../i18n/admin';
   import type { Sejour } from '../../lib/supabase';
   import { trouverChevauchements, nuits, plageValide } from '../../lib/sejours';
+  import { construireLienLocataire } from '../../lib/lien-locataire';
 
   let sejours: Sejour[] = [];
   let editingId: string | null = null;
@@ -343,7 +416,12 @@ const STATUTS = ['demande', 'option', 'confirme', 'annule', 'termine'] as const;
               )}</span>
             </td>
             <td class="px-4 py-3 align-top">
-              <div class="flex items-center justify-end gap-1.5">
+              <div class="flex flex-wrap items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  data-link="${esc(s.id)}"
+                  class="rounded-full border border-ocean-200 bg-white px-3 py-1.5 text-xs font-medium text-ocean-800 transition-colors hover:bg-ocean-50"
+                >${esc(AT['sejours.link'])}</button>
                 <button
                   type="button"
                   data-edit="${esc(s.id)}"
@@ -486,14 +564,29 @@ const STATUTS = ['demande', 'option', 'confirme', 'annule', 'termine'] as const;
     }
 
     toast(AT['sejours.saved']);
+
+    // Annulation : la base révoque déjà le lien (trigger de la migration
+    // 0012). On refait l'appel ici pour que la révocation soit immédiate
+    // même si le trigger n'a pas encore été appliqué sur le projet.
+    if (editingId && payload.statut === 'annule') {
+      void sb().functions.invoke('tenant-link', { body: { action: 'revoquer', reservation_id: editingId } });
+    }
+
     closeForm();
     await load();
   });
 
   listEl?.addEventListener('click', async (event) => {
     const target = event.target as HTMLElement;
+    const linkId = target.closest<HTMLElement>('[data-link]')?.dataset.link;
     const editId = target.closest<HTMLElement>('[data-edit]')?.dataset.edit;
     const removeId = target.closest<HTMLElement>('[data-remove]')?.dataset.remove;
+
+    if (linkId) {
+      const sejour = sejours.find((s) => s.id === linkId);
+      if (sejour) void openLinkPanel(sejour);
+      return;
+    }
 
     if (editId) {
       const sejour = sejours.find((s) => s.id === editId);
@@ -533,6 +626,161 @@ const STATUTS = ['demande', 'option', 'confirme', 'annule', 'termine'] as const;
   document.getElementById('sejours-new')?.addEventListener('click', () => openForm());
   document.getElementById('sejours-form-close')?.addEventListener('click', closeForm);
   document.getElementById('sejours-form-cancel')?.addEventListener('click', closeForm);
+
+  // -------------------------------------------------------------------
+  // Lien locataire (chantier 12)
+  //
+  // Le jeton naît dans l'Edge Function `tenant-link`, jamais ici : ce script
+  // ne fait que demander, afficher et copier. Il n'écrit aucun jeton dans le
+  // HTML servi — il n'existe qu'à l'exécution, et seulement tant que le lien
+  // est actif.
+  // -------------------------------------------------------------------
+  const linkPanel = document.getElementById('sejours-link-panel');
+  const linkFor = document.getElementById('sejours-link-for');
+  const linkStatus = document.getElementById('sejours-link-status');
+  const linkValueBox = document.getElementById('sejours-link-value-box');
+  const linkValue = document.getElementById('sejours-link-value') as HTMLInputElement | null;
+  const linkExpiryBox = document.getElementById('sejours-link-expiry-box');
+  const linkExpiry = document.getElementById('sejours-link-expiry') as HTMLInputElement | null;
+  const linkCreateBtn = document.getElementById('sejours-link-create') as HTMLButtonElement | null;
+  const linkRevokeBtn = document.getElementById('sejours-link-revoke') as HTMLButtonElement | null;
+  const linkCopyBtn = document.getElementById('sejours-link-copy') as HTMLButtonElement | null;
+  const linkSaveExpiryBtn = document.getElementById('sejours-link-save-expiry') as HTMLButtonElement | null;
+
+  let linkSejour: Sejour | null = null;
+  let linkToken: string | null = null;
+  let linkLang: string | null = null;
+
+  /** Date `AAAA-MM-JJ` à J+n, sans fuseau (comme `dateExpirationParDefaut`). */
+  function jourPlus(dateIso: string, jours: number): string {
+    const [a, m, j] = dateIso.split('-').map(Number);
+    if (!a || !m || !j) return dateIso;
+    return new Date(Date.UTC(a, m - 1, j) + jours * 86_400_000).toISOString().slice(0, 10);
+  }
+
+  function lienDepuisJeton(token: string): string {
+    return construireLienLocataire(import.meta.env.BASE_URL ?? '/', token, linkLang);
+  }
+
+  /**
+   * Peint le panneau à partir de la session renvoyée par la fonction.
+   * `session` nulle = aucun lien en base.
+   */
+  function renderLink(session: { active: boolean; expires_at: string; token?: string } | null) {
+    if (!linkSejour) return;
+    if (linkFor) {
+      linkFor.textContent = `${linkSejour.client_nom} · ${fmtDate(linkSejour.arrivee)} → ${fmtDate(linkSejour.depart)}`;
+    }
+
+    const statutOk = linkSejour.statut === 'confirme' || linkSejour.statut === 'termine';
+
+    if (linkCreateBtn) {
+      linkCreateBtn.classList.toggle('hidden', !statutOk || Boolean(session?.active));
+      linkCreateBtn.disabled = !statutOk;
+    }
+    linkRevokeBtn?.classList.toggle('hidden', !session);
+
+    if (!session) {
+      if (linkStatus) linkStatus.textContent = statutOk ? AT['sejours.linkNone'] : AT['sejours.linkStatusHint'];
+      linkValueBox?.classList.add('hidden');
+      linkExpiryBox?.classList.add('hidden');
+      if (linkExpiry) linkExpiry.value = jourPlus(linkSejour.depart, 1);
+      return;
+    }
+
+    if (linkStatus) {
+      linkStatus.textContent = session.active
+        ? `${AT['sejours.linkActive']} ${fmtDateTime(session.expires_at)}`
+        : `${AT['sejours.linkExpired']} ${fmtDateTime(session.expires_at)}`;
+    }
+
+    linkToken = session.active && session.token ? session.token : null;
+    if (linkValueBox) linkValueBox.classList.toggle('hidden', !linkToken);
+    if (linkValue && linkToken) linkValue.value = lienDepuisJeton(linkToken);
+
+    // L'expiration enregistrée est à midi (Paris) : sa date UTC est la même,
+    // on peut donc préremplir l'input `date` avec les 10 premiers caractères.
+    if (linkExpiry) linkExpiry.value = session.expires_at.slice(0, 10);
+    if (linkExpiryBox) linkExpiryBox.classList.toggle('hidden', !session.active);
+  }
+
+  /** Appelle l'Edge Function pour ce séjour ; renvoie le corps de réponse. */
+  async function appelerLien(action: string, expiresAt?: string) {
+    if (!linkSejour) return null;
+    const { data, error } = await sb().functions.invoke('tenant-link', {
+      body: { action, reservation_id: linkSejour.id, expires_at: expiresAt },
+    });
+    if (error) {
+      toast(errText(error) || AT['sejours.linkError'], 'error');
+      return null;
+    }
+    return (data ?? null) as { session?: { active: boolean; expires_at: string; token?: string } | null; lang?: string | null } | null;
+  }
+
+  async function openLinkPanel(sejour: Sejour) {
+    linkSejour = sejour;
+    linkToken = null;
+    linkLang = sejour.lang ?? null;
+    if (linkExpiry) linkExpiry.value = jourPlus(sejour.depart, 1);
+    if (linkFor) linkFor.textContent = sejour.client_nom;
+    if (linkStatus) linkStatus.textContent = AT['common.loading'];
+    linkPanel?.classList.remove('hidden');
+    linkPanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    const reponse = await appelerLien('lister');
+    linkLang = reponse?.lang ?? linkLang;
+    renderLink(reponse?.session ?? null);
+  }
+
+  function closeLinkPanel() {
+    linkSejour = null;
+    linkToken = null;
+    linkPanel?.classList.add('hidden');
+  }
+
+  linkCreateBtn?.addEventListener('click', async () => {
+    if (!linkSejour) return;
+    if (!window.confirm(AT['sejours.linkConfirm'])) return;
+    linkCreateBtn.disabled = true;
+    const reponse = await appelerLien('creer', linkExpiry?.value || undefined);
+    linkCreateBtn.disabled = false;
+    if (!reponse) return;
+    linkLang = reponse.lang ?? linkLang;
+    renderLink(reponse.session ?? null);
+    toast(AT['sejours.linkCreated']);
+  });
+
+  linkSaveExpiryBtn?.addEventListener('click', async () => {
+    if (!linkSejour || !linkExpiry?.value) return;
+    const reponse = await appelerLien('expiration', linkExpiry.value);
+    if (!reponse) return;
+    renderLink(reponse.session ?? null);
+    toast(AT['sejours.linkExpirySaved']);
+  });
+
+  linkRevokeBtn?.addEventListener('click', async () => {
+    if (!linkSejour) return;
+    if (!window.confirm(AT['sejours.linkRevokeConfirm'])) return;
+    const reponse = await appelerLien('revoquer');
+    if (!reponse) return;
+    renderLink(null);
+    toast(AT['sejours.linkRevoked']);
+  });
+
+  linkCopyBtn?.addEventListener('click', async () => {
+    if (!linkToken) return;
+    const url = lienDepuisJeton(linkToken);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast(AT['sejours.linkCopied']);
+    } catch {
+      // Presse-papiers indisponible (contexte non sécurisé, permission) :
+      // on sélectionne le texte pour que le propriétaire puisse le copier.
+      linkValue?.select();
+    }
+  });
+
+  document.getElementById('sejours-link-close')?.addEventListener('click', closeLinkPanel);
 
   // Chargement des données une fois la session admin confirmée par le layout.
   onAdminReady(() => {

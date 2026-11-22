@@ -45,6 +45,17 @@ appliqué la migration et déployé les fonctions.
    locataire et désactive seulement le JWT de la fonction cron, qui exige à la
    place l’en-tête secret `x-cron-secret`.
 
+4. Déployer aussi la fonction du back office qui émet les liens locataire
+   (chantier 12, migration `0012_tenant_links.sql`) :
+
+   ```sh
+   supabase functions deploy tenant-link --project-ref ykvieyeftewvxjralcym
+   ```
+
+   Elle vérifie le JWT de la session admin (`verify_jwt = true`) puis refuse
+   tout compte dont l’email n’est pas `ADMIN_EMAIL` (valeur par défaut
+   `gruissancozy@gmail.com`).
+
 ## 2. Secrets Edge Functions et email
 
 Configurer dans **Supabase → Edge Functions → Secrets** (ou via
@@ -55,7 +66,9 @@ Configurer dans **Supabase → Edge Functions → Secrets** (ou via
 - `OWNER_EMAIL` : adresse de réception du propriétaire (facultative, valeur par
   défaut `gruissancozy@gmail.com`) ;
 - `CRON_SECRET` : valeur aléatoire longue utilisée uniquement pour appeler la
-  fonction de purge.
+  fonction de purge ;
+- `ADMIN_EMAIL` : adresse du propriétaire autorisée à émettre un lien locataire
+  (facultative, valeur par défaut `gruissancozy@gmail.com`).
 
 Les fonctions utilisent aussi les variables Supabase standard
 `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY`, fournies par l’environnement des
@@ -94,40 +107,49 @@ inséparable de la preuve.
 
 ## 3. Créer un lien de locataire
 
-Une fois `0007`, `0008`, `0009` et `0011` appliquées, l’espace `/admin/` ne crée
-pas encore ces liens. Pour un séjour confirmé, exécuter dans le SQL Editor la
-requête ci-dessous en remplaçant le placeholder par l’UUID du séjour. Elle
-génère un jeton aléatoire unique, lié à l’email du séjour, et l’expire au début
-du lendemain du départ (heure de Paris) :
+Depuis le chantier 12 (migrations `0011` et `0012` appliquées, fonction
+`tenant-link` déployée), le lien se crée depuis le back office, sans SQL :
 
-```sql
-insert into public.tenant_sessions (reservation_id, email, token, expires_at)
-select id,
-       client_email,
-       encode(gen_random_bytes(32), 'hex'),
-       ((depart + 1)::timestamp at time zone 'Europe/Paris')
-from public.sejours
-where id = 'REMPLACER_PAR_UUID_DU_SEJOUR'
-  and statut = 'confirme'
-returning token, reservation_id, expires_at;
-```
+1. ouvrir **`/admin/sejours/`** et se connecter avec l’adresse `ADMIN_EMAIL` ;
+2. cliquer sur **« Lien locataire »** sur la ligne du séjour ;
+3. vérifier la date d’expiration proposée (lendemain du départ à midi, heure de
+   Paris) et cliquer sur **« Générer le lien locataire »** ;
+4. cliquer sur **« Copier le lien »** et le transmettre au locataire par SMS,
+   WhatsApp ou email.
 
-Depuis la migration `0011`, la réservation vit dans `sejours` : la colonne de
-départ s’appelle `depart`, le statut confirmé s’écrit `confirme`, et l’email du
-client est `client_email`. Un séjour saisi à la main dans `/admin/sejours/` peut
-désormais recevoir un lien, ce qui n’était pas possible avant la fusion.
+Règles appliquées par la fonction (`supabase/functions/_shared/lien.ts`, testé
+dans `tests/tenant-lien.test.ts`) :
 
-Copier le jeton retourné dans le lien privé, sans le publier ni le placer dans
-un ticket ou un journal :
+- seuls un séjour **`confirme`** ou **`termine`** peuvent recevoir un lien ;
+- le jeton fait 32 octets aléatoires (64 caractères hexadécimaux) : il n’est
+  jamais dérivé de l’identifiant ni de l’email du séjour ;
+- l’expiration ne peut pas dépasser **30 jours après le départ**, ni être dans
+  le passé ; elle est également bornée en base par un trigger ;
+- le jeton n’apparaît **jamais** dans les journaux des Edge Functions ni dans le
+  HTML servi : il n’existe qu’à l’exécution, et seulement tant que le lien est
+  actif.
+
+Un lien se révoque de trois façons :
+
+- **manuellement**, avec le bouton « Révoquer le lien » du panneau ;
+- **automatiquement** quand le séjour passe au statut `annule` (trigger de la
+  migration `0012`, plus un appel de la page pour une révocation immédiate) ;
+- **à l’expiration**, où le jeton cesse d’être accepté puis est purgé par le
+  cron.
+
+Une seule session est autorisée par séjour. Générer un nouveau lien alors que le
+précédent est encore actif réaffiche le lien existant ; s’il est expiré, il est
+remplacé.
+
+Le lien prend la forme :
 
 ```text
 https://gruissan-cozy.github.io/gruissan-location/tenant/?lang=fr&token=JETON
 ```
 
 Remplacer `fr` par `en`, `es` ou `de` selon la langue enregistrée pour le
-séjour. La page retire le jeton de la barre d’adresse après l’avoir mémorisé.
-Une seule session est autorisée par réservation ; pour réémettre un lien,
-révoquer ou remplacer la session existante depuis le SQL Editor.
+séjour — la page le fait automatiquement d’après `sejours.lang`. La page retire
+le jeton de la barre d’adresse après l’avoir mémorisé.
 
 ## 4. Vérification avant usage réel
 
@@ -139,3 +161,5 @@ révoquer ou remplacer la session existante depuis le SQL Editor.
   agrégés et n’incluent ni jeton ni adresse personnelle.
 - Confirmer la purge des fichiers Storage après expiration avant de transmettre
   un lien à un locataire.
+- Vérifier qu’un séjour passé à `annule` perd immédiatement son lien (panneau
+  « Lien locataire » vide, ancien lien refusé).

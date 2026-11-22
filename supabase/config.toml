@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.tenant-upload]
 verify_jwt = true
+
+[functions.tenant-link]
+verify_jwt = true
