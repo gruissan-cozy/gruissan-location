@@ -3,15 +3,17 @@
  * /admin/taxe-sejour — taxe de séjour (chantier 8 — #22).
  *
  * Deux écrans :
- *   1. TAXE PAR SÉJOUR : nuits × personnes × taux (taux lu dans
- *      content/tarifs.json), avec le statut d'assujettissement ;
+ *   1. TAXE PAR SÉJOUR : nuits × adultes × taux (taux lu dans
+ *      content/tarifs.json ; les mineurs sont exonérés), avec le statut
+ *      d'assujettissement ;
  *   2. RÉCAPITULATIF PAR ANNÉE : total collecté et nombre de séjours
  *      assujettis, destiné à la déclaration en mairie.
  *
  * Toute la logique est pure et testée dans `src/lib/taxe-sejour.ts`
  * (tests/taxe-sejour.test.ts) : ce script ne fait que récupérer les
- * séjours, appeler `calculerTaxeSejour()` / `recapitulerTaxe()` et
- * afficher. Aucun taux n'est codé en dur ici.
+ * séjours, appeler `ligneTaxe()` / `recapitulerTaxe()` et afficher. Aucun
+ * taux n'est codé en dur ici, et la règle « une demande n'est pas
+ * assujettie » vit dans `ligneTaxe()`, pas dans le rendu.
  *
  * Dégradation : tant que la migration `0003_sejours.sql` n'est pas
  * appliquée, la table n'existe pas — bandeau explicite. Si le taux est
@@ -21,14 +23,8 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { AT } from '../../i18n/admin';
-import tarifsData from '../../../content/tarifs.json';
 
 const configured = isSupabaseConfigured;
-
-/** Taux lu dans le contenu éditable — jamais codé en dur dans la page. */
-const taux = (tarifsData as { taxe_sejour_par_nuit_personne?: unknown })
-  .taxe_sejour_par_nuit_personne;
-const tauxAbsent = typeof taux !== 'number' || !Number.isFinite(taux);
 ---
 
 <AdminLayout title={AT['taxe.title']} section="taxe">
@@ -128,7 +124,7 @@ const tauxAbsent = typeof taux !== 'number' || !Number.isFinite(taux);
                     {AT['taxe.colNights']}
                   </th>
                   <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
-                    {AT['taxe.colPeople']}
+                    {AT['taxe.colAdults']}
                   </th>
                   <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ocean-700/70">
                     {AT['taxe.colRate']}
@@ -203,6 +199,7 @@ const tauxAbsent = typeof taux !== 'number' || !Number.isFinite(taux);
             <li>{AT['taxe.notePlafond']}</li>
             <li>{AT['taxe.notePeriode']}</li>
             <li>{AT['taxe.noteStatuts']}</li>
+            <li>{AT['taxe.noteAdultes']}</li>
           </ul>
         </section>
       </div>
@@ -214,8 +211,7 @@ const tauxAbsent = typeof taux !== 'number' || !Number.isFinite(taux);
   import { sb, esc, fmtDate, fmtPrice, toast, errText, onAdminReady } from '../../lib/admin-runtime';
   import { AT } from '../../i18n/admin';
   import {
-    calculerTaxeSejour,
-    estAssujetti,
+    ligneTaxe,
     recapitulerTaxe,
     type SejourTaxe,
   } from '../../lib/taxe-sejour';
@@ -287,19 +283,32 @@ const tauxAbsent = typeof taux !== 'number' || !Number.isFinite(taux);
 
     corps.innerHTML = liste
       .map((s) => {
-        const assujetti = estAssujetti({ id: s.id, statut: s.statut });
-        const calcul = calculerTaxeSejour(s as SejourTaxe, TAUX);
-        const montant = calcul.montant === null ? esc(AT['taxe.notCalculable']) : esc(fmtPrice(calcul.montant, true));
+        // `ligneTaxe` porte la règle « une demande n'est pas assujettie » :
+        // le tableau ne peut donc pas contredire le récapitulatif.
+        const ligne = ligneTaxe(s as SejourTaxe, TAUX);
+        // La colonne « Pers. » porte l'assiette réellement taxée (adultes ;
+        // les mineurs sont exonérés), et non le total déclaré.
+        const montant = ligne.nonCalculable
+          ? esc(AT['taxe.notCalculable'])
+          : ligne.montant === null
+            ? esc(AT['taxe.notApplicable'])
+            : esc(fmtPrice(ligne.montant, true));
         const tauxAffiche =
-          calcul.taux === null ? esc(AT['common.empty']) : esc(String(calcul.taux).replace('.', ','));
+          ligne.taux === null ? esc(AT['common.empty']) : esc(String(ligne.taux).replace('.', ','));
         return `
         <tr class="transition-colors hover:bg-sand-50/70">
           <td class="px-4 py-3 text-sm font-medium text-ocean-900">${esc(s.client_nom)}</td>
           <td class="px-4 py-3 text-sm whitespace-nowrap text-ocean-700/80">${esc(fmtDate(s.arrivee))} → ${esc(fmtDate(s.depart))}</td>
-          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${esc(String(calcul.nuits))}</td>
-          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${esc(String(s.personnes ?? ''))}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${esc(String(ligne.nuits))}</td>
+          <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${esc(String(ligne.assiette))}</td>
           <td class="px-4 py-3 text-right text-sm text-ocean-700/80">${tauxAffiche}</td>
-          <td class="px-4 py-3 text-right text-sm font-semibold ${calcul.montant === null ? 'text-amber-700' : 'text-ocean-900'}">${montant}</td>
+          <td class="px-4 py-3 text-right text-sm font-semibold ${
+            ligne.nonCalculable
+              ? 'text-amber-700'
+              : ligne.montant === null
+                ? 'text-ocean-700/60'
+                : 'text-ocean-900'
+          }">${montant}</td>
           <td class="px-4 py-3 text-sm text-ocean-700/70">${esc(AT[`statut.${s.statut}`] ?? s.statut)}</td>
         </tr>`;
       })
@@ -396,20 +405,23 @@ const tauxAbsent = typeof taux !== 'number' || !Number.isFinite(taux);
       AT['taxe.colSejour'],
       AT['taxe.colDates'],
       AT['taxe.colNights'],
-      AT['taxe.colPeople'],
+      AT['taxe.colAdults'],
       AT['taxe.colRate'],
       AT['taxe.colAmount'],
       AT['taxe.colStatut'],
     ];
     const lignes = sejoursDuPerimetre().map((s) => {
-      const calcul = calculerTaxeSejour(s as SejourTaxe, TAUX);
+      // Même règle que le tableau (`ligneTaxe`) : une demande, une option ou
+      // une annulation n'est pas assujettie — l'export ne doit porter aucun
+      // montant de taxe pour ces lignes (il part à la mairie).
+      const ligne = ligneTaxe(s as SejourTaxe, TAUX);
       return [
         s.client_nom,
         `${fmtDate(s.arrivee)} → ${fmtDate(s.depart)}`,
-        String(calcul.nuits),
-        String(s.personnes ?? ''),
-        calcul.taux === null ? '' : String(calcul.taux),
-        calcul.montant === null ? '' : String(calcul.montant),
+        String(ligne.nuits),
+        String(ligne.assiette),
+        ligne.taux === null ? '' : String(ligne.taux),
+        ligne.montant === null ? '' : String(ligne.montant),
         AT[`statut.${s.statut}`] ?? s.statut,
       ];
     });

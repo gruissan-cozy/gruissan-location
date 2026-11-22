@@ -41,6 +41,13 @@ export interface Message {
   lu_at?: string | null;
 }
 
+/**
+ * Ancienne table des demandes de réservation.
+ *
+ * OBSOLÈTE depuis la migration 0011 : les demandes vivent dans `sejours` au
+ * statut `demande`. Le type est conservé le temps de la période de lecture
+ * seule (audit) ; plus aucun code applicatif ne lit ni n'écrit `bookings`.
+ */
 export interface Booking {
   id: string;
   created_at: string;
@@ -56,6 +63,16 @@ export interface Booking {
   statut: 'demande' | 'confirmee' | 'annulee' | 'terminee';
   historique: Array<{ at: string; by: string; action: string; detail?: string }>;
   lang: string | null;
+}
+
+/** Option choisie lors d'une demande de réservation (reprise de `bookings.packs`). */
+export interface SejourPack {
+  id: string;
+  slug: string;
+  nom: string;
+  prix: number;
+  unite: string;
+  quantite: number;
 }
 
 export interface AvailabilityRow {
@@ -94,7 +111,14 @@ export interface GuideSection {
   visibilite?: 'public' | 'tenant';
 }
 
-/** Séjour daté du logement (chantier 1 — calendrier). */
+/**
+ * Séjour daté du logement — dossier de réservation unique depuis la
+ * migration 0011 (`bookings` y a été fusionnée).
+ *
+ * Cycle de vie : `demande` → `option` → `confirme` → `termine`, ou `annule`.
+ * `origine` distingue une demande du site ('site'), une saisie du back office
+ * ('admin') et une ligne reprise de `bookings` ('import').
+ */
 export interface Sejour {
   id: string;
   created_at: string;
@@ -104,9 +128,24 @@ export interface Sejour {
   client_email: string | null;
   client_telephone: string | null;
   personnes: number;
-  statut: 'option' | 'confirme' | 'annule' | 'termine';
+  statut: 'demande' | 'option' | 'confirme' | 'annule' | 'termine';
   prix_total: number | null;
   note: string | null;
+  /** Message libre du visiteur (ex-`bookings.message`). */
+  client_message?: string | null;
+  /** Détail adultes / mineurs — les mineurs sont exonérés de taxe de séjour. */
+  adultes?: number | null;
+  mineurs?: number | null;
+  /** Options choisies à la réservation (ex-`bookings.packs`). */
+  packs?: SejourPack[];
+  /** Prix estimé par le formulaire (le prix négocié reste `prix_total`). */
+  prix_estime?: number | null;
+  /** Historique des changements de statut (ex-`bookings.historique`). */
+  historique?: Array<{ at: string; by: string; action: string; detail?: string }>;
+  /** Langue de la demande (fr, en, es, de). */
+  lang?: string | null;
+  /** Provenance de la ligne : 'admin' (saisie), 'site' (formulaire), 'import'. */
+  origine?: 'admin' | 'site' | 'import';
 }
 
 /**

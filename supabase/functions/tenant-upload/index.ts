@@ -1,4 +1,5 @@
 import { BUCKET, corsHeaders, createServiceClient, jsonResponse, readTenantToken, validateTenantToken } from '../_shared/tenant.ts';
+import { estReservationAutorisee } from '../_shared/reservation.ts';
 
 const MAX_PHOTOS_PER_ROOM = 2;
 const ALLOWED_ROOMS = new Set(['living', 'kitchen', 'bedroom', 'mezzanine', 'bathroom', 'entrance']);
@@ -17,9 +18,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createServiceClient();
-    const { data: booking, error: bookingError } = await supabase.from('bookings')
+    // Depuis la migration 0011, la réservation vit dans `sejours` avec le
+    // vocabulaire unifié (`confirme` / `termine`, et non plus `confirmee` /
+    // `terminee`). La règle est centralisée dans _shared/reservation.ts pour
+    // que les quatre fonctions locataire ne puissent pas diverger.
+    const { data: sejour, error: sejourError } = await supabase.from('sejours')
       .select('statut').eq('id', session.reservation_id).maybeSingle();
-    if (bookingError || !booking || !['confirmee', 'terminee'].includes(booking.statut)) {
+    if (sejourError || !sejour || !estReservationAutorisee(sejour.statut)) {
       return jsonResponse({ error: 'Réservation non autorisée.' }, 403);
     }
 

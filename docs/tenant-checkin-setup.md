@@ -5,6 +5,26 @@ Le code du chantier 10 doit être livré avec `0007_tenant_checkin.sql`,
 pas exécutées par le dépôt ou par GitHub Pages : elles doivent être appliquées
 manuellement dans le SQL Editor Supabase, dans cet ordre.
 
+## 0. Ordre de mise en service de la migration 0011 (à lire en premier)
+
+`0011_unifier_bookings_sejours.sql` fusionne `bookings` dans `sejours`. Le
+déploiement GitHub Pages est **automatique au merge sur `main`** : si l’ordre
+n’est pas respecté, des demandes sont perdues silencieusement. Séquence
+obligatoire :
+
+1. **Appliquer `0011`** dans le SQL Editor Supabase (colonne `origine`,
+   `adultes`, `mineurs`, `prix_estime`, politique `public_insert_sejours`…).
+2. **Déployer les quatre Edge Functions** (§1.3 ci-dessous) : elles lisent
+   désormais `sejours` et les statuts `confirme` / `termine`.
+3. **Merger la branche sur `main`** — c’est ce merge qui publie le formulaire
+   public écrivant dans `sejours`.
+
+Entre le merge et l’exécution de `0011`, le formulaire `/reserver/` échoue : il
+envoie des colonnes qui n’existent pas encore et la politique d’insertion
+publique n’est pas créée. La demande retombe sur le message d’erreur générique
+(`booking.error`) et **n’est pas enregistrée**. Ne jamais merger avant d’avoir
+appliqué la migration et déployé les fonctions.
+
 ## 1. Préparer Supabase
 
 1. Dans **Storage**, créer le bucket `etats-des-lieux` en mode **privé**.
@@ -74,23 +94,28 @@ inséparable de la preuve.
 
 ## 3. Créer un lien de locataire
 
-Une fois `0007`, `0008` et `0009` appliquées, l’espace `/admin/` ne crée pas encore ces liens. Pour
-un séjour confirmé, exécuter dans le SQL Editor la requête ci-dessous en
-remplaçant le placeholder par l’UUID du séjour. Elle génère un jeton aléatoire
-unique, lié à l’email du séjour, et l’expire au début du lendemain du départ
-(heure de Paris) :
+Une fois `0007`, `0008`, `0009` et `0011` appliquées, l’espace `/admin/` ne crée
+pas encore ces liens. Pour un séjour confirmé, exécuter dans le SQL Editor la
+requête ci-dessous en remplaçant le placeholder par l’UUID du séjour. Elle
+génère un jeton aléatoire unique, lié à l’email du séjour, et l’expire au début
+du lendemain du départ (heure de Paris) :
 
 ```sql
 insert into public.tenant_sessions (reservation_id, email, token, expires_at)
 select id,
-       email,
+       client_email,
        encode(gen_random_bytes(32), 'hex'),
-       ((check_out + 1)::timestamp at time zone 'Europe/Paris')
-from public.bookings
+       ((depart + 1)::timestamp at time zone 'Europe/Paris')
+from public.sejours
 where id = 'REMPLACER_PAR_UUID_DU_SEJOUR'
-  and statut = 'confirmee'
+  and statut = 'confirme'
 returning token, reservation_id, expires_at;
 ```
+
+Depuis la migration `0011`, la réservation vit dans `sejours` : la colonne de
+départ s’appelle `depart`, le statut confirmé s’écrit `confirme`, et l’email du
+client est `client_email`. Un séjour saisi à la main dans `/admin/sejours/` peut
+désormais recevoir un lien, ce qui n’était pas possible avant la fusion.
 
 Copier le jeton retourné dans le lien privé, sans le publier ni le placer dans
 un ticket ou un journal :
