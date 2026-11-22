@@ -1,0 +1,398 @@
+---
+/**
+ * /admin/demandes — voir et traiter les demandes de réservation.
+ *
+ * Depuis la migration 0011, une demande envoyée depuis /reserver/ est une
+ * ligne `sejours` au statut `demande`. Cette page liste ces demandes, triées
+ * par urgence (arrivée la plus proche d'abord), et permet de les traiter en
+ * un clic :
+ *
+ *   Confirmer  → statut `confirme` (le séjour apparaît dans /admin/sejours/)
+ *   Option     → statut `option`   (les dates sont tenues)
+ *   Refuser    → statut `annule`   (les dates sont libérées, motif facultatif)
+ *
+ * Aucune action ne crée de seconde ligne : la demande EST le séjour. Chaque
+ * décision est horodatée dans `sejours.historique`.
+ *
+ * Toute la logique (tri, complétude, chevauchement, historique) vit dans
+ * `src/lib/demandes.ts`, couverte par tests/demandes.test.ts.
+ *
+ * Garde-fou : si les dates ont été occupées entre-temps, un avertissement de
+ * chevauchement s'affiche et un second clic est exigé avant validation.
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { AT } from '../../i18n/admin';
+
+const configured = isSupabaseConfigured;
+---
+
+<AdminLayout title={AT['demandes.title']} section="demandes">
+  {
+    configured && (
+      <>
+        <header class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 class="font-display text-2xl font-semibold text-ocean-900 sm:text-3xl">
+              {AT['demandes.title']}
+            </h1>
+            <p class="mt-1.5 text-sm leading-relaxed text-ocean-700/80">{AT['demandes.subtitle']}</p>
+          </div>
+          <p id="demandes-count" class="text-sm text-ocean-700/70"></p>
+        </header>
+
+        <!-- Alerte : la table des séjours (donc la migration 0011) manque -->
+        <div
+          id="demandes-migration"
+          class="mb-5 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+          role="alert"
+        >
+          {AT['demandes.tableMissing']}
+        </div>
+
+        <div id="demandes-list" class="space-y-4">
+          <p class="text-sm text-ocean-700/60">{AT['common.loading']}</p>
+        </div>
+      </>
+    )
+  }
+</AdminLayout>
+
+<script>
+  import {
+    sb,
+    esc,
+    fmtDate,
+    fmtDateTime,
+    fmtPrice,
+    toast,
+    errText,
+    onAdminReady,
+    CLS,
+  } from '../../lib/admin-runtime';
+  import { AT } from '../../i18n/admin';
+  import type { Sejour } from '../../lib/supabase';
+  import { estTableSejoursAbsente } from '../../lib/revenus';
+  import { nuits } from '../../lib/sejours';
+  import {
+    trierDemandes,
+    champsManquants,
+    chevauchementsDemande,
+    confirmationRequise,
+    construirePatchAction,
+    actionOccupeCalendrier,
+    totalPersonnes,
+    type ActionDemande,
+  } from '../../lib/demandes';
+
+  const listEl = document.getElementById('demandes-list');
+  const countEl = document.getElementById('demandes-count');
+  const migrationEl = document.getElementById('demandes-migration');
+
+  let demandes: Sejour[] = [];
+  /** Tous les séjours (dates + statut), pour la détection de chevauchement. */
+  let tous: Sejour[] = [];
+
+  const motifPour: Record<string, string> = {};
+  /** Décision en attente de confirmation (chevauchement) ou de motif (refus). */
+  let enAttente: { id: string; action: ActionDemande } | null = null;
+
+  const champManquantLabel = (champ: string): string =>
+    champ === 'email'
+      ? AT['demandes.missingEmail']
+      : champ === 'telephone'
+        ? AT['demandes.missingPhone']
+        : AT['demandes.missingPrice'];
+
+  // -------------------------------------------------------------------
+  // Chargement
+  // -------------------------------------------------------------------
+  async function load() {
+    const [resDemandes, resTous] = await Promise.all([
+      sb().from('sejours').select('*').eq('statut', 'demande'),
+      sb().from('sejours').select('id, arrivee, depart, statut'),
+    ]);
+
+    if (resDemandes.error) {
+      if (estTableSejoursAbsente(resDemandes.error)) {
+        migrationEl?.classList.remove('hidden');
+        if (listEl) listEl.innerHTML = '';
+        if (countEl) countEl.textContent = '';
+        return;
+      }
+      toast(errText(resDemandes.error) || AT['common.errorGeneric'], 'error');
+      return;
+    }
+
+    demandes = trierDemandes((resDemandes.data ?? []) as Sejour[]);
+    tous = (resTous.data ?? []) as Sejour[];
+    renderList();
+  }
+
+  // -------------------------------------------------------------------
+  // Rendu
+  // -------------------------------------------------------------------
+  function renderList() {
+    if (!listEl) return;
+    if (!demandes.length) {
+      listEl.innerHTML = `<div class="rounded-2xl border border-sand-200/70 bg-white px-5 py-8 text-center text-sm text-ocean-700/60 shadow-card">${esc(
+        AT['demandes.empty'],
+      )}</div>`;
+      if (countEl) countEl.textContent = '';
+      return;
+    }
+
+    listEl.innerHTML = demandes.map((d) => carteDemande(d)).join('');
+    if (countEl) countEl.textContent = `${demandes.length} ${AT['demandes.count']}`;
+  }
+
+  function badgeManquants(d: Sejour): string {
+    const manquants = champsManquants(d);
+    if (!manquants.length) {
+      return `<span class="${CLS.badge} bg-emerald-50 text-emerald-700 ring-emerald-200">${esc(
+        AT['demandes.complete'],
+      )}</span>`;
+    }
+    const details = manquants.map(champManquantLabel).join(' · ');
+    return `<span class="${CLS.badge} bg-amber-50 text-amber-700 ring-amber-200" title="${esc(
+      AT['demandes.missingHint'],
+    )}">${esc(AT['demandes.incomplete'])} — ${esc(details)}</span>`;
+  }
+
+  function ligneOptions(d: Sejour): string {
+    const packs = Array.isArray(d.packs) ? d.packs : [];
+    if (!packs.length) return `<span class="text-ocean-700/50">${esc(AT['demandes.noOptions'])}</span>`;
+    return packs
+      .map((p) => {
+        const quantite = Number(p.quantite) > 1 ? ` × ${esc(p.quantite)}` : '';
+        const prix = Number.isFinite(Number(p.prix)) ? ` (${esc(fmtPrice(p.prix))})` : '';
+        return `<span class="inline-flex items-center rounded-full bg-ocean-50 px-2 py-0.5 text-xs text-ocean-700 ring-1 ring-ocean-100">${esc(
+          p.nom,
+        )}${quantite}${prix}</span>`;
+      })
+      .join(' ');
+  }
+
+  function carteDemande(d: Sejour): string {
+    const n = nuits(d.arrivee, d.depart);
+    const adultes = Number(d.adultes);
+    const mineurs = Number(d.mineurs);
+    const detailPersonnes =
+      Number.isFinite(adultes) && adultes > 0
+        ? `${adultes} ${esc(AT['demandes.adults'])}${
+            Number.isFinite(mineurs) && mineurs > 0 ? ` · ${mineurs} ${esc(AT['demandes.minors'])}` : ''
+          }`
+        : `${totalPersonnes(d)}`;
+
+    const contact = [
+      d.client_email ? `<a href="mailto:${esc(d.client_email)}" class="break-all hover:underline">${esc(d.client_email)}</a>` : '',
+      d.client_telephone
+        ? `<a href="tel:${esc(d.client_telephone)}" class="hover:underline">${esc(d.client_telephone)}</a>`
+        : '',
+    ]
+      .filter(Boolean)
+      .join('<br />');
+
+    const estOuverte = enAttente?.id === d.id;
+    const conflits = chevauchementsDemande(d, tous);
+    const decision = enAttente?.action;
+    const avecConflit = Boolean(decision) && actionOccupeCalendrier(decision!) && conflits.length > 0;
+
+    const boutons = (['confirmer', 'option', 'refuser'] as ActionDemande[])
+      .map((action) => {
+        const classe =
+          action === 'confirmer'
+            ? `${CLS.btnPrimary} ${CLS.btnSmall}`
+            : action === 'refuser'
+              ? `${CLS.btnDanger} ${CLS.btnSmall}`
+              : `${CLS.btnGhost} ${CLS.btnSmall}`;
+        return `<button type="button" data-action="${action}" data-id="${esc(d.id)}" class="${classe}">${esc(
+          AT[`demandes.action.${action}`],
+        )}</button>`;
+      })
+      .join('');
+
+    const panneau = estOuverte
+      ? `
+        <div class="mt-4 rounded-xl border border-sand-200 bg-sand-50/70 p-4">
+          ${
+            avecConflit
+              ? `<div class="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">
+                  <p class="font-semibold">${esc(AT['demandes.overlapTitle'])}</p>
+                  <p class="mt-1">${esc(conflits.map((c) => `${fmtDate(c.arrivee)} → ${fmtDate(c.depart)}`).join(', '))}</p>
+                  <p class="mt-1">${esc(AT['demandes.overlapBody'])}</p>
+                </div>`
+              : ''
+          }
+          ${
+            decision === 'refuser'
+              ? `<label class="${CLS.label}" for="motif-${esc(d.id)}">${esc(AT['demandes.refuseMotif'])}</label>
+                 <input
+                   id="motif-${esc(d.id)}"
+                   data-motif="${esc(d.id)}"
+                   type="text"
+                   maxlength="300"
+                   value="${esc(motifPour[d.id] ?? '')}"
+                   placeholder="${esc(AT['demandes.refuseMotifPlaceholder'])}"
+                   class="${CLS.input}"
+                 />`
+              : ''
+          }
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" data-confirm="${esc(d.id)}" class="${
+              avecConflit ? `${CLS.btnDanger} ${CLS.btnSmall}` : `${CLS.btnPrimary} ${CLS.btnSmall}`
+            }">
+              ${esc(avecConflit ? AT['demandes.overlapConfirm'] : AT[`demandes.action.${decision}`])}
+            </button>
+            <button type="button" data-close="${esc(d.id)}" class="${CLS.btnGhost} ${CLS.btnSmall}">
+              ${esc(AT['demandes.overlapCancel'])}
+            </button>
+          </div>
+        </div>`
+      : '';
+
+    return `
+      <article class="rounded-2xl border border-sand-200/70 bg-white shadow-card">
+        <div class="flex flex-col gap-4 p-5 sm:p-6">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="font-display text-lg font-semibold text-ocean-900">
+                ${esc(fmtDate(d.arrivee))} → ${esc(fmtDate(d.depart))}
+                <span class="ml-1 text-sm font-normal text-ocean-700/60">${n} ${esc(AT['demandes.nuits'])}</span>
+              </p>
+              <p class="mt-0.5 text-sm text-ocean-700/70">
+                ${esc(AT['demandes.colReceived'])} ${esc(fmtDateTime(d.created_at))}
+                ${d.lang ? ` · ${esc(AT['demandes.lang'])} : ${esc(String(d.lang).toUpperCase())}` : ''}
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              ${badgeManquants(d)}
+            </div>
+          </div>
+
+          <dl class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <dt class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(
+                AT['demandes.colPersonnes'],
+              )}</dt>
+              <dd class="mt-0.5 text-ocean-900">${detailPersonnes}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(
+                AT['demandes.colPrice'],
+              )}</dt>
+              <dd class="mt-0.5 text-ocean-900">${esc(fmtPrice(d.prix_estime ?? d.prix_total))}</dd>
+            </div>
+            <div class="lg:col-span-2">
+              <dt class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(
+                AT['demandes.colContact'],
+              )}</dt>
+              <dd class="mt-0.5 text-ocean-900">
+                <span class="font-semibold">${esc(d.client_nom)}</span>
+                ${contact ? `<span class="mt-0.5 block text-xs text-ocean-700/70">${contact}</span>` : ''}
+              </dd>
+            </div>
+            <div class="sm:col-span-2 lg:col-span-4">
+              <dt class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(
+                AT['demandes.colOptions'],
+              )}</dt>
+              <dd class="mt-1 flex flex-wrap gap-1.5">${ligneOptions(d)}</dd>
+            </div>
+            ${
+              d.client_message
+                ? `<div class="sm:col-span-2 lg:col-span-4">
+                    <dt class="text-xs font-medium uppercase tracking-wide text-ocean-700/55">${esc(
+                      AT['demandes.message'],
+                    )}</dt>
+                    <dd class="mt-1 whitespace-pre-line rounded-lg bg-sand-50 px-3 py-2 text-ocean-800">${esc(
+                      d.client_message,
+                    )}</dd>
+                  </div>`
+                : ''
+            }
+          </dl>
+
+          <div class="flex flex-wrap items-center gap-2 border-t border-sand-200/70 pt-4">
+            ${boutons}
+          </div>
+          ${panneau}
+        </div>
+      </article>`;
+  }
+
+  // -------------------------------------------------------------------
+  // Décisions
+  // -------------------------------------------------------------------
+  async function appliquer(d: Sejour, action: ActionDemande) {
+    const maintenant = new Date().toISOString();
+    const patch = construirePatchAction(d, action, maintenant, motifPour[d.id] ?? null);
+
+    const { error } = await sb().from('sejours').update(patch).eq('id', d.id);
+    if (error) {
+      toast(errText(error) || AT['demandes.actionError'], 'error');
+      return;
+    }
+
+    delete motifPour[d.id];
+    enAttente = null;
+    toast(
+      action === 'confirmer'
+        ? AT['demandes.confirmed']
+        : action === 'option'
+          ? AT['demandes.optioned']
+          : AT['demandes.refused'],
+    );
+    await load();
+  }
+
+  listEl?.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+
+    const actionBtn = target.closest<HTMLElement>('[data-action]');
+    if (actionBtn) {
+      const id = actionBtn.dataset.id ?? '';
+      const action = actionBtn.dataset.action as ActionDemande;
+      const d = demandes.find((x) => x.id === id);
+      if (!d) return;
+
+      // Une action qui occupe le calendrier sur des dates déjà prises exige
+      // une confirmation explicite : jamais d'écrasement silencieux.
+      // Un refus ouvre le panneau pour proposer un motif (facultatif).
+      if (confirmationRequise(d, tous, action) || action === 'refuser') {
+        enAttente = { id, action };
+        renderList();
+        return;
+      }
+
+      void appliquer(d, action);
+      return;
+    }
+
+    const confirmBtn = target.closest<HTMLElement>('[data-confirm]');
+    if (confirmBtn) {
+      const id = confirmBtn.dataset.confirm ?? '';
+      const d = demandes.find((x) => x.id === id);
+      if (!d) return;
+      const action = enAttente?.id === id ? enAttente.action : 'refuser';
+      void appliquer(d, action);
+      return;
+    }
+
+    const closeBtn = target.closest<HTMLElement>('[data-close]');
+    if (closeBtn) {
+      enAttente = null;
+      renderList();
+    }
+  });
+
+  listEl?.addEventListener('input', (event) => {
+    const el = event.target as HTMLInputElement;
+    const id = el.dataset?.motif;
+    if (!id) return;
+    motifPour[id] = el.value;
+  });
+
+  onAdminReady(() => {
+    void load();
+  });
+</script>
