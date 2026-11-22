@@ -4,6 +4,7 @@ import site from '../../content/site.json';
 import { LANGUAGES, langNames, t, seo } from '../i18n';
 import type { Lang } from '../i18n';
 import { libelleNumero, lienWhatsApp, numeroAppel, peutAppeler, peutUtiliserWhatsApp } from '../lib/contact';
+import { htmlEnregistrement } from '../lib/enregistrement';
 
 interface Props {
   lang?: Lang;
@@ -24,6 +25,9 @@ const whatsappLien = lienWhatsApp(coordonnees.telephone, coordonnees.whatsapp);
 const montrerAppel = peutAppeler(coordonnees);
 const montrerWhatsApp = peutUtiliserWhatsApp(coordonnees);
 const telephoneAffiche = libelleNumero(coordonnees);
+
+// Numéro d'enregistrement mairie : fragment vide tant que le champ est vide.
+const enregistrementHtml = htmlEnregistrement(site.numero_enregistrement_mairie, lang);
 
 // --- SEO ---
 const siteUrl = 'https://gruissan-cozy.github.io';
@@ -187,6 +191,7 @@ const metaDesc = seo[lang].description;
           <p class="leading-relaxed">
             {site.adresse_ligne}<br />{site.code_postal} {site.ville}<br />{site.region}
           </p>
+          {enregistrementHtml && <Fragment set:html={enregistrementHtml} />}
         </div>
         <div>
           <p class="font-semibold text-white mb-4">{tr['footer.contact']}</p>
