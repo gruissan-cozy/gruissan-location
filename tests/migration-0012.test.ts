@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * Garde sur la migration de fusion `bookings` → `sejours` (0011).
+ * Garde sur la migration de fusion `bookings` → `sejours` (0012).
  *
  * Le fichier SQL n'est pas exécuté par Vitest (il s'applique à la main dans
  * le SQL Editor Supabase). On vérifie donc les invariants qui, s'ils
@@ -17,9 +17,9 @@ import { join } from 'node:path';
  */
 
 const ROOT = new URL('../', import.meta.url).pathname;
-const sql = readFileSync(join(ROOT, 'migrations/0011_unifier_bookings_sejours.sql'), 'utf8');
+const sql = readFileSync(join(ROOT, 'migrations/0012_unifier_bookings_sejours.sql'), 'utf8');
 
-describe('migration 0011 — idempotence', () => {
+describe('migration 0012 — idempotence', () => {
   it('ajoute les colonnes avec `if not exists`', () => {
     const ajouts = sql.match(/add column[^,;]*/g) ?? [];
     expect(ajouts.length).toBeGreaterThan(0);
@@ -45,7 +45,7 @@ describe('migration 0011 — idempotence', () => {
   });
 });
 
-describe('migration 0011 — cycle de vie', () => {
+describe('migration 0012 — cycle de vie', () => {
   it('ajoute demande au domaine de statut', () => {
     expect(sql).toMatch(/check \(statut in \('demande', 'option', 'confirme', 'annule', 'termine'\)\)/);
   });
@@ -62,7 +62,7 @@ describe('migration 0011 — cycle de vie', () => {
   });
 });
 
-describe('migration 0011 — reprise sans perte', () => {
+describe('migration 0012 — reprise sans perte', () => {
   it('conserve l’identifiant des lignes bookings', () => {
     expect(sql).toMatch(/insert into public\.sejours \(\s*id,/);
     expect(sql).toMatch(/select\s+b\.id,/);
@@ -89,7 +89,7 @@ describe('migration 0011 — reprise sans perte', () => {
   });
 });
 
-describe('migration 0011 — liens locataire', () => {
+describe('migration 0012 — liens locataire', () => {
   it('rebase les clés étrangères sur sejours', () => {
     expect(sql).toContain("array['tenant_sessions', 'checklists', 'photos', 'pdf_reports']");
     expect(sql).toContain('references public.sejours(id) on delete cascade');
@@ -101,7 +101,7 @@ describe('migration 0011 — liens locataire', () => {
   });
 });
 
-describe('migration 0011 — RLS publique non affaiblie', () => {
+describe('migration 0012 — RLS publique non affaiblie', () => {
   it('ne touche pas à la politique de lecture publique des séjours', () => {
     expect(sql).not.toContain('drop policy if exists "public_read_sejours_dates"');
     expect(sql).not.toContain('drop policy if exists "admin_all_sejours"');
@@ -131,7 +131,7 @@ describe('migration 0011 — RLS publique non affaiblie', () => {
   });
 });
 
-describe('migration 0011 — bookings en lecture seule', () => {
+describe('migration 0012 — bookings en lecture seule', () => {
   it('ne supprime pas la table', () => {
     expect(sql).not.toMatch(/drop table[^;]*bookings/i);
   });

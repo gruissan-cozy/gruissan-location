@@ -4,7 +4,7 @@
  * Module PUR : aucune dépendance au DOM, au réseau ou à Supabase.
  * Toutes les fonctions sont couvertes par tests/sejours.test.ts.
  *
- * Depuis la migration 0011 (`bookings` fusionnée dans `sejours`), un séjour
+ * Depuis la migration 0012 (`bookings` fusionnée dans `sejours`), un séjour
  * suit un cycle de vie unique :
  *
  *     demande → option → confirme → termine   (+ annule)
@@ -33,7 +33,7 @@ export interface PlageDates {
  */
 export const STATUTS_BLOQUANTS = ['option', 'confirme'] as const;
 
-/** Statuts possibles d'un séjour (alignés sur la contrainte SQL de 0011). */
+/** Statuts possibles d'un séjour (alignés sur la contrainte SQL de 0012). */
 export const STATUTS_SEJOUR = ['demande', 'option', 'confirme', 'annule', 'termine'] as const;
 
 export type StatutSejour = (typeof STATUTS_SEJOUR)[number];

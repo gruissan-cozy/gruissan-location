@@ -1,5 +1,5 @@
 /**
- * Vocabulaire unifié des réservations (migration 0011).
+ * Vocabulaire unifié des réservations (migration 0012).
  *
  * Module PUR : aucune dépendance à Deno, au DOM, au réseau ou à Supabase.
  * Il est importé par les quatre Edge Functions locataire
@@ -8,7 +8,7 @@
  *
  * Contexte : deux tables coexistaient. `bookings` (formulaire public) portait
  * les statuts `demande | confirmee | annulee | terminee` ; `sejours` (back
- * office) portait `option | confirme | annule | termine`. La migration 0011
+ * office) portait `option | confirme | annule | termine`. La migration 0012
  * fusionne tout dans `sejours` avec le cycle de vie :
  *
  *     demande → option → confirme → termine   (+ annule)
@@ -25,7 +25,7 @@ export const STATUTS_LOCATAIRE = ['confirme', 'termine'] as const;
 
 export type StatutLocataire = (typeof STATUTS_LOCATAIRE)[number];
 
-/** Statut unifié d'un séjour (aligné sur la contrainte SQL de 0011). */
+/** Statut unifié d'un séjour (aligné sur la contrainte SQL de 0012). */
 export const STATUTS_UNIFIES = ['demande', 'option', 'confirme', 'annule', 'termine'] as const;
 
 export type StatutUnifie = (typeof STATUTS_UNIFIES)[number];
@@ -42,7 +42,7 @@ export function estReservationAutorisee(statut: string | null | undefined): bool
 
 /**
  * Correspondance des statuts hérités de `bookings` vers le vocabulaire
- * unifié. Reproduit exactement le `case` de la migration 0011.
+ * unifié. Reproduit exactement le `case` de la migration 0012.
  *
  * Une valeur inconnue (donnée corrompue, futur statut) devient `demande` :
  * jamais bloquante, donc une ligne à trier plutôt que des dates bloquées par
@@ -116,7 +116,7 @@ function ajouterJours(dateIso: string, jours: number): string {
 /**
  * Transforme une demande `bookings` en séjour `sejours`, SANS PERTE.
  *
- * Règles (miroir exact de `migrations/0011_unifier_bookings_sejours.sql`) :
+ * Règles (miroir exact de `migrations/0012_unifier_bookings_sejours.sql`) :
  * - l'identifiant est conservé : les liens locataire déjà émis continuent de
  *   fonctionner, et la migration est idempotente (`on conflict (id)`);
  * - `check_in`/`check_out` deviennent `arrivee`/`depart`;
@@ -133,7 +133,7 @@ export function sejourDepuisBooking(booking: BookingHerite): SejourMigre {
   const incoherente = !(booking.check_out > booking.check_in);
   const depart = incoherente ? ajouterJours(booking.check_in, 1) : booking.check_out;
   const note = incoherente
-    ? `[migration 0011] dates incohérentes reprises de bookings : arrivée ${booking.check_in}, `
+    ? `[migration 0012] dates incohérentes reprises de bookings : arrivée ${booking.check_in}, `
       + `départ ${booking.check_out} (départ ramené au lendemain de l'arrivée).`
     : null;
 

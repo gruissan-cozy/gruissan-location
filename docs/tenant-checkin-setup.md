@@ -74,7 +74,7 @@ inséparable de la preuve.
 
 ## 3. Créer un lien de locataire
 
-Une fois `0007`, `0008`, `0009` et `0011` appliquées, l’espace `/admin/` ne crée
+Une fois `0007`, `0008`, `0009` et `0012` appliquées, l’espace `/admin/` ne crée
 pas encore ces liens. Pour un séjour confirmé, exécuter dans le SQL Editor la
 requête ci-dessous en remplaçant le placeholder par l’UUID du séjour. Elle
 génère un jeton aléatoire unique, lié à l’email du séjour, et l’expire au début
@@ -92,7 +92,7 @@ where id = 'REMPLACER_PAR_UUID_DU_SEJOUR'
 returning token, reservation_id, expires_at;
 ```
 
-Depuis la migration `0011`, la réservation vit dans `sejours` : la colonne de
+Depuis la migration `0012`, la réservation vit dans `sejours` : la colonne de
 départ s’appelle `depart`, le statut confirmé s’écrit `confirme`, et l’email du
 client est `client_email`. Un séjour saisi à la main dans `/admin/sejours/` peut
 désormais recevoir un lien, ce qui n’était pas possible avant la fusion.
