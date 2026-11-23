@@ -282,6 +282,51 @@ Les décisions DA-1 et DA-2 sont prises. Ce tableau liste ce qu'il reste à
 
 ---
 
+## 6 bis. État de livraison du Lot 1 (2026-11-23)
+
+Les 10 tâches du Lot 1 sont livrées et mergées **en local** sur `main`. Rien
+n'est poussé : le merge GitHub et l'application des migrations restent la
+décision de kiki (voir §6 et la note de déploiement ci-dessous).
+
+| # | Tâche | État | Où |
+|---|---|---|---|
+| 1 | Unifier le dossier de réservation (`bookings` → `sejours`) | ✅ livré | `migrations/0012_unifier_bookings_sejours.sql` |
+| 2 | `calendar_blocks` + disponibilité sur deux sources | ✅ livré | `migrations/0011_calendar_blocks.sql`, `src/lib/calendrier.ts` |
+| 3 | Voir et traiter les demandes dans `/admin/` | ✅ livré | `src/pages/admin/demandes.astro` |
+| 4 | Une seule source de vérité pour `/reserver/` | ✅ livré | `src/lib/reservation-disponibilite.ts` |
+| 5 | Taxe de séjour non classé + numéro d'enregistrement | ✅ livré (valeur mairie manquante) | `src/lib/taxe-sejour.ts`, `src/lib/enregistrement.ts` |
+| 6 | Pages légales, CGV, confidentialité (4 langues) | ✅ livré | `content/legal.json`, `content/cgv.json`, 12 pages |
+| 7 | Lien locataire depuis `/admin/sejours/` | ✅ livré | `migrations/0013_tenant_links.sql`, `src/lib/lien-locataire.ts` |
+| 8 | Conserver les états des lieux signés hors purge | ✅ livré | `supabase/functions/_shared/purge.ts` |
+| 9 | Acompte en ligne | ⛔ non lancé — D3 non tranchée | — |
+| 10 | Alerte de nouvelle demande hors back office | ✅ livré | `src/lib/notifications.ts`, `docs/notifications.md` |
+
+**Tâches issues des revues, ouvertes après le Lot 1 :**
+
+| Sujet | État |
+|---|---|
+| Purger `sejours.client_*` et `messages`, ou assumer leur conservation | ⛔ bloqué sur une décision de kiki : la politique de confidentialité décrit l'existant, elle n'annonce plus une suppression que le code n'applique pas |
+| `public/sitemap.xml` statique (4 URL, sans les pages légales ni le guide) | à planifier |
+| Champ `title`/`description` du `Layout` | ✅ corrigé (`src/lib/seo.ts`, 21 tests) |
+
+### Note de déploiement — aucun merge GitHub avant les migrations
+
+Le déploiement GitHub Pages part **automatiquement** au merge sur `main`. Or
+aucune migration n'est appliquée en production Supabase. Dans cet ordre, et
+dans cet ordre seulement :
+
+1. `0011_calendar_blocks.sql`
+2. `0012_unifier_bookings_sejours.sql`
+3. `0013_tenant_links.sql`
+4. redéployer les quatre Edge Functions
+5. pousser `main`
+
+Sauter l'étape 1 ou 2 publie un formulaire `/reserver/` qui écrit dans des
+colonnes inexistantes : la demande affiche une erreur générique et **n'est pas
+enregistrée**. Le détail est dans `docs/tenant-checkin-setup.md` §0.
+
+---
+
 ## 7. Prochaines tâches suggérées (ordre de priorité)
 
 Chaque tâche est détaillée dans son fichier thématique. Toutes respectent les
