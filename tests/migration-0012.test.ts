@@ -17,7 +17,7 @@ import { join } from 'node:path';
  */
 
 const ROOT = new URL('../', import.meta.url).pathname;
-const sql = readFileSync(join(ROOT, 'migrations/0011_unifier_bookings_sejours.sql'), 'utf8');
+const sql = readFileSync(join(ROOT, 'migrations/0012_unifier_bookings_sejours.sql'), 'utf8');
 
 describe('migration 0011 — idempotence', () => {
   it('ajoute les colonnes avec `if not exists`', () => {
@@ -163,7 +163,7 @@ describe('migration 0011 — ordre de mise en service documenté', () => {
 
   it('le guide de mise en service reprend le même ordre', () => {
     expect(doc).toContain('Ordre de mise en service de la migration 0011');
-    expect(doc).toContain('0011_unifier_bookings_sejours.sql');
+    expect(doc).toContain('0012_unifier_bookings_sejours.sql');
     expect(doc).toMatch(/Appliquer `0011`/);
     expect(doc).toMatch(/Déployer les quatre Edge Functions/);
     expect(doc).toMatch(/Merger la branche sur `main`/);

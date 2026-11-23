@@ -96,7 +96,7 @@ magique, sans mot de passe) : messages, calendrier, packs et guide.
 
 ### Un seul dossier de réservation
 
-Depuis la migration [`0011_unifier_bookings_sejours.sql`](migrations/0011_unifier_bookings_sejours.sql),
+Depuis la migration [`0012_unifier_bookings_sejours.sql`](migrations/0012_unifier_bookings_sejours.sql),
 il n'existe **qu'une seule table de réservation** : `sejours`. L'ancienne table
 `bookings` (demandes du formulaire public) y a été fusionnée, identifiants
 conservés, et reste en lecture seule jusqu'à son retrait après une saison.

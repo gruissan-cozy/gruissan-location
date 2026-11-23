@@ -7,7 +7,7 @@ manuellement dans le SQL Editor Supabase, dans cet ordre.
 
 ## 0. Ordre de mise en service de la migration 0011 (à lire en premier)
 
-`0011_unifier_bookings_sejours.sql` fusionne `bookings` dans `sejours`. Le
+`0012_unifier_bookings_sejours.sql` fusionne `bookings` dans `sejours`. Le
 déploiement GitHub Pages est **automatique au merge sur `main`** : si l’ordre
 n’est pas respecté, des demandes sont perdues silencieusement. Séquence
 obligatoire :
