@@ -6,6 +6,7 @@ import type { Lang } from '../i18n';
 import { libelleNumero, lienWhatsApp, numeroAppel, peutAppeler, peutUtiliserWhatsApp } from '../lib/contact';
 import { htmlEnregistrement } from '../lib/enregistrement';
 import { adresseContact, cheminPage } from '../lib/legal';
+import { jsonLd } from '../lib/confiance';
 import { adresseCanonique, alternativesLangues, descriptionPage, titrePage } from '../lib/seo';
 
 interface Props {
@@ -84,7 +85,9 @@ const metaDesc = descriptionPage(description, seo[lang].description);
     />
     <slot name="head" />
     <!-- Données structurées schema.org (résultats enrichis Google) -->
-    <script type="application/ld+json" set:html={JSON.stringify({
+    <!-- `jsonLd()` échappe `<` en `\u003c` : une valeur de contenu ne peut pas
+         fermer la balise `<script>` et injecter du HTML (A03). -->
+    <script type="application/ld+json" set:html={jsonLd({
       '@context': 'https://schema.org',
       '@type': 'LodgingBusiness',
       name: 'Gruissan Cozy',
