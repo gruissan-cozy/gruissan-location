@@ -75,6 +75,10 @@ describe('migrations — ordre d’application sur `main`', () => {
   it('0011 reste calendar_blocks, sans doublon', () => {
     expect(migrations().filter((nom) => nom.startsWith('0011_'))).toEqual(['0011_calendar_blocks.sql']);
   });
+
+  it('l’effacement des coordonnées est la 0014', () => {
+    expect(migrations()).toContain('0014_purge_coordonnees.sql');
+  });
 });
 
 describe('migrations — les tests pointent vers des fichiers existants', () => {
@@ -90,5 +94,36 @@ describe('migrations — les tests pointent vers des fichiers existants', () => 
       }
     }
     expect([...references].filter((nom) => !fichiers.includes(nom))).toEqual([]);
+  });
+});
+
+
+describe('migration 0014 — effacement des coordonnées', () => {
+  const sql = readFileSync(join(ROOT, 'migrations/0014_purge_coordonnees.sql'), 'utf8');
+
+  it('n’ajoute aucune colonne et ne change aucune politique', () => {
+    // Cette migration ne doit rien casser : seulement accélérer la purge.
+    expect(sql).not.toMatch(/add column/i);
+    expect(sql).not.toMatch(/create policy/i);
+    expect(sql).not.toMatch(/drop policy/i);
+    expect(sql).not.toMatch(/alter table[^;]*drop/i);
+  });
+
+  it('ajoute l’index qui sert le balayage `where depart < cutoff`', () => {
+    expect(sql).toMatch(/create index if not exists sejours_depart_idx/i);
+    expect(sql).toContain('on public.sejours (depart)');
+  });
+
+  it('rappelle que `client_nom` est `not null` et ne doit pas être vidée', () => {
+    expect(sql).toContain('client_nom');
+    expect(sql).toMatch(/not null/i);
+  });
+
+  it('est idempotente (`if not exists`)', () => {
+    const index = sql.match(/create index[^;]*/gi) ?? [];
+    expect(index.length).toBeGreaterThan(0);
+    for (const ligne of index) {
+      expect(ligne).toMatch(/if not exists/i);
+    }
   });
 });

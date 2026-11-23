@@ -99,17 +99,19 @@ export const legalT: Record<Lang, Record<string, string>> = {
       "Certains prestataires peuvent héberger des données en dehors de l'Union européenne. Ces transferts s'appuient sur les garanties contractuelles prévues par le RGPD (clauses contractuelles types de la Commission européenne) et sont limités aux données nécessaires au service. C'est notamment le cas des polices d'écriture chargées depuis les serveurs de Google : l'adresse IP du visiteur leur est transmise à chaque affichage d'une page, y compris sur celles-ci.",
     'confidentialite.durees.titre': 'Durées de conservation',
     'confidentialite.durees.intro':
-      "Les durées ci-dessous distinguent ce qui est purgé automatiquement de ce qui est conservé au titre d'une obligation légale :",
+      'Toutes les durées ci-dessous sont appliquées automatiquement par la purge des données :',
     'confidentialite.durees.session':
       "Accès à l'espace locataire (jeton, adresse email de connexion) : supprimé à l'expiration du lien, au plus tard {0} jours après le départ.",
     'confidentialite.durees.notes':
       "Notes libres de l'état des lieux et fichiers non retenus comme preuve : supprimés à la purge qui suit l'expiration de l'accès.",
     'confidentialite.durees.sejour':
-      "Données de la réservation (nom, adresse email, téléphone, message) : conservées dans le dossier de séjour pour la durée légale de conservation comptable et fiscale, qui dépasse le délai de {0} jours applicable à l'accès à l'espace locataire.",
+      "Coordonnées de la réservation (nom, adresse email, téléphone, message) : effacées {0} jours après le départ. Le nom est remplacé par la mention « voyageur effacé » ; le dossier de séjour subsiste sans identité, avec ses dates, son montant et le nombre de personnes, qui servent à la taxe de séjour et à la comptabilité.",
     'confidentialite.durees.preuve':
       "Preuve de l'état des lieux (PDF signé et photographies) : conservée {0} ans à compter du départ, pour répondre à un éventuel litige.",
+    'confidentialite.durees.messages':
+      "Messages envoyés depuis le formulaire de contact : nom, adresse email, téléphone et contenu effacés {0} jours après leur réception.",
     'confidentialite.durees.note':
-      "Les durées de conservation comptable et fiscale applicables à une location saisonnière restent à confirmer par le propriétaire avec son comptable ; elles ne sont pas recopiées ici pour ne pas annoncer un chiffre non vérifié. Une demande d'effacement reste possible à tout moment : voir « Vos droits ».",
+      "Une demande d'effacement reste possible à tout moment, sans attendre ces délais : voir « Vos droits ».",
 
     'confidentialite.droits.titre': 'Vos droits',
     'confidentialite.droits.intro':
@@ -224,17 +226,19 @@ export const legalT: Record<Lang, Record<string, string>> = {
       'Some providers may host data outside the European Union. Such transfers rely on the contractual safeguards provided for by the GDPR (European Commission standard contractual clauses) and are limited to the data needed for the service. This applies in particular to the typefaces loaded from Google servers: the visitor’s IP address is sent to them each time a page is displayed, including these pages.',
     'confidentialite.durees.titre': 'Retention periods',
     'confidentialite.durees.intro':
-      'The periods below distinguish what is purged automatically from what is kept under a legal obligation:',
+      'All the periods below are applied automatically by the data purge:',
     'confidentialite.durees.session':
       'Access to the tenant space (token, sign-in email address): deleted when the link expires, at the latest {0} days after departure.',
     'confidentialite.durees.notes':
       'Free-text notes from the inventory and files not retained as evidence: deleted by the purge that follows the expiry of the access.',
     'confidentialite.durees.sejour':
-      'Booking data (name, email address, telephone, message): kept in the stay file for the legal accounting and tax retention period, which is longer than the {0}-day limit that applies to access to the tenant space.',
+      'Booking contact details (name, email address, telephone, message): erased {0} days after departure. The name is replaced by “erased guest”; the stay record remains without identity, with its dates, amount and number of guests, which are used for the tourist tax and for accounting.',
     'confidentialite.durees.preuve':
       'Inventory report evidence (signed PDF and photographs): retained for {0} years from departure, to respond to a possible dispute.',
+    'confidentialite.durees.messages':
+      'Messages sent from the contact form: name, email address, telephone and content erased {0} days after receipt.',
     'confidentialite.durees.note':
-      'The accounting and tax retention periods applicable to a seasonal rental remain to be confirmed by the owner with their accountant; they are not reproduced here so as not to state an unverified figure. A request for erasure remains possible at any time: see “Your rights”.',
+      'A request for erasure remains possible at any time, without waiting for these periods: see “Your rights”.',
 
     'confidentialite.droits.titre': 'Your rights',
     'confidentialite.droits.intro':
@@ -350,17 +354,19 @@ export const legalT: Record<Lang, Record<string, string>> = {
       'Algunos proveedores pueden alojar datos fuera de la Unión Europea. Estas transferencias se basan en las garantías contractuales previstas por el RGPD (cláusulas contractuales tipo de la Comisión Europea) y se limitan a los datos necesarios para el servicio. Es el caso en particular de las tipografías cargadas desde los servidores de Google: la dirección IP del visitante se les transmite cada vez que se muestra una página, incluidas estas.',
     'confidentialite.durees.titre': 'Plazos de conservación',
     'confidentialite.durees.intro':
-      'Los plazos siguientes distinguen lo que se purga automáticamente de lo que se conserva por una obligación legal:',
+      'Los plazos siguientes se aplican automáticamente mediante la purga de los datos:',
     'confidentialite.durees.session':
       'Acceso al espacio del inquilino (token, dirección de correo de conexión): suprimido al expirar el enlace, a más tardar {0} días después de la salida.',
     'confidentialite.durees.notes':
       'Notas libres del inventario y archivos no conservados como prueba: suprimidos en la purga que sigue a la expiración del acceso.',
     'confidentialite.durees.sejour':
-      'Datos de la reserva (nombre, dirección de correo, teléfono, mensaje): conservados en el expediente de la estancia durante el plazo legal de conservación contable y fiscal, que es superior al plazo de {0} días aplicable al acceso al espacio del inquilino.',
+      'Datos de contacto de la reserva (nombre, dirección de correo, teléfono, mensaje): suprimidos {0} días después de la salida. El nombre se sustituye por «viajero suprimido»; el expediente de la estancia subsiste sin identidad, con sus fechas, su importe y el número de personas, que sirven para la tasa turística y la contabilidad.',
     'confidentialite.durees.preuve':
       'Prueba del inventario (PDF firmado y fotografías): conservada {0} años desde la salida, para responder a un posible litigio.',
+    'confidentialite.durees.messages':
+      'Mensajes enviados desde el formulario de contacto: nombre, dirección de correo, teléfono y contenido suprimidos {0} días después de su recepción.',
     'confidentialite.durees.note':
-      'Los plazos de conservación contable y fiscal aplicables a un alquiler de temporada deben ser confirmados por el propietario con su asesor; no se reproducen aquí para no anunciar una cifra no verificada. En cualquier momento puede solicitarse la supresión: véase «Sus derechos».',
+      'En cualquier momento puede solicitarse la supresión, sin esperar a estos plazos: véase «Sus derechos».',
 
     'confidentialite.droits.titre': 'Sus derechos',
     'confidentialite.droits.intro':
@@ -475,17 +481,19 @@ export const legalT: Record<Lang, Record<string, string>> = {
       'Einige Dienstleister können Daten außerhalb der Europäischen Union hosten. Diese Übermittlungen stützen sich auf die im DSGVO vorgesehenen vertraglichen Garantien (Standardvertragsklauseln der Europäischen Kommission) und beschränken sich auf die für den Dienst erforderlichen Daten. Das gilt insbesondere für die von Google-Servern geladenen Schriftarten: Die IP-Adresse des Besuchers wird bei jedem Seitenaufruf dorthin übertragen, auch auf diesen Seiten.',
     'confidentialite.durees.titre': 'Speicherdauer',
     'confidentialite.durees.intro':
-      'Die folgenden Fristen unterscheiden, was automatisch gelöscht wird und was aufgrund einer gesetzlichen Pflicht aufbewahrt wird:',
+      'Alle folgenden Fristen werden automatisch durch die Löschroutine der Daten angewandt:',
     'confidentialite.durees.session':
       'Zugang zum Mieterbereich (Token, E-Mail-Adresse für die Anmeldung): gelöscht mit Ablauf des Links, spätestens {0} Tage nach der Abreise.',
     'confidentialite.durees.notes':
       'Freie Notizen des Zustandsberichts und nicht als Nachweis aufbewahrte Dateien: gelöscht durch die Löschroutine, die auf den Ablauf des Zugangs folgt.',
     'confidentialite.durees.sejour':
-      'Buchungsdaten (Name, E-Mail-Adresse, Telefon, Nachricht): aufbewahrt im Aufenthaltsvorgang für die gesetzliche buchhalterische und steuerliche Aufbewahrungsfrist, die länger ist als die für den Zugang zum Mieterbereich geltende Frist von {0} Tagen.',
+      'Kontaktdaten der Buchung (Name, E-Mail-Adresse, Telefon, Nachricht): {0} Tage nach der Abreise gelöscht. Der Name wird durch „gelöschter Gast“ ersetzt; der Aufenthaltsvorgang bleibt ohne Identität mit seinen Daten, seinem Betrag und der Personenzahl bestehen, die für die Kurtaxe und die Buchhaltung dienen.',
     'confidentialite.durees.preuve':
       'Nachweis des Zustandsberichts (unterzeichnetes PDF und Fotos): {0} Jahre ab der Abreise aufbewahrt, um einen möglichen Streit beantworten zu können.',
+    'confidentialite.durees.messages':
+      'Über das Kontaktformular gesendete Nachrichten: Name, E-Mail-Adresse, Telefon und Inhalt {0} Tage nach Eingang gelöscht.',
     'confidentialite.durees.note':
-      'Die für eine Ferienvermietung geltenden buchhalterischen und steuerlichen Aufbewahrungsfristen sind vom Eigentümer mit seinem Steuerberater zu bestätigen; sie werden hier nicht wiedergegeben, um keine ungeprüfte Zahl zu nennen. Eine Löschung kann jederzeit beantragt werden: siehe „Ihre Rechte“.',
+      'Eine Löschung kann jederzeit beantragt werden, ohne diese Fristen abzuwarten: siehe „Ihre Rechte“.',
 
     'confidentialite.droits.titre': 'Ihre Rechte',
     'confidentialite.droits.intro':

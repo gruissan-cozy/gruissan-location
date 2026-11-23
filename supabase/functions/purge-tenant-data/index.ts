@@ -1,9 +1,15 @@
 import { BUCKET, corsHeaders, createServiceClient, jsonResponse } from '../_shared/tenant.ts';
 import {
+  RETENTION_COORDONNEES_JOURS,
   RETENTION_DONNEES_PERSONNELLES_JOURS,
   RETENTION_PREUVE_ANNEES,
+  NOM_ANONYMISE,
+  buildEffacementCoordonneesEntry,
+  buildEffacementMessageEntry,
   buildEvidenceExpiryEntry,
+  coordonneesExpiryCutoff,
   evidenceExpiryCutoff,
+  planEffacementSejour,
   planReservationPurge,
   summarizePurge,
   type PurgeEntry,
@@ -63,7 +69,11 @@ async function countRows(
  *     checklist et fichiers hors preuve sont supprimés ; le PDF signé et
  *     les photos d'état des lieux sont CONSERVÉS et anonymisés (métadonnées
  *     vidées), parce qu'ils constituent la preuve en cas de litige ;
- *  2. preuve arrivée au terme de sa durée de conservation
+ *  2. coordonnées du voyageur (`sejours.client_*`) et messages du
+ *     formulaire de contact (`messages`) : effacés une fois le délai de
+ *     RETENTION_COORDONNEES_JOURS écoulé depuis le départ. `client_nom`
+ *     étant `not null`, il est remplacé par un libellé neutre ;
+ *  3. preuve arrivée au terme de sa durée de conservation
  *     (RETENTION_PREUVE_ANNEES après le départ) : elle est supprimée à son
  *     tour, et seulement là.
  *
@@ -162,7 +172,69 @@ Deno.serve(async (req: Request) => {
       report.push({ reservationId, retainedUntil: plan.retainedUntil, ...plan.entry });
     }
 
-    // Second temps : la preuve elle-même, une fois sa durée de conservation
+    // Second temps : les coordonnées du voyageur, dans `sejours` et dans les
+    // messages du formulaire de contact. Le dossier de séjour survit
+    // (dates, montants, statut) : ce sont ces champs, et non l'identité, qui
+    // servent à la taxe de séjour et à la comptabilité.
+    const cutoffCoordonnees = coordonneesExpiryCutoff(now);
+    const { data: sejoursAEffacer, error: sejoursError } = await supabase
+      .from('sejours')
+      .select('id, depart, client_nom, client_email, client_telephone, client_message')
+      .lt('depart', cutoffCoordonnees)
+      .order('depart')
+      .limit(BATCH_SIZE * 10);
+    if (sejoursError) throw new Error('Lecture des séjours à effacer impossible.');
+
+    let effacedSejours = 0;
+    for (const sejour of sejoursAEffacer || []) {
+      const patch = planEffacementSejour(sejour, now);
+      if (!patch) continue;
+      const { error: updateError } = await supabase
+        .from('sejours')
+        .update(patch)
+        .eq('id', sejour.id);
+      if (updateError) throw new Error(`Effacement des coordonnées impossible pour ${sejour.id}.`);
+      effacedSejours += 1;
+      report.push({
+        reservationId: sejour.id,
+        retainedUntil: '',
+        ...buildEffacementCoordonneesEntry(String(sejour.depart)),
+      });
+    }
+
+    // Messages du formulaire de contact : mêmes coordonnées, même délai. Ils
+    // ne sont rattachés à aucun séjour, donc traités séparément.
+    const { data: messagesAEffacer, error: messagesError } = await supabase
+      .from('messages')
+      .select('id')
+      .lt('created_at', `${cutoffCoordonnees}T00:00:00Z`)
+      .limit(BATCH_SIZE * 10);
+    if (messagesError) throw new Error('Lecture des messages à effacer impossible.');
+
+    let effacedMessages = 0;
+    const idsMessages = (messagesAEffacer || []).map((m: { id: string }) => m.id);
+    if (idsMessages.length > 0) {
+      // `nom`, `email` et `message` sont `not null` : même contrainte que
+      // `client_nom`, mêmes valeurs neutres.
+      const { error: messagesUpdateError } = await supabase
+        .from('messages')
+        .update({
+          nom: NOM_ANONYMISE,
+          email: 'efface@invalid',
+          telephone: null,
+          message: 'Message effacé (délai de conservation écoulé).',
+        })
+        .in('id', idsMessages);
+      if (messagesUpdateError) throw new Error('Effacement des messages impossible.');
+      effacedMessages = idsMessages.length;
+      report.push({
+        reservationId: '',
+        retainedUntil: '',
+        ...buildEffacementMessageEntry(effacedMessages),
+      });
+    }
+
+    // Troisième temps : la preuve elle-même, une fois sa durée de conservation
     // atteinte (RETENTION_PREUVE_ANNEES après le départ du locataire).
     const cutoff = evidenceExpiryCutoff(now);
     const { data: agedSejours, error: agedError } = await supabase
@@ -208,6 +280,7 @@ Deno.serve(async (req: Request) => {
 
     const retention = {
       personalDataDays: RETENTION_DONNEES_PERSONNELLES_JOURS,
+      coordonneesDays: RETENTION_COORDONNEES_JOURS,
       evidenceYears: RETENTION_PREUVE_ANNEES,
     };
     const summary = summarizePurge(report);
@@ -217,6 +290,8 @@ Deno.serve(async (req: Request) => {
       removedFiles,
       expiredEvidenceReservations,
       expiredEvidenceFiles,
+      effacedSejours,
+      effacedMessages,
       deferredReservations: deferred.length,
       retention,
       summary,
@@ -228,6 +303,8 @@ Deno.serve(async (req: Request) => {
       removedFiles,
       expiredEvidenceReservations,
       expiredEvidenceFiles,
+      effacedSejours,
+      effacedMessages,
       deferredReservations: deferred.length,
       retention,
       summary,

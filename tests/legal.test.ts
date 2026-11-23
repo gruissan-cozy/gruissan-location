@@ -17,6 +17,7 @@ import {
   valeurPubliee,
 } from '../src/lib/legal';
 import {
+  RETENTION_COORDONNEES_JOURS,
   RETENTION_DONNEES_PERSONNELLES_JOURS,
   RETENTION_PREUVE_ANNEES,
 } from '../supabase/functions/_shared/purge';
@@ -153,12 +154,41 @@ describe('durées de conservation — celles du code, pas une promesse séparée
     }
   });
 
-  it('reste aligné sur la purge réelle : `client_email` n’y apparaît pas', () => {
-    // Si la purge venait à supprimer les données du séjour, ce test tomberait
-    // et forcerait à mettre le texte à jour dans le même commit.
+  it('reste aligné sur la purge réelle : les coordonnées sont bien effacées', () => {
+    // Sens inversé depuis la décision de kiki (2026-11-23) : les coordonnées
+    // du voyageur ne sont plus conservées, elles sont effacées. La page doit
+    // donc pouvoir l'affirmer — et si la purge cessait de le faire, ce test
+    // tomberait pour forcer à corriger le texte dans le même commit.
     const purge = lire('supabase/functions/purge-tenant-data/index.ts');
     for (const colonne of ['client_email', 'client_nom', 'client_telephone', 'client_message']) {
-      expect(purge, `la purge touche désormais ${colonne} : mettre à jour la page`).not.toContain(colonne);
+      expect(purge, `la purge n'efface plus ${colonne} : la page devient fausse`).toContain(colonne);
+    }
+    // `client_nom` est `not null` : elle doit être remplacée, jamais vidée.
+    expect(purge).toContain('NOM_ANONYMISE');
+    expect(purge).not.toMatch(/client_nom:\s*null/);
+    // Les messages du formulaire de contact suivent la même règle.
+    expect(purge).toMatch(/from\(\s*['"]messages['"]\s*\)/);
+  });
+
+  it('annonce le délai réel des coordonnées, importé de la purge', () => {
+    // Le nombre affiché ne doit pas être recopié : il vient de la constante
+    // que la purge applique.
+    expect(DUREES_CONSERVATION.coordonneesJours).toBe(RETENTION_COORDONNEES_JOURS);
+    for (const lang of LANGUAGES) {
+      const sejour = interpoler(legalT[lang]['confidentialite.durees.sejour'], [
+        DUREES_CONSERVATION.coordonneesJours,
+      ]);
+      const messages = interpoler(legalT[lang]['confidentialite.durees.messages'], [
+        DUREES_CONSERVATION.coordonneesJours,
+      ]);
+      expect(sejour, `[${lang}] séjour sans le délai`).toContain(
+        String(DUREES_CONSERVATION.coordonneesJours),
+      );
+      expect(messages, `[${lang}] messages sans le délai`).toContain(
+        String(DUREES_CONSERVATION.coordonneesJours),
+      );
+      expect(sejour).not.toContain('{0}');
+      expect(messages).not.toContain('{0}');
     }
   });
 

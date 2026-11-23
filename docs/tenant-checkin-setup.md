@@ -18,9 +18,11 @@ obligatoire :
    `adultes`, `mineurs`, `prix_estime`, politique `public_insert_sejours`…).
 3. **Appliquer `0013_tenant_links.sql`** (jetons du lien locataire généré
    depuis le back office).
-4. **Déployer les quatre Edge Functions** (§1.3 ci-dessous) : elles lisent désormais
+4. **Appliquer `0014_purge_coordonnees.sql`** (index de la purge des
+   coordonnées voyageur ; sans elle la purge fonctionne, seulement plus lentement).
+5. **Déployer les quatre Edge Functions** (§1.3 ci-dessous) : elles lisent désormais
    `sejours` et les statuts `confirme` / `termine`.
-5. **Merger la branche sur `main`** — c’est ce merge qui publie le formulaire
+6. **Merger la branche sur `main`** — c’est ce merge qui publie le formulaire
    public écrivant dans `sejours`.
 
 Entre le merge et l’exécution des migrations, le formulaire `/reserver/` échoue :

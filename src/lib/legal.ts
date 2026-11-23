@@ -15,6 +15,7 @@
 import type { Lang } from '../i18n';
 import { valeurEnregistrement } from './enregistrement';
 import {
+  RETENTION_COORDONNEES_JOURS,
   RETENTION_DONNEES_PERSONNELLES_JOURS,
   RETENTION_PREUVE_ANNEES,
 } from '../../supabase/functions/_shared/purge';
@@ -69,6 +70,8 @@ export function ligneEnregistrement(numero: unknown, libelle: string): string {
 /** Durées de conservation, lues depuis la purge effective des données. */
 export const DUREES_CONSERVATION = {
   donneesPersonnellesJours: RETENTION_DONNEES_PERSONNELLES_JOURS,
+  /** Coordonnées du voyageur (`sejours.client_*`) et messages de contact. */
+  coordonneesJours: RETENTION_COORDONNEES_JOURS,
   preuveAnnees: RETENTION_PREUVE_ANNEES,
 } as const;
 

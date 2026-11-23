@@ -69,7 +69,7 @@ magique, sans mot de passe) : messages, calendrier, packs et guide.
 1. Créez un projet gratuit sur [supabase.com](https://supabase.com).
 2. Dans **SQL Editor**, exécutez dans l'ordre **toutes** les migrations de
    [`migrations/`](migrations/) : `0001_init.sql` (tables + RLS + données
-   initiales), puis `0002` à `0013`. Le fichier
+   initiales), puis `0002` à `0014`. Le fichier
    [`docs/tenant-checkin-setup.md`](docs/tenant-checkin-setup.md) précise l'ordre
    exact et, à partir de `0011`, la séquence à respecter avant le déploiement du
    site (migrations → fonctions → merge).

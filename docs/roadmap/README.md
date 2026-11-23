@@ -277,7 +277,7 @@ Les décisions DA-1 et DA-2 sont prises. Ce tableau liste ce qu'il reste à
 | **Paiement (D3)** | Accepte-t-on Stripe (payant) malgré la règle « pas de service payant » ? | Kiki | Pas de réservation en ligne possible |
 | **Caution** | Montant, mode (empreinte / chèque / virement), délai de restitution | Kiki | Litige à chaque départ |
 | **Annulation** | Valider le barème de `content/annulation.json` (aujourd'hui `a_valider: true`) | Kiki | CGV inapplicables |
-| **RGPD** | Durée de conservation : combien de temps garder les états des lieux ? | Kiki | Purge actuelle détruit la preuve |
+| **RGPD** | Durée de conservation des états des lieux signés (5 ans aujourd'hui) | Kiki | Preuve détruite trop tôt, ou conservée trop longtemps |
 | **Domaine** | Acheter un domaine (10–15 €/an) avant d'encaisser des paiements ? | Kiki | Un `github.io` inspire peu confiance pour payer |
 
 ---
@@ -305,7 +305,7 @@ décision de kiki (voir §6 et la note de déploiement ci-dessous).
 
 | Sujet | État |
 |---|---|
-| Purger `sejours.client_*` et `messages`, ou assumer leur conservation | ⛔ bloqué sur une décision de kiki : la politique de confidentialité décrit l'existant, elle n'annonce plus une suppression que le code n'applique pas |
+| Purger `sejours.client_*` et `messages` | ✅ **tranché par kiki (2026-11-23) : on purge, sans conservation légale.** Effacement 30 jours après le départ / réception, `client_nom` remplacé par un libellé neutre (`not null`), messages vidés. `migrations/0014_purge_coordonnees.sql` + `_shared/purge.ts` |
 | `public/sitemap.xml` statique (4 URL, sans les pages légales ni le guide) | à planifier |
 | Champ `title`/`description` du `Layout` | ✅ corrigé (`src/lib/seo.ts`, 21 tests) |
 
@@ -318,8 +318,9 @@ dans cet ordre seulement :
 1. `0011_calendar_blocks.sql`
 2. `0012_unifier_bookings_sejours.sql`
 3. `0013_tenant_links.sql`
-4. redéployer les quatre Edge Functions
-5. pousser `main`
+4. `0014_purge_coordonnees.sql` (index seulement — la purge marche sans, plus lentement)
+5. redéployer les quatre Edge Functions
+6. pousser `main`
 
 Sauter l'étape 1 ou 2 publie un formulaire `/reserver/` qui écrit dans des
 colonnes inexistantes : la demande affiche une erreur générique et **n'est pas
