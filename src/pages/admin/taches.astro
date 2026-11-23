@@ -141,7 +141,11 @@ const configured = isSupabaseConfigured;
       toast(errText(resSejours.error) || AT['common.errorGeneric'], 'error');
       return;
     }
-    sejours = (resSejours.data ?? []) as Sejour[];
+    // Une `demande` n'est pas encore un séjour : elle n'a pas de tâches
+    // (ménage, clés) tant que le propriétaire ne l'a pas passée en option ou
+    // confirmée. Depuis la migration 0012, `sejours` contient aussi les
+    // demandes du formulaire public : on les écarte de cette page.
+    sejours = ((resSejours.data ?? []) as Sejour[]).filter((s) => s.statut !== 'demande');
 
     // Les tâches vivent dans leur propre table : si elle n'existe pas,
     // on affiche un bandeau et la case reste cochable sans persistance.

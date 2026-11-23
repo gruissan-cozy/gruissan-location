@@ -277,8 +277,54 @@ Les décisions DA-1 et DA-2 sont prises. Ce tableau liste ce qu'il reste à
 | **Paiement (D3)** | Accepte-t-on Stripe (payant) malgré la règle « pas de service payant » ? | Kiki | Pas de réservation en ligne possible |
 | **Caution** | Montant, mode (empreinte / chèque / virement), délai de restitution | Kiki | Litige à chaque départ |
 | **Annulation** | Valider le barème de `content/annulation.json` (aujourd'hui `a_valider: true`) | Kiki | CGV inapplicables |
-| **RGPD** | Durée de conservation : combien de temps garder les états des lieux ? | Kiki | Purge actuelle détruit la preuve |
+| **RGPD** | Durée de conservation des états des lieux signés (5 ans aujourd'hui) | Kiki | Preuve détruite trop tôt, ou conservée trop longtemps |
 | **Domaine** | Acheter un domaine (10–15 €/an) avant d'encaisser des paiements ? | Kiki | Un `github.io` inspire peu confiance pour payer |
+
+---
+
+## 6 bis. État de livraison du Lot 1 (2026-11-23)
+
+Les 10 tâches du Lot 1 sont livrées et mergées **en local** sur `main`. Rien
+n'est poussé : le merge GitHub et l'application des migrations restent la
+décision de kiki (voir §6 et la note de déploiement ci-dessous).
+
+| # | Tâche | État | Où |
+|---|---|---|---|
+| 1 | Unifier le dossier de réservation (`bookings` → `sejours`) | ✅ livré | `migrations/0012_unifier_bookings_sejours.sql` |
+| 2 | `calendar_blocks` + disponibilité sur deux sources | ✅ livré | `migrations/0011_calendar_blocks.sql`, `src/lib/calendrier.ts` |
+| 3 | Voir et traiter les demandes dans `/admin/` | ✅ livré | `src/pages/admin/demandes.astro` |
+| 4 | Une seule source de vérité pour `/reserver/` | ✅ livré | `src/lib/reservation-disponibilite.ts` |
+| 5 | Taxe de séjour non classé + numéro d'enregistrement | ✅ livré (valeur mairie manquante) | `src/lib/taxe-sejour.ts`, `src/lib/enregistrement.ts` |
+| 6 | Pages légales, CGV, confidentialité (4 langues) | ✅ livré | `content/legal.json`, `content/cgv.json`, 12 pages |
+| 7 | Lien locataire depuis `/admin/sejours/` | ✅ livré | `migrations/0013_tenant_links.sql`, `src/lib/lien-locataire.ts` |
+| 8 | Conserver les états des lieux signés hors purge | ✅ livré | `supabase/functions/_shared/purge.ts` |
+| 9 | Acompte en ligne | ⛔ non lancé — D3 non tranchée | — |
+| 10 | Alerte de nouvelle demande hors back office | ✅ livré | `src/lib/notifications.ts`, `docs/notifications.md` |
+
+**Tâches issues des revues, ouvertes après le Lot 1 :**
+
+| Sujet | État |
+|---|---|
+| Purger `sejours.client_*` et `messages` | ✅ **tranché par kiki (2026-11-23) : on purge, sans conservation légale.** Effacement 30 jours après le départ / réception, `client_nom` remplacé par un libellé neutre (`not null`), messages vidés. `migrations/0014_purge_coordonnees.sql` + `_shared/purge.ts` |
+| `public/sitemap.xml` statique (4 URL, sans les pages légales ni le guide) | à planifier |
+| Champ `title`/`description` du `Layout` | ✅ corrigé (`src/lib/seo.ts`, 21 tests) |
+
+### Note de déploiement — aucun merge GitHub avant les migrations
+
+Le déploiement GitHub Pages part **automatiquement** au merge sur `main`. Or
+aucune migration n'est appliquée en production Supabase. Dans cet ordre, et
+dans cet ordre seulement :
+
+1. `0011_calendar_blocks.sql`
+2. `0012_unifier_bookings_sejours.sql`
+3. `0013_tenant_links.sql`
+4. `0014_purge_coordonnees.sql` (index seulement — la purge marche sans, plus lentement)
+5. redéployer les quatre Edge Functions
+6. pousser `main`
+
+Sauter l'étape 1 ou 2 publie un formulaire `/reserver/` qui écrit dans des
+colonnes inexistantes : la demande affiche une erreur générique et **n'est pas
+enregistrée**. Le détail est dans `docs/tenant-checkin-setup.md` §0.
 
 ---
 

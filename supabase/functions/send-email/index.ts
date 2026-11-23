@@ -1,4 +1,5 @@
 import { BUCKET, corsHeaders, createServiceClient, jsonResponse, readTenantToken, validateTenantToken } from '../_shared/tenant.ts';
+import { estReservationAutorisee } from '../_shared/reservation.ts';
 
 const EMAIL_COPY: Record<string, { tenantSubject: string; tenantBody: string; ownerSubject: string; ownerBody: string; reportFile: string }> = {
   fr: {
@@ -86,14 +87,22 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (reportError || !report) return jsonResponse({ error: 'Rapport PDF introuvable.' }, 404);
 
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .select('nom, email, statut, lang')
+    // Migration 0011 : la réservation vit dans `sejours` (statuts `confirme` /
+    // `termine`). Règle partagée par les quatre fonctions locataire.
+    const { data: sejour, error: sejourError } = await supabase
+      .from('sejours')
+      .select('client_nom, client_email, statut, lang')
       .eq('id', reservationId)
       .maybeSingle();
-    if (bookingError || !booking || !['confirmee', 'terminee'].includes(booking.statut)) {
+    if (sejourError || !sejour || !estReservationAutorisee(sejour.statut)) {
       return jsonResponse({ error: 'Réservation non autorisée.' }, 403);
     }
+    const booking = {
+      nom: sejour.client_nom,
+      email: sejour.client_email,
+      statut: sejour.statut,
+      lang: sejour.lang,
+    };
     if (!booking.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email)) {
       return jsonResponse({ error: 'Adresse email du locataire manquante ou invalide.' }, 422);
     }

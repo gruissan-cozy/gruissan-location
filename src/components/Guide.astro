@@ -56,7 +56,7 @@ const titre = (s: GuideSectionLike) => s.titre[lang] || s.titre.fr || s.slug;
 const contenu = (s: GuideSectionLike) => s.contenu[lang] || s.contenu.fr || '';
 ---
 
-<Layout lang={lang} title={tr['guide.title']}>
+<Layout lang={lang} title={tr['guide.title']} description={tr['guide.subtitle']}>
   <!-- En-tête du guide -->
   <section class="guide-header bg-ocean-900 text-white">
     <div class="max-w-4xl mx-auto px-4 pt-16 pb-14 sm:pt-20 sm:pb-16">

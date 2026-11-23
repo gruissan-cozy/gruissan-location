@@ -1,0 +1,140 @@
+---
+import LegalPage from './LegalPage.astro';
+import site from '../../content/site.json';
+import { t } from '../i18n';
+import type { Lang } from '../i18n';
+import { legalT } from '../i18n/legal';
+import { DUREES_CONSERVATION, adresseContact, cheminPage, interpoler } from '../lib/legal';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props as Props;
+const tr = legalT[lang];
+const commun = t[lang];
+
+// Adresse réellement publiable : un domaine réservé à la documentation
+// (exemple.com) ne reçoit aucun courrier et ne doit jamais être affiché.
+const email = adresseContact(site.email);
+const exercer = email
+  ? interpoler(tr['confidentialite.droits.exercer'], [email])
+  : tr['confidentialite.droits.exercerSansEmail'];
+const responsable = email
+  ? interpoler(tr['confidentialite.responsable.texte'], [email])
+  : tr['confidentialite.responsable.sansEmail'];
+// Trois durées distinctes, toutes appliquées par la purge : la session
+// locataire, les coordonnées de la réservation et celles des messages.
+const dureesSession = interpoler(tr['confidentialite.durees.session'], [
+  DUREES_CONSERVATION.donneesPersonnellesJours,
+]);
+const dureesSejour = interpoler(tr['confidentialite.durees.sejour'], [
+  DUREES_CONSERVATION.coordonneesJours,
+]);
+const dureesMessages = interpoler(tr['confidentialite.durees.messages'], [
+  DUREES_CONSERVATION.coordonneesJours,
+]);
+const dureesPreuve = interpoler(tr['confidentialite.durees.preuve'], [
+  DUREES_CONSERVATION.preuveAnnees,
+]);
+---
+
+<LegalPage lang={lang} titre={tr['confidentialite.title']} sousTitre={tr['confidentialite.subtitle']}>
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.responsable.titre']}</h2>
+    <p>{responsable}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.donnees.titre']}</h2>
+    <p>{tr['confidentialite.donnees.intro']}</p>
+    <ul class="mt-3 space-y-2 list-disc pl-5">
+      <li>{tr['confidentialite.donnees.reservation']}</li>
+      <li>{tr['confidentialite.donnees.contact']}</li>
+      <li>{tr['confidentialite.donnees.etat']}</li>
+      <li>{tr['confidentialite.donnees.techniques']}</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.finalites.titre']}</h2>
+    <p>{tr['confidentialite.finalites.intro']}</p>
+    <ul class="mt-3 space-y-2 list-disc pl-5">
+      <li>{tr['confidentialite.finalites.reservation']}</li>
+      <li>{tr['confidentialite.finalites.sejour']}</li>
+      <li>{tr['confidentialite.finalites.preuve']}</li>
+      <li>{tr['confidentialite.finalites.legal']}</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.base.titre']}</h2>
+    <p>{tr['confidentialite.base.texte']}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.destinataires.titre']}</h2>
+    <p>{tr['confidentialite.destinataires.texte']}</p>
+    <ul class="mt-3 space-y-2 list-disc pl-5">
+      <li>{tr['confidentialite.destinataires.supabase']}</li>
+      <li>{tr['confidentialite.destinataires.resend']}</li>
+      <li>{tr['confidentialite.destinataires.hebergeur']}</li>
+      <li>{tr['confidentialite.destinataires.formsubmit']}</li>
+      <li>{tr['confidentialite.destinataires.googlefonts']}</li>
+      <li>{tr['confidentialite.destinataires.autorites']}</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.transferts.titre']}</h2>
+    <p>{tr['confidentialite.transferts.texte']}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.durees.titre']}</h2>
+    <p>{tr['confidentialite.durees.intro']}</p>
+    <ul class="mt-3 space-y-2 list-disc pl-5">
+      <li>{dureesSession}</li>
+      <li>{tr['confidentialite.durees.notes']}</li>
+      <li>{dureesSejour}</li>
+      <li>{dureesMessages}</li>
+      <li>{dureesPreuve}</li>
+    </ul>
+    <p class="mt-3 text-sm text-ocean-700/80">{tr['confidentialite.durees.note']}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.droits.titre']}</h2>
+    <p>{tr['confidentialite.droits.intro']}</p>
+    <ul class="mt-3 space-y-2 list-disc pl-5">
+      <li>{tr['confidentialite.droits.acces']}</li>
+      <li>{tr['confidentialite.droits.rectification']}</li>
+      <li>{tr['confidentialite.droits.effacement']}</li>
+      <li>{tr['confidentialite.droits.limitation']}</li>
+      <li>{tr['confidentialite.droits.opposition']}</li>
+      <li>{tr['confidentialite.droits.portabilite']}</li>
+    </ul>
+    <p class="mt-3">{exercer}</p>
+    <p class="mt-2 text-sm text-ocean-700/80">{tr['confidentialite.droits.reclamation']}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.cookies.titre']}</h2>
+    <p>{tr['confidentialite.cookies.texte']}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.photos.titre']}</h2>
+    <p>{tr['confidentialite.photos.texte']}</p>
+  </section>
+
+  <section class="border-t border-sand-200 pt-6 text-sm">
+    <p>
+      <a href={cheminPage('mentions-legales', lang)} class="text-ocean-600 hover:text-ocean-500 underline font-medium">
+        {commun['footer.legal']}
+      </a>
+    </p>
+    <p class="mt-2 text-ocean-700/80">
+      {email
+        ? <a href={`mailto:${email}`} class="text-ocean-600 hover:text-ocean-500 underline">{email}</a>
+        : tr['legal.contactNonPublie']}
+    </p>
+  </section>
+</LegalPage>

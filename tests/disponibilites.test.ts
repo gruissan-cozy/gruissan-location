@@ -3,9 +3,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   chargerDisponibilites,
   plagesDepuisJson,
-  plagesDepuisSejours,
   plagesRepli,
 } from '../src/lib/disponibilites';
+import { plagesDepuisSejours } from '../src/lib/calendrier';
 
 describe('plagesDepuisSejours', () => {
   it('occupe les nuits du séjour, jour de départ exclu', () => {
@@ -134,16 +134,32 @@ describe('plagesRepli (content/disponibilites.json)', () => {
 // Repli et priorité Supabase
 // ---------------------------------------------------------------------------
 
-/** Façonne un client Supabase minimal : `from('sejours').select(...)` suffit. */
-function fauxClient(reponse: { data: unknown; error: unknown } | Error): SupabaseClient {
-  const erreur = reponse instanceof Error ? reponse : null;
-  const valeur = reponse instanceof Error ? { data: null, error: { message: 'erreur' } } : reponse;
+interface ReponseTable {
+  data?: unknown;
+  error?: unknown;
+  throws?: boolean;
+}
+
+/**
+ * Façonne un client Supabase minimal lisant DEUX tables (`sejours` et
+ * `calendar_blocks`). Chaque table peut répondre, échouer (`error`) ou lever.
+ */
+function fauxClient(tables: Record<string, ReponseTable | Error>): SupabaseClient {
   return {
-    from: () => ({
-      select: () => (erreur ? Promise.reject(erreur) : Promise.resolve(valeur)),
+    from: (table: string) => ({
+      select: () => {
+        const reponse = tables[table];
+        if (!reponse) return Promise.resolve({ data: null, error: { message: `relation "${table}" does not exist` } });
+        if (reponse instanceof Error) return Promise.reject(reponse);
+        if (reponse.throws) return Promise.reject(new Error('réseau indisponible'));
+        return Promise.resolve({ data: reponse.data ?? null, error: reponse.error ?? null });
+      },
     }),
   } as unknown as SupabaseClient;
 }
+
+/** Réponse standard : la table n'existe pas encore (migration non appliquée). */
+const TABLE_ABSENTE: ReponseTable = { data: null, error: { message: 'relation does not exist' } };
 
 describe('chargerDisponibilites', () => {
   it('retombe sur le JSON sans Supabase configuré', async () => {
@@ -157,42 +173,87 @@ describe('chargerDisponibilites', () => {
     expect(res.source).toBe('json');
   });
 
-  it('utilise la table sejours quand Supabase répond', async () => {
+  it('utilise les deux tables quand Supabase répond', async () => {
     const client = fauxClient({
-      data: [{ arrivee: '2026-07-10', depart: '2026-07-17' }],
-      error: null,
+      sejours: { data: [{ arrivee: '2026-07-10', depart: '2026-07-17' }], error: null },
+      calendar_blocks: { data: [{ debut: '2026-08-03', fin: '2026-08-08' }], error: null },
     });
     const res = await chargerDisponibilites({ configure: true, client });
     expect(res.source).toBe('supabase');
-    expect(res.plages).toEqual([{ debut: '2026-07-10', fin: '2026-07-16', etat: 'occupe' }]);
+    expect(res.plages).toEqual([
+      { debut: '2026-07-10', fin: '2026-07-16', etat: 'occupe' },
+      // Blocage : `fin` inclusive, donc le 8 août est bien bloqué.
+      { debut: '2026-08-03', fin: '2026-08-08', etat: 'occupe' },
+    ]);
   });
 
-  it('retombe sur le JSON quand la table sejours n’existe pas encore', async () => {
-    // Cas réel : migrations/0003_sejours.sql pas encore appliquée sur le projet.
-    const client = fauxClient({ data: null, error: { message: 'relation "sejours" does not exist' } });
+  it('garde les séjours quand calendar_blocks n’existe pas encore, et ajoute le repli', async () => {
+    // Cas réel : 0011_calendar_blocks.sql pas encore appliquée. Une source est
+    // illisible : on ne peut pas affirmer que le reste est libre, donc les
+    // plages du repli statique (juin partiel, juillet-août occupés, décembre
+    // partiel) s'ajoutent aux séjours réellement lus.
+    const client = fauxClient({
+      sejours: { data: [{ arrivee: '2026-07-10', depart: '2026-07-17' }], error: null },
+      calendar_blocks: TABLE_ABSENTE,
+    });
+    const res = await chargerDisponibilites({ configure: true, client });
+    expect(res.source).toBe('json');
+    expect(res.plages).toEqual([
+      { debut: '2026-06-01', fin: '2026-06-30', etat: 'partiel' },
+      { debut: '2026-07-01', fin: '2026-08-31', etat: 'occupe' },
+      { debut: '2026-12-01', fin: '2026-12-31', etat: 'partiel' },
+    ]);
+  });
+
+  it('garde les blocages quand sejours n’existe pas encore, et ajoute le repli', async () => {
+    const client = fauxClient({
+      sejours: TABLE_ABSENTE,
+      calendar_blocks: { data: [{ debut: '2026-03-03', fin: '2026-03-08' }], error: null },
+    });
+    const res = await chargerDisponibilites({ configure: true, client });
+    expect(res.source).toBe('json');
+    expect(res.plages).toEqual([
+      { debut: '2026-03-03', fin: '2026-03-08', etat: 'occupe' },
+      { debut: '2026-06-01', fin: '2026-06-30', etat: 'partiel' },
+      { debut: '2026-07-01', fin: '2026-08-31', etat: 'occupe' },
+      { debut: '2026-12-01', fin: '2026-12-31', etat: 'partiel' },
+    ]);
+  });
+
+  it('ne conclut jamais « libre » quand sejours échoue et calendar_blocks est vide', async () => {
+    // Le défaut corrigé : avant, cette combinaison renvoyait `supabase` + `[]`,
+    // c'est-à-dire « tout est libre », alors que juillet et août sont réservés.
+    const client = fauxClient({
+      sejours: new Error('réseau'),
+      calendar_blocks: { data: [], error: null },
+    });
+    const res = await chargerDisponibilites({ configure: true, client });
+    expect(res.source).toBe('json');
+    expect(res.plages).toEqual(plagesRepli());
+    expect(res.plages).not.toEqual([]);
+  });
+
+  it('retombe sur le JSON quand les deux tables sont absentes', async () => {
+    const client = fauxClient({ sejours: TABLE_ABSENTE, calendar_blocks: TABLE_ABSENTE });
     const res = await chargerDisponibilites({ configure: true, client });
     expect(res.source).toBe('json');
     expect(res.plages).toEqual(plagesRepli());
   });
 
-  it('retombe sur le JSON quand la requête lève une exception', async () => {
-    const res = await chargerDisponibilites({
-      configure: true,
-      client: fauxClient(new Error('réseau indisponible')),
-    });
+  it('retombe sur le JSON quand les deux requêtes lèvent une exception', async () => {
+    const client = fauxClient({ sejours: new Error('réseau'), calendar_blocks: new Error('réseau') });
+    const res = await chargerDisponibilites({ configure: true, client });
     expect(res.source).toBe('json');
     expect(res.plages).toEqual(plagesRepli());
   });
 
-  it('retombe sur le JSON quand la réponse ne contient pas de données', async () => {
-    const res = await chargerDisponibilites({ configure: true, client: fauxClient({ data: null, error: null }) });
-    expect(res.source).toBe('json');
-  });
-
-  it('une liste de séjours vide signifie « tout libre » (pas de repli JSON)', async () => {
-    // Supabase est joignable et la table existe : on lui fait confiance,
-    // même si aucun séjour n'est encore saisi dans le back office.
-    const client = fauxClient({ data: [], error: null });
+  it('une liste vide sur les deux tables signifie « tout libre » (pas de repli JSON)', async () => {
+    // Supabase est joignable et les tables existent : on leur fait confiance,
+    // même si rien n'est encore saisi dans le back office.
+    const client = fauxClient({
+      sejours: { data: [], error: null },
+      calendar_blocks: { data: [], error: null },
+    });
     const res = await chargerDisponibilites({ configure: true, client });
     expect(res.source).toBe('supabase');
     expect(res.plages).toEqual([]);

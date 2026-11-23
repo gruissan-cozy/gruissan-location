@@ -1,0 +1,40 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { legalT } from '../i18n/legal';
+import { formaterDate } from '../lib/legal';
+import legal from '../../content/legal.json';
+import type { Lang } from '../i18n';
+
+interface Props {
+  lang: Lang;
+  titre: string;
+  sousTitre: string;
+}
+
+const { lang, titre, sousTitre } = Astro.props as Props;
+const tr = legalT[lang];
+const dateMaj = formaterDate(legal.date_mise_a_jour, lang);
+const accueil = `/gruissan-location/${lang === 'fr' ? '' : lang + '/'}`;
+---
+
+<Layout lang={lang} title={titre} description={sousTitre}>
+  <section class="bg-ocean-900 text-white">
+    <div class="max-w-3xl mx-auto px-4 pt-16 pb-12 sm:pt-20 sm:pb-14">
+      <a
+        href={accueil}
+        class="inline-flex items-center gap-2 text-sand-100/80 hover:text-white text-sm transition-colors"
+      >
+        <span aria-hidden="true">←</span>{tr['legal.retour']}
+      </a>
+      <h1 class="mt-6 font-display text-4xl sm:text-5xl font-semibold leading-tight">{titre}</h1>
+      <p class="mt-5 text-lg text-sand-100/90 max-w-2xl leading-relaxed">{sousTitre}</p>
+      {dateMaj && (
+        <p class="mt-4 text-xs text-sand-100/60">{tr['legal.miseAJour']} {dateMaj}</p>
+      )}
+    </div>
+  </section>
+
+  <article class="max-w-3xl mx-auto px-4 py-12 sm:py-16 space-y-10 text-ocean-800 leading-relaxed">
+    <slot />
+  </article>
+</Layout>

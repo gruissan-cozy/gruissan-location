@@ -67,8 +67,12 @@ magique, sans mot de passe) : messages, calendrier, packs et guide.
 ### Activer le back office (une seule fois)
 
 1. Créez un projet gratuit sur [supabase.com](https://supabase.com).
-2. Dans **SQL Editor**, exécutez le contenu de [`migrations/0001_init.sql`](migrations/0001_init.sql)
-   (crée les tables + les règles de sécurité RLS + les données initiales).
+2. Dans **SQL Editor**, exécutez dans l'ordre **toutes** les migrations de
+   [`migrations/`](migrations/) : `0001_init.sql` (tables + RLS + données
+   initiales), puis `0002` à `0014`. Le fichier
+   [`docs/tenant-checkin-setup.md`](docs/tenant-checkin-setup.md) précise l'ordre
+   exact et, à partir de `0011`, la séquence à respecter avant le déploiement du
+   site (migrations → fonctions → merge).
 3. Dans **Authentication → Providers**, activez **Email** et le **Magic Link**.
    Ajoutez l'URL du site dans **Authentication → URL Configuration → Redirect URLs** :
    `https://gruissan-cozy.github.io/gruissan-location/admin/`
@@ -89,6 +93,29 @@ magique, sans mot de passe) : messages, calendrier, packs et guide.
 | `/admin/disponibilites/` | Statut des 12 prochains mois (libre / partiel / réservé) + note interne |
 | `/admin/packs/` | Options proposées à la réservation (4 langues, prix, unité, ordre, actif) |
 | `/admin/guide/` | Guide d'accueil numérique (titre + contenu HTML en 4 langues) |
+
+### Un seul dossier de réservation
+
+Depuis la migration [`0012_unifier_bookings_sejours.sql`](migrations/0012_unifier_bookings_sejours.sql),
+il n'existe **qu'une seule table de réservation** : `sejours`. L'ancienne table
+`bookings` (demandes du formulaire public) y a été fusionnée, identifiants
+conservés, et reste en lecture seule jusqu'à son retrait après une saison.
+
+Un séjour suit un cycle de vie unique, et **un seul vocabulaire** :
+
+| Statut | Sens | Bloque le calendrier |
+|---|---|---|
+| `demande` | Demande reçue depuis `/reserver/` | Non |
+| `option` | Dates tenues, demande en cours de traitement | Oui |
+| `confirme` | Réservation confirmée | Oui |
+| `termine` | Séjour passé | Non (n'apparaît plus) |
+| `annule` | Séjour annulé | Non |
+
+Les quatre Edge Functions locataire (`tenant-upload`, `generate-pdf`,
+`send-email`, `purge-tenant-data`) n'acceptent l'état des lieux que pour les
+statuts `confirme` et `termine`. Cette règle est centralisée dans
+[`supabase/functions/_shared/reservation.ts`](supabase/functions/_shared/reservation.ts)
+et testée : ne jamais la dupliquer dans une fonction.
 
 ### Mode dégradé (sans Supabase)
 

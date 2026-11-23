@@ -1,0 +1,142 @@
+---
+import LegalPage from './LegalPage.astro';
+import site from '../../content/site.json';
+import legal from '../../content/legal.json';
+import { t } from '../i18n';
+import type { Lang } from '../i18n';
+import { legalT } from '../i18n/legal';
+import {
+  aDesChampsRenseignes,
+  adresseContact,
+  champsRenseignes,
+  cheminPage,
+  interpoler,
+  ligneEnregistrement,
+  valeurPubliee,
+} from '../lib/legal';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props as Props;
+const tr = legalT[lang];
+const commun = t[lang];
+
+// Adresse réellement publiable : un domaine réservé à la documentation
+// (exemple.com) ne reçoit aucun courrier et ne doit jamais être affiché.
+const email = adresseContact(site.email);
+
+const editeur = champsRenseignes(legal.exploitant);
+const assurance = champsRenseignes(legal.assurance);
+
+const libelleEditeur: Record<string, string> = {
+  nom: tr['mentions.editeur.nom'],
+  forme_juridique: tr['mentions.editeur.forme'],
+  siret: tr['mentions.editeur.siret'],
+  adresse: tr['mentions.editeur.adresse'],
+  telephone: tr['mentions.editeur.telephone'],
+};
+const libelleAssurance: Record<string, string> = {
+  assureur: tr['mentions.assurance.assureur'],
+  numero_contrat: tr['mentions.assurance.contrat'],
+};
+
+const enregistrement = ligneEnregistrement(
+  site.numero_enregistrement_mairie,
+  commun['footer.enregistrement'],
+);
+const hebergeurNom = valeurPubliee(legal.hebergeur.nom);
+const hebergeurAdresse = valeurPubliee(legal.hebergeur.adresse);
+const hebergeurSite = valeurPubliee(legal.hebergeur.site);
+
+const texteActivite = interpoler(tr['mentions.activite.texte'], [
+  site.adresse_ligne,
+  site.code_postal,
+  site.ville,
+  site.region,
+]);
+const textePublication = email
+  ? interpoler(tr['mentions.publication.texte'], [email])
+  : tr['mentions.publication.sansEmail'];
+---
+
+<LegalPage lang={lang} titre={tr['mentions.title']} sousTitre={tr['mentions.subtitle']}>
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['mentions.editeur.titre']}</h2>
+    <p>{tr['mentions.editeur.intro']}</p>
+    <dl class="mt-4 space-y-2 text-sm">
+      {editeur.map(({ cle, valeur }) => (
+        <div class="flex flex-col sm:flex-row sm:gap-2">
+          <dt class="font-semibold text-ocean-900 sm:min-w-56">{libelleEditeur[cle] ?? cle}</dt>
+          <dd>{valeur}</dd>
+        </div>
+      ))}
+      <div class="flex flex-col sm:flex-row sm:gap-2">
+        <dt class="font-semibold text-ocean-900 sm:min-w-56">{tr['mentions.editeur.email']}</dt>
+        <dd>
+          {email
+            ? <a href={`mailto:${email}`} class="text-ocean-600 hover:text-ocean-500 underline">{email}</a>
+            : <span class="text-ocean-700/80">{tr['legal.contactNonPublie']}</span>}
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['mentions.activite.titre']}</h2>
+    <p>{texteActivite}</p>
+    {enregistrement && (
+      <p class="mt-2">{enregistrement}</p>
+    )}
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['mentions.publication.titre']}</h2>
+    <p>{textePublication}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['mentions.hebergeur.titre']}</h2>
+    {hebergeurNom && (
+      <>
+        <p>{interpoler(tr['mentions.hebergeur.texte'], [hebergeurNom])}</p>
+        {hebergeurAdresse && <p class="mt-2 text-sm">{hebergeurAdresse}</p>}
+        {hebergeurSite && (
+          <p class="mt-1 text-sm">
+            <a href={hebergeurSite} target="_blank" rel="noopener noreferrer" class="text-ocean-600 hover:text-ocean-500 underline">
+              {tr['mentions.hebergeur.site']}
+            </a>
+          </p>
+        )}
+      </>
+    )}
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['mentions.propriete.titre']}</h2>
+    <p>{tr['mentions.propriete.texte']}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['mentions.donnees.titre']}</h2>
+    <p>{tr['mentions.donnees.texte']}</p>
+    <p class="mt-3">
+      <a href={cheminPage('confidentialite', lang)} class="text-ocean-600 hover:text-ocean-500 underline font-medium">
+        {tr['mentions.donnees.lien']}
+      </a>
+    </p>
+  </section>
+
+  {aDesChampsRenseignes(legal.assurance) && (
+    <section data-assurance>
+      <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['mentions.assurance.titre']}</h2>
+      <p>{tr['mentions.assurance.texte']}</p>
+      <dl class="mt-4 space-y-2 text-sm">
+        {assurance.map(({ cle, valeur }) => (
+          <div class="flex flex-col sm:flex-row sm:gap-2">
+            <dt class="font-semibold text-ocean-900 sm:min-w-56">{libelleAssurance[cle] ?? cle}</dt>
+            <dd>{valeur}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )}
+</LegalPage>

@@ -91,10 +91,10 @@
         "de": "Ist die Kurtaxe im Preis enthalten?"
       },
       "reponse": {
-        "fr": "Non : la taxe de séjour est en sus, fixée par la commune. Le montant indicatif figurant dans nos tarifs est d'environ 1,15 € par nuit et par personne. À valider par le propriétaire : vérifier le barème en vigueur, qui peut être révisé chaque année.",
-        "en": "No: the tourist tax is additional and set by the local authority. The indicative amount shown in our rates is about €1.15 per night and per person. To be confirmed by the owner: check the rate currently in force, which may be revised each year.",
-        "es": "No: la tasa turística se añade a la tarifa y la fija el municipio. El importe indicativo que figura en nuestras tarifas es de unos 1,15 € por noche y por persona. Pendiente de validar por el propietario: comprobar el baremo vigente, que puede revisarse cada año.",
-        "de": "Nein: die Kurtaxe ist gesondert zu zahlen und von der Gemeinde festgelegt. Der in unseren Preisen angegebene Richtwert liegt bei etwa 1,15 € pro Nacht und Person. Vom Eigentümer zu bestätigen: den jeweils gültigen Satz prüfen, der jährlich angepasst werden kann."
+        "fr": "Non : la taxe de séjour est en sus, fixée par la commune. Elle s'applique par nuit et par adulte — les mineurs en sont exonérés. Le montant indicatif figurant dans nos tarifs est d'environ 1,15 € par nuit et par adulte. À valider par le propriétaire : vérifier le barème en vigueur, qui peut être révisé chaque année.",
+        "en": "No: the tourist tax is additional and set by the local authority. It applies per night and per adult — minors are exempt. The indicative amount shown in our rates is about €1.15 per night and per adult. To be confirmed by the owner: check the rate currently in force, which may be revised each year.",
+        "es": "No: la tasa turística se añade a la tarifa y la fija el municipio. Se aplica por noche y por adulto — los menores están exentos. El importe indicativo que figura en nuestras tarifas es de unos 1,15 € por noche y por adulto. Pendiente de validar por el propietario: comprobar el baremo vigente, que puede revisarse cada año.",
+        "de": "Nein: die Kurtaxe ist gesondert zu zahlen und von der Gemeinde festgelegt. Sie gilt pro Nacht und pro Erwachsenem — Minderjährige sind befreit. Der in unseren Preisen angegebene Richtwert liegt bei etwa 1,15 € pro Nacht und Erwachsenem. Vom Eigentümer zu bestätigen: den jeweils gültigen Satz prüfen, der jährlich angepasst werden kann."
       }
     },
     {

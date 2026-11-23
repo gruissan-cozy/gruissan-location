@@ -1,0 +1,201 @@
+---
+import LegalPage from './LegalPage.astro';
+import site from '../../content/site.json';
+import tarifs from '../../content/tarifs.json';
+import annulation from '../../content/annulation.json';
+import cgv from '../../content/cgv.json';
+import { t } from '../i18n';
+import type { Lang } from '../i18n';
+import { cgvT } from '../i18n/cgv';
+import {
+  adresseContact,
+  cheminPage,
+  interpoler,
+  champsRenseignes,
+  ligneEnregistrement,
+} from '../lib/legal';
+import {
+  baremeAffiche,
+  baremeContractuel,
+  montantTaxeAffichable,
+  texteAnnulation,
+  versionCgv,
+} from '../lib/cgv';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props as Props;
+const tr = cgvT[lang];
+const commun = t[lang];
+
+// Une adresse d'exemple (domaine réservé) n'est pas une adresse : elle est
+// remplacée par un texte qui dit où l'obtenir, jamais affichée telle quelle.
+const email = adresseContact(site.email);
+const caution = Number(tarifs.caution);
+const cautionAffichable = Number.isFinite(caution) && caution > 0 ? caution : null;
+const taxeMontant = montantTaxeAffichable(tarifs);
+const lignes = baremeAffiche(annulation, lang);
+const contractuel = baremeContractuel(annulation);
+const explications = texteAnnulation(annulation, 'explications', lang);
+const noteProprietaire = texteAnnulation(annulation, 'note_proprietaire', lang);
+const version = versionCgv(cgv);
+const mediateur = champsRenseignes(cgv.mediateur);
+const enregistrement = ligneEnregistrement(
+  site.numero_enregistrement_mairie,
+  commun['footer.enregistrement'],
+);
+
+const objet = interpoler(tr['cgv.objet.texte'], [site.ville]);
+const logement = interpoler(tr['cgv.logement.texte'], [site.capacite]);
+const reglement = interpoler(tr['cgv.reglement.texte'], [site.capacite]);
+const reclamation = email
+  ? interpoler(tr['cgv.mediateur.texte'], [email])
+  : tr['cgv.mediateur.sansEmail'];
+const versionTexte = version ? interpoler(tr['cgv.version.texte'], [version]) : '';
+const guideHref = `/gruissan-location/${lang === 'fr' ? '' : lang + '/'}guide/`;
+---
+
+<LegalPage lang={lang} titre={tr['cgv.title']} sousTitre={tr['cgv.subtitle']}>
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.objet.titre']}</h2>
+    <p>{objet}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.logement.titre']}</h2>
+    <p>{logement}</p>
+    <p class="mt-3">{tr['cgv.logement.nonClasse']}</p>
+    {enregistrement && <p class="mt-2">{enregistrement}</p>}
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.prix.titre']}</h2>
+    <p>{tr['cgv.prix.texte']}</p>
+    <p class="mt-3">{tr['cgv.prix.options']}</p>
+    {cautionAffichable !== null && (
+      <p class="mt-3">{interpoler(tr['cgv.prix.caution'], [cautionAffichable])}</p>
+    )}
+    <p class="mt-3">{tr['cgv.prix.taxe']}</p>
+    <p class="mt-3">
+      {taxeMontant !== null
+        ? interpoler(tr['cgv.prix.taxeMontant'], [taxeMontant.toFixed(2).replace('.', ',')])
+        : tr['cgv.prix.taxeAValider']}
+    </p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.reservation.titre']}</h2>
+    <p>{tr['cgv.reservation.texte']}</p>
+    <p class="mt-3">{tr['cgv.reservation.paiement']}</p>
+    <p class="mt-3">{tr['cgv.reservation.acompte']}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.annulation.titre']}</h2>
+    <p>{tr['cgv.annulation.intro']}</p>
+    {lignes.length > 0 && (
+      <div class="mt-5 overflow-x-auto rounded-xl border border-sand-200">
+        <table class="w-full text-left text-sm min-w-[420px]">
+          <caption class="sr-only">{tr['cgv.annulation.titre']}</caption>
+          <thead class="bg-sand-50 text-ocean-700">
+            <tr>
+              <th scope="col" class="px-5 py-3 text-xs font-semibold uppercase tracking-wide">{tr['cgv.annulation.colDelai']}</th>
+              <th scope="col" class="px-5 py-3 text-xs font-semibold uppercase tracking-wide">{tr['cgv.annulation.colRemboursement']}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-sand-200">
+            {lignes.map((ligne) => (
+              <tr>
+                <td class="px-5 py-4">{ligne.delai}</td>
+                <td class="px-5 py-4">
+                  <span class="font-semibold tabular-nums text-ocean-900">{ligne.remboursementPct} %</span>
+                  <span class="ml-2 text-ocean-700/70">{tr['cgv.annulation.rembourse']}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+    {!contractuel && (
+      <p data-bareme-modele class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        {tr['cgv.annulation.modele']}
+      </p>
+    )}
+    <p class="mt-3">{tr['cgv.annulation.proprietaire']}</p>
+    {explications && <p class="mt-3">{explications}</p>}
+    <p class="mt-3">{tr['cgv.annulation.horsBareme']}</p>
+    {!contractuel && noteProprietaire && (
+      <p class="mt-3 text-sm text-ocean-700/80">{noteProprietaire}</p>
+    )}
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.etat.titre']}</h2>
+    <p>{tr['cgv.etat.texte']}</p>
+    <p class="mt-3">{tr['cgv.etat.restauration']}</p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.reglement.titre']}</h2>
+    <p>{reglement}</p>
+    <p class="mt-3">
+      <a href={guideHref} class="text-ocean-600 hover:text-ocean-500 underline font-medium">{tr['cgv.reglement.guide']}</a>
+    </p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.donnees.titre']}</h2>
+    <p>{tr['cgv.donnees.texte']}</p>
+    <p class="mt-3">
+      <a href={cheminPage('confidentialite', lang)} class="text-ocean-600 hover:text-ocean-500 underline font-medium">
+        {tr['cgv.donnees.lien']}
+      </a>
+    </p>
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.mediateur.titre']}</h2>
+    <p>{reclamation}</p>
+    {mediateur.length > 0 ? (
+      <dl class="mt-4 space-y-2 text-sm">
+        {mediateur.map(({ cle, valeur }) => (
+          <div class="flex flex-col sm:flex-row sm:gap-2">
+            <dt class="font-semibold text-ocean-900 sm:min-w-40">{cle}</dt>
+            <dd>{valeur}</dd>
+          </div>
+        ))}
+      </dl>
+    ) : (
+      <p class="mt-3">{tr['cgv.mediateur.absent']}</p>
+    )}
+  </section>
+
+  <section>
+    <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.droit.titre']}</h2>
+    <p>{tr['cgv.droit.texte']}</p>
+  </section>
+
+  {versionTexte && (
+    <section data-cgv-version>
+      <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.version.titre']}</h2>
+      <p>{versionTexte}</p>
+    </section>
+  )}
+
+  <section class="border-t border-sand-200 pt-6 text-sm">
+    <p class="text-ocean-700/80">{tr['cgv.contact']}</p>
+    <p class="mt-2">
+      {email
+        ? <a href={`mailto:${email}`} class="text-ocean-600 hover:text-ocean-500 underline">{email}</a>
+        : tr['legal.contactNonPublie']}
+    </p>
+    <p class="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+      <a href={cheminPage('mentions-legales', lang)} class="text-ocean-600 hover:text-ocean-500 underline font-medium">
+        {commun['footer.legal']}
+      </a>
+      <a href={cheminPage('confidentialite', lang)} class="text-ocean-600 hover:text-ocean-500 underline font-medium">
+        {commun['footer.confidentialite']}
+      </a>
+    </p>
+  </section>
+</LegalPage>

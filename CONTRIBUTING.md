@@ -199,6 +199,30 @@ affiche aussi un récapitulatif par année (total collecté, séjours
 assujettis, nuits) pour la déclaration en mairie, avec un filtre par
 année et un export CSV.
 
+Côté **devis de la page `/reserver`** (`src/lib/pricing.ts`), le calcul est
+distinct : la taxe ne s'applique qu'aux **adultes** — les mineurs sont
+exonérés. Le formulaire collecte donc adultes et mineurs séparément, et le
+récapitulatif affiche le détail `adultes × nuits × taux`. Le taux vient de
+l'unique constante `TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE` (lue dans
+`content/tarifs.json`) ; sa valeur actuelle est provisoire et reste à
+confirmer auprès de la mairie de Gruissan.
+
+Le meublé étant **non classé** (DA-2), le taux est en plus **plafonné au tarif
+de la catégorie la plus basse** : `content/tarifs.json` porte
+`plafond_par_nuit_et_personne` (marqué `a_valider: true`), et le calcul retient
+`min(taux, plafond)` par nuit et par personne assujettie (`tauxPlafonne`). Le
+détail exporté (`taxeSejourDetail.tauxApplique`, `.plafond`,
+`.plafondApplique`) permet au récapitulatif d'afficher le taux réellement
+appliqué et de mentionner le plafond quand il mord, dans les 4 langues. Sans
+plafond exploitable, le taux brut s'applique : aucune valeur légale n'est
+inventée.
+
+Le devis public applique en plus la **capacité du logement**
+(`content/site.json`, clé `capacite`) : `computeQuote` retourne `null` dès que
+`adultes + mineurs` la dépasse, et le formulaire plafonne les options
+« Mineurs » à ce qu'il reste de capacité. Un devis sans `capacite` fournie
+n'est pas plafonné (le calcul ne l'invente pas).
+
 - Un taux absent n'est **jamais remplacé par une valeur approchante** :
   le séjour reste visible, le montant est « non calculable » et le cas
   est signalé au propriétaire.

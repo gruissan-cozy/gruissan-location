@@ -174,3 +174,42 @@ le code.
   `src/layouts/AdminLayout.astro`, `src/i18n/admin.ts` (4 langues).
 - Toute nouvelle option de notification **doit** être documentée ici avant
   d'être implémentée, avec ses prérequis et ses limites.
+
+---
+
+## 7. Module d'alerte — message pur et point d'entrée (tâche 10)
+
+Un module pur `src/lib/notifications.ts` prépare l'alerte d'une nouvelle
+demande, sans dépendance réseau : `construireAlerteDemande(sejour)` retourne
+un message avec les dates, le nombre d'adultes et de mineurs, le prix estimé
+et le lien `/admin/demandes/`. `envoyerAlerteDemande(sejour, environnement?)`
+est le point d'appel : il lit les secrets depuis l'environnement et retourne
+toujours un résultat explicite, même quand ils manquent.
+
+**Prérequis pour un envoi réel (tâche ultérieure)** :
+
+| Secret (GitHub Secrets) | Rôle |
+|---|---|
+| `ALERTE_DEMANDE_WEBHOOK_URL` | URL du relais d'alerte à configurer |
+| `ALERTE_DEMANDE_WEBHOOK_SECRET` | Secret d'authentification du relais |
+
+Comme pour les options A et C, il faut aussi une exécution planifiée
+(GitHub Actions) ou un déclencheur serveur : le site statique ne peut pas
+envoyer d'alerte de lui-même. Aucune valeur n'est fournie aujourd'hui.
+
+**Confidentialité** : le payload ne contient **ni nom, ni e-mail, ni
+téléphone, ni identifiant de séjour, ni message du visiteur** — seulement les
+dates, les effectifs, le prix estimé et le lien du back office. Le
+propriétaire s'authentifie dans `/admin/` pour lire la demande elle-même.
+
+**Limites, à ne pas confondre avec une fonctionnalité opérationnelle** :
+
+- aucun appel réseau n'est effectué : `envoyerAlerteDemande()` retourne
+  `envoye: false` avec `configuration_manquante` (secrets absents) ou
+  `integration_non_branchee` (secrets présents mais envoi non câblé) ;
+- aucun déclenchement sur la création d'un séjour `demande` n'est branché :
+  le site ne sait donc toujours pas alerter tout seul (voir §1) ;
+- aucun webhook ni fournisseur n'est configuré, et aucun envoi n'est simulé
+  dans le code ;
+- les secrets ne sont jamais consignés dans les logs : seul leur **nom**
+  peut apparaître dans le résultat quand ils manquent.

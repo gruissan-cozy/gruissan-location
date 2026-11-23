@@ -3,6 +3,46 @@
  * et le script client de la page /reserver (aucune dépendance externe).
  */
 
+import tarifsContenu from '../../content/tarifs.json';
+
+/**
+ * Taux de la taxe de séjour, par nuit et par personne assujettie (en euros).
+ *
+ * ⚠️ Le taux communal de Gruissan reste À CONFIRMER auprès de la mairie
+ * (délibération de l'année en cours) : la valeur actuelle n'a AUCUNE source
+ * officielle dans ce dépôt, elle est provisoire.
+ *
+ * Source unique de vérité : `content/tarifs.json`, clé
+ * `taxe_sejour_par_nuit_personne` (éditable par le propriétaire). Aucun
+ * autre nombre ne doit être codé en dur ailleurs : le formulaire de
+ * réservation, les tests métier et l'affichage lisent cette constante.
+ *
+ * Rappel : seuls les ADULTES sont assujettis — les mineurs sont exonérés.
+ */
+export const TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE = Number(
+  tarifsContenu.taxe_sejour_par_nuit_personne,
+);
+
+/**
+ * Plafond de la taxe de séjour, par nuit et par personne assujettie (en euros).
+ *
+ * ⚠️ Le meublé est **non classé** : le montant par nuit et par personne ne peut
+ * pas dépasser le tarif de la catégorie la plus basse. `content/tarifs.json`
+ * porte ce plafond (`plafond_par_nuit_et_personne`, marqué `a_valider`), mais
+ * sa valeur est **provisoire et sans source officielle** : le barème communal
+ * de Gruissan reste à récupérer auprès de la mairie.
+ *
+ * `null` si le plafond est absent ou illisible : dans ce cas AUCUN plafond
+ * n'est appliqué (on n'invente jamais une valeur légale).
+ */
+export const PLAFOND_TAXE_SEJOUR_PAR_NUIT_PERSONNE = normalizePlafondTaxe(
+  // Lecture défensive : la clé est OPTIONNELLE dans le contenu. Le propriétaire
+  // peut la retirer sans casser `astro check` (et donc la CI) — le calcul
+  // retombe alors sur le taux brut, sans plafond inventé.
+  (tarifsContenu as { plafond_par_nuit_et_personne?: number | string | null })
+    .plafond_par_nuit_et_personne,
+);
+
 export interface Saison {
   id: string;
   periode: string;
@@ -78,16 +118,6 @@ export function computeStay(
   };
 }
 
-/** Chevauchement période demandée / ligne availability (réservée). */
-export function overlaps(
-  startDate: string,
-  endDate: string,
-  checkIn: string,
-  checkOut: string,
-): boolean {
-  return startDate <= checkOut && endDate >= checkIn;
-}
-
 // ---------------------------------------------------------------------------
 // Devis instantané (issue #17)
 // ---------------------------------------------------------------------------
@@ -126,6 +156,79 @@ function normalizeGuests(value: number): number {
   return Math.floor(n);
 }
 
+/**
+ * Taux de taxe de séjour exploitable, ou `null` s'il est absent ou illisible.
+ *
+ * Règle du dépôt : un taux absent n'est JAMAIS remplacé par une valeur
+ * approchante — le montant devient « non calculable » et l'interface
+ * l'indique (« à confirmer ») au lieu d'afficher 0 €.
+ */
+export function normalizeTauxTaxe(
+  value: number | string | undefined | null,
+): number | null {
+  if (value === undefined || value === null) return null;
+  const raw = typeof value === 'string' ? value.trim() : value;
+  if (raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return round2(n);
+}
+
+/**
+ * Plafond de taxe exploitable, ou `null` s'il est absent ou illisible.
+ *
+ * Un plafond absent n'est JAMAIS remplacé par une valeur approchante : le
+ * calcul retombe alors sur le taux brut, sans plafonnement inventé.
+ */
+export function normalizePlafondTaxe(
+  value: number | string | undefined | null,
+): number | null {
+  if (value === undefined || value === null) return null;
+  const raw = typeof value === 'string' ? value.trim() : value;
+  if (raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return round2(n);
+}
+
+/**
+ * Taux effectivement appliqué par nuit et par personne : le plus petit du taux
+ * et du plafond « catégorie la plus basse ». Sans plafond exploitable, le taux
+ * est rendu tel quel (aucun plafond inventé).
+ */
+export function tauxPlafonne(taux: number, plafond: number | null): number {
+  if (plafond === null) return taux;
+  return round2(Math.min(taux, plafond));
+}
+
+/**
+ * Capacité du logement normalisée (entier > 0), ou `null` si elle n'est pas
+ * exploitable : une capacité absente ou aberrante ne doit pas inventer de
+ * plafond (elle est simplement ignorée, comme le prévoit l'appelant).
+ */
+function normalizeCapacite(value: number | undefined): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.floor(n);
+}
+
+/**
+ * true si le total adultes + mineurs dépasse la capacité du logement.
+ *
+ * `capacite` omise (ou illisible) → aucun plafond : le calcul ne refuse rien.
+ * Cette garde évite qu'un formulaire proposant adultes et mineurs séparément
+ * accepte 8 personnes dans un logement déclaré pour 4.
+ */
+export function exceedsCapacity(
+  adults: number,
+  minors: number,
+  capacite?: number,
+): boolean {
+  const cap = normalizeCapacite(capacite);
+  if (cap === null) return false;
+  return normalizeGuests(adults) + normalizeGuests(minors) > cap;
+}
+
 export interface PackSelection {
   id: string;
   slug: string;
@@ -154,15 +257,60 @@ export interface DevisPack {
 export interface DevisInput {
   checkIn: string;
   checkOut: string;
-  guests: number;
+  /** Adultes assujettis à la taxe de séjour (au moins 1). */
+  adults: number;
+  /** Mineurs, exonérés de la taxe de séjour (0 par défaut). */
+  minors?: number;
+  /** Capacité du logement : au-delà, le devis est refusé. Omise → pas de plafond. */
+  capacite?: number;
   saisons: Saison[];
   packs?: PackSelection[];
   caution?: number;
   taxeSejourParNuitPersonne?: number;
+  /**
+   * Plafond « catégorie la plus basse » par nuit et par personne (non classé).
+   * Omis → lu dans `content/tarifs.json` ; `null` explicite → aucun plafond.
+   */
+  plafondTaxeParNuitPersonne?: number | null;
+}
+
+/** Détail vérifiable de la taxe de séjour (affiché dans le récapitulatif). */
+export interface DevisTaxeSejour {
+  /** Adultes assujettis — base du calcul. */
+  adultes: number;
+  /** Mineurs exonérés (jamais facturés). */
+  mineurs: number;
+  nuits: number;
+  /** Taux par nuit et par adulte, en euros (0 si non calculable). */
+  taux: number;
+  /**
+   * Taux RÉELLEMENT appliqué par nuit et par personne après plafonnement
+   * « non classé » : `min(taux, plafond)`. C'est lui qui sert au montant et que
+   * le récapitulatif affiche.
+   */
+  tauxApplique: number;
+  /** Plafond par nuit et par personne, ou `null` si aucun plafond n'est défini. */
+  plafond: number | null;
+  /** true si le plafond « catégorie la plus basse » a effectivement réduit le taux. */
+  plafondApplique: boolean;
+  /** Montant dû = adultes × nuits × taux appliqué. */
+  montant: number;
+  /**
+   * false si le taux est absent ou illisible : le montant n'est alors PAS
+   * calculable. On ne le remplace jamais par une valeur approchante
+   * (règle du dépôt) — l'interface affiche « à confirmer ».
+   */
+  calculable: boolean;
 }
 
 export interface Devis {
   nights: number;
+  /** Nombre total de voyageurs (adultes + mineurs), base des packs. */
+  guests: number;
+  /** Adultes assujettis à la taxe de séjour. */
+  adults: number;
+  /** Mineurs exonérés de la taxe de séjour. */
+  minors: number;
   /** Sous-total du séjour (toutes saisons confondues). */
   stay: number;
   /** Détail nuit par nuit, regroupé par saison traversée. */
@@ -170,6 +318,8 @@ export interface Devis {
   packs: DevisPack[];
   packsTotal: number;
   taxeSejour: number;
+  /** Détail de la taxe : adultes × nuits × taux (mineurs exonérés). */
+  taxeSejourDetail: DevisTaxeSejour;
   /** Total dû = séjour + packs + taxe de séjour (caution exclue). */
   total: number;
   /** Caution à prévoir à l'arrivée — remboursable, non incluse dans le total. */
@@ -184,20 +334,40 @@ export interface Devis {
 
 /**
  * Devis instantané : séjour (chaque nuit facturée selon la saison qui la
- * contient) + packs (selon leur unité) + taxe de séjour (nuits × voyageurs).
+ * contient) + packs (selon leur unité) + taxe de séjour appliquée aux SEULS
+ * adultes (les mineurs sont exonérés).
  * La caution est renseignée mais reste hors du total dû (elle est remboursable).
- * Retourne `null` si les dates sont manquantes, invalides ou inversées.
+ * Retourne `null` si les dates sont manquantes, invalides ou inversées, s'il
+ * n'y a aucun adulte (un séjour sans adulte n'est pas une réservation) ou si
+ * adultes + mineurs dépassent la capacité du logement.
  */
 export function computeQuote(input: DevisInput): Devis | null {
   const { checkIn, checkOut, saisons } = input;
   if (!checkIn || !checkOut || saisons.length === 0) return null;
 
-  const guests = normalizeGuests(input.guests);
+  const adults = normalizeGuests(input.adults);
+  if (adults < 1) return null;
+  const minors = normalizeGuests(input.minors ?? 0);
+  if (exceedsCapacity(adults, minors, input.capacite)) return null;
+  const guests = adults + minors;
   const packs = (input.packs ?? []).filter(
     (p) => p && Number.isFinite(Number(p.prix)) && p.unite,
   );
   const caution = round2(Number(input.caution ?? 0) || 0);
-  const taxeRate = round2(Number(input.taxeSejourParNuitPersonne ?? 0) || 0);
+  // `undefined` = non fourni → on lit la constante du contenu ; `null` explicite
+  // = taux volontairement absent → montant non calculable (jamais 0 €).
+  const taxeRate = normalizeTauxTaxe(
+    input.taxeSejourParNuitPersonne === undefined
+      ? TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE
+      : input.taxeSejourParNuitPersonne,
+  );
+  // Plafond « non classé » : `undefined` = non fourni → constante du contenu ;
+  // `null` explicite = aucun plafond (le taux brut s'applique tel quel).
+  const taxePlafond = normalizePlafondTaxe(
+    input.plafondTaxeParNuitPersonne === undefined
+      ? PLAFOND_TAXE_SEJOUR_PAR_NUIT_PERSONNE
+      : input.plafondTaxeParNuitPersonne,
+  );
 
   const nights = nightsBetween(checkIn, checkOut);
   if (nights <= 0 || nights > MAX_NUITES) return null;
@@ -243,8 +413,18 @@ export function computeQuote(input: DevisInput): Devis | null {
   });
   const packsTotal = round2(devisPacks.reduce((sum, p) => sum + p.total, 0));
 
-  // --- Taxe de séjour : nuits × voyageurs × taux (à zéro si non configurée).
-  const taxeSejour = round2(nights * guests * taxeRate);
+  // --- Taxe de séjour : adultes × nuits × taux plafonné (mineurs exonérés).
+  // Le meublé étant non classé, le taux est plafonné au tarif de la catégorie
+  // la plus basse : `min(taux, plafond)`. Taux absent → montant NON calculable
+  // (jamais remplacé par 0 €) : il n'est pas ajouté au total, et
+  // `taxeSejourDetail.calculable` vaut false pour que l'interface l'annonce.
+  const taxeCalculable = taxeRate !== null;
+  const taxeTaux = taxeRate ?? 0;
+  const taxeTauxApplique = tauxPlafonne(taxeTaux, taxePlafond);
+  const taxePlafondApplique = taxePlafond !== null && taxeTaux > taxePlafond;
+  const taxeSejour = taxeCalculable
+    ? round2(nights * adults * taxeTauxApplique)
+    : 0;
 
   const total = round2(stay + packsTotal + taxeSejour);
 
@@ -254,11 +434,25 @@ export function computeQuote(input: DevisInput): Devis | null {
 
   return {
     nights,
+    guests,
+    adults,
+    minors,
     stay,
     stayBySeason,
     packs: devisPacks,
     packsTotal,
     taxeSejour,
+    taxeSejourDetail: {
+      adultes: adults,
+      mineurs: minors,
+      nuits: nights,
+      taux: taxeTaux,
+      tauxApplique: taxeTauxApplique,
+      plafond: taxePlafond,
+      plafondApplique: taxePlafondApplique,
+      montant: taxeSejour,
+      calculable: taxeCalculable,
+    },
     total,
     caution,
     toPay: round2(total + caution),

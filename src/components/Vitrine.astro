@@ -22,6 +22,7 @@ import {
   type EtatJour,
   type JourCalendrier,
 } from '../lib/calendrier';
+import { adresseContact } from '../lib/legal';
 import { chargerDisponibilites } from '../lib/disponibilites';
 import {
   chargerGalerie,
@@ -60,6 +61,7 @@ const supabaseKey = supabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_
 // --- Contact direct : les boutons n'existent que si une vraie coordonnée est renseignée ---
 // Aucun numéro n'est fabriqué : téléphone et WhatsApp vides => rien n'est affiché.
 const coordonnees = site;
+const emailContact = adresseContact(site.email);
 const appelLien = numeroAppel(coordonnees.telephone);
 const appelLibelle = libelleNumero(coordonnees);
 const whatsappLien = lienWhatsApp(coordonnees.telephone, coordonnees.whatsapp);
@@ -68,7 +70,13 @@ const whatsappNumero = extraitNumeroAppel(coordonnees.whatsapp) || extraitNumero
 const whatsappLibelle = whatsappNumero ? `+${whatsappNumero}` : '';
 const montrerAppel = peutAppeler(coordonnees);
 const montrerWhatsApp = peutUtiliserWhatsApp(coordonnees);
-const montrerContactDirect = montrerAppel || montrerWhatsApp;
+// L'email compte comme contact direct : une adresse réelle suffit à afficher
+// le bloc, même sans numéro de téléphone renseigné.
+const montrerContactDirect = montrerAppel || montrerWhatsApp || Boolean(emailContact);
+// Le formulaire de contact a deux moteurs : l'insert Supabase (script client)
+// et le POST FormSubmit natif. Il ne doit disparaître que si AUCUN des deux ne
+// peut aboutir.
+const formulaireContactUtilisable = Boolean(emailContact) || supabaseConfigured;
 
 // --- Galerie : photos regroupées par pièce (content/galerie.json reste le seul maître) ---
 const galerieGroupes = chargerGalerie(galerieData);
@@ -203,7 +211,7 @@ const cfgCalendrier = {
 };
 ---
 
-<Layout lang={lang} title={tr['hero.title']}>
+<Layout lang={lang}>
   <!-- Hero — photo plein cadre avec voile sombre -->
   <section class="relative min-h-[85vh] flex items-center overflow-hidden">
     <img
@@ -809,9 +817,10 @@ const cfgCalendrier = {
     </p>
     <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['contact.title']}</h2>
     <div class="mt-14 grid md:grid-cols-2 gap-10">
+      {formulaireContactUtilisable ? (
       <form
         id="contact-form"
-        action={`https://formsubmit.co/${site.email}`}
+        action={emailContact ? `https://formsubmit.co/${emailContact}` : undefined}
         method="POST"
         class="bg-white rounded-2xl p-8 shadow-card border border-sand-200 space-y-5"
       >
@@ -847,6 +856,11 @@ const cfgCalendrier = {
         >
         </p>
       </form>
+      ) : (
+        <p class="bg-white rounded-2xl p-8 shadow-card border border-sand-200 text-sm text-ocean-700/80 leading-relaxed">
+          {tr['contact.indisponible']}
+        </p>
+      )}
       <div class="space-y-6 md:pt-2">
         <p class="text-ocean-700/70">{tr['contact.ou']}</p>
         <!-- Contact direct : les boutons n'existent que si une vraie coordonnée est renseignée -->
@@ -878,10 +892,12 @@ const cfgCalendrier = {
                 </a>
               </p>
             )}
-            <p class="flex items-baseline justify-between gap-4">
-              <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.emailLabel']}</span>
-              <a href={`mailto:${site.email}`} class="font-semibold text-ocean-700 hover:text-ocean-500 transition-colors break-all">{site.email}</a>
-            </p>
+            {emailContact && (
+              <p class="flex items-baseline justify-between gap-4">
+                <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.emailLabel']}</span>
+                <a href={`mailto:${emailContact}`} class="font-semibold text-ocean-700 hover:text-ocean-500 transition-colors break-all">{emailContact}</a>
+              </p>
+            )}
           </div>
         )}
         {!montrerContactDirect && (
@@ -990,8 +1006,22 @@ const cfgCalendrier = {
     })();
   </script>
 
-  <script define:vars={{ cfgCalendrier }}>
+  <script type="application/json" id="calendrier-cfg" set:html={JSON.stringify(cfgCalendrier).replace(/</g, '\\u003c')}></script>
+
+  <script>
 import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/calendrier';
+import type { EtatJour, JourCalendrier, Plage } from '../lib/calendrier';
+
+    interface CalendrierCfg {
+      lang: string;
+      aujourdHui: string;
+      slugDefaut: string;
+      moisOptions: string[];
+      plages: Plage[];
+      reserverBase: string;
+      nomsMois: string[];
+      t: Record<string, string>;
+    }
 
     // Le corps est encapsulé dans une IIFE : les scripts Astro sont compilés
     // au niveau racine du module, où un `return` anticipé est interdit.
@@ -1001,16 +1031,21 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
       // Le mois courant est rendu côté serveur (le calendrier reste lisible sans
       // JavaScript) ; le script reconstruit les autres mois avec la même logique
       // pure que le serveur, issue de src/lib/calendrier.ts.
+      // La configuration arrive en JSON (et non `define:vars`, qui impose un
+      // script inline où l'import ci-dessus est interdit : SyntaxError).
+      const cfgScript = document.getElementById('calendrier-cfg');
+      const cfgCalendrier = JSON.parse(cfgScript?.textContent ?? '{}') as CalendrierCfg;
 
       const { lang, aujourdHui, slugDefaut, plages, nomsMois, reserverBase, t } = cfgCalendrier;
 
-      const corps = document.querySelector('[data-cal-corps]');
-      const titre = document.querySelector('[data-cal-titre]');
-      const nuits = document.querySelector('[data-cal-nuits]');
-      const select = document.querySelector('[data-cal-select]');
-      const boutonPrecedent = document.querySelector('[data-cal-precedent]');
-      const boutonSuivant = document.querySelector('[data-cal-suivant]');
+      const corps = document.querySelector<HTMLElement>('[data-cal-corps]');
+      const titre = document.querySelector<HTMLElement>('[data-cal-titre]');
+      const nuits = document.querySelector<HTMLElement>('[data-cal-nuits]');
+      const select = document.querySelector<HTMLSelectElement>('[data-cal-select]');
+      const boutonPrecedent = document.querySelector<HTMLElement>('[data-cal-precedent]');
+      const boutonSuivant = document.querySelector<HTMLElement>('[data-cal-suivant]');
       if (!corps) return;
+      const corpsCal = corps;
 
       const fmtDate = new Intl.DateTimeFormat(lang, {
         day: 'numeric',
@@ -1018,25 +1053,26 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
         year: 'numeric',
         timeZone: 'UTC',
       });
-      const dateLongue = (iso) => fmtDate.format(new Date(`${iso}T00:00:00Z`));
+      const dateLongue = (iso: string) => fmtDate.format(new Date(`${iso}T00:00:00Z`));
 
-      const libelleMois = (slug) => {
+      const libelleMois = (slug: string) => {
         const p = parseMois(slug);
         return p ? `${nomsMois[p.mois - 1]} ${p.annee}` : slug;
       };
 
       const CLASSE_BASE =
         'flex h-14 items-center justify-center border-l border-sand-200/60 text-sm tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sunset-400';
-      const CLASSE_ETAT = {
+      const CLASSE_ETAT: Record<EtatJour, string> = {
         libre: 'bg-emerald-50/60 text-emerald-700 hover:bg-emerald-100',
         occupe: 'bg-rose-50/60 text-rose-700',
         partiel: 'bg-amber-50/60 text-amber-800',
       };
 
-      const lienReserver = (plage) => `${reserverBase}?arrivee=${plage.debut}&depart=${plage.fin}`;
+      const lienReserver = (plage: Plage) =>
+        `${reserverBase}?arrivee=${plage.debut}&depart=${plage.fin}`;
 
       /** Nom du jour + état, ou action « choisir cette plage » (lu par les lecteurs d'écran). */
-      function texteAccessible(j) {
+      function texteAccessible(j: JourCalendrier): string {
         const date = dateLongue(j.iso);
         if (j.plageLibre) {
           const action = t.choisir
@@ -1044,11 +1080,13 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
             .replace('{fin}', dateLongue(j.plageLibre.fin));
           return `${date} · ${action}`;
         }
-        const libelle = { libre: t.etatLibre, occupe: t.etatOccupe, partiel: t.etatPartiel }[j.etat];
+        const libelle = { libre: t.etatLibre, occupe: t.etatOccupe, partiel: t.etatPartiel }[
+          j.etat
+        ];
         return `${date} · ${j.passe ? `${libelle} · ${t.etatPasse}` : libelle}`;
       }
 
-      function cellule(j) {
+      function cellule(j: JourCalendrier): HTMLTableCellElement {
         const td = document.createElement('td');
         td.className = 'p-0';
         const classe = [
@@ -1080,7 +1118,7 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
       }
 
       /** Ajoute l'option du mois courant s'il sort de la liste pré-calculée. */
-      function assurerOption(liste, slug) {
+      function assurerOption(liste: HTMLSelectElement | null, slug: string): void {
         if (!liste || [...liste.options].some((o) => o.value === slug)) return;
         const opt = document.createElement('option');
         opt.value = slug;
@@ -1090,11 +1128,11 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
         else liste.append(opt);
       }
 
-      function rendre(slug) {
+      function rendre(slug: string): void {
         const p = parseMois(slug);
         if (!p) return;
         const mois = construireMois(p.annee, p.mois, plages, { aujourdHui });
-        corps.replaceChildren();
+        corpsCal.replaceChildren();
         for (const semaine of grilleSemaines(p.annee, p.mois, 1)) {
           const tr = document.createElement('tr');
           for (const iso of semaine) {
@@ -1108,7 +1146,7 @@ import { ajouterMois, construireMois, grilleSemaines, parseMois } from '../lib/c
             const jour = mois.jours.find((x) => x.iso === iso);
             if (jour) tr.append(cellule(jour));
           }
-          corps.append(tr);
+          corpsCal.append(tr);
         }
         if (titre) titre.textContent = libelleMois(slug);
         if (nuits) {
