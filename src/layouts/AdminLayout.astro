@@ -15,7 +15,7 @@ import { AT } from '../i18n/admin';
 interface Props {
   title: string;
   /** Section courante, pour surligner l'onglet de navigation. */
-  section: 'dashboard' | 'sejours' | 'revenus' | 'taxe' | 'taches' | 'messages' | 'disponibilites' | 'packs' | 'guide';
+  section: 'dashboard' | 'demandes' | 'sejours' | 'revenus' | 'taxe' | 'taches' | 'messages' | 'disponibilites' | 'packs' | 'guide';
   /**
    * `true` (défaut) : le contenu est masqué jusqu'à l'ouverture de session.
    * `false` : la page gère elle-même ses états (écran de connexion de /admin/).
@@ -29,6 +29,7 @@ const configured = isSupabaseConfigured;
 
 const NAV = [
   { key: 'dashboard', href: `${base}admin/`, label: AT['nav.dashboard'], icon: '▤' },
+  { key: 'demandes', href: `${base}admin/demandes/`, label: AT['nav.demandes'], icon: '✧' },
   { key: 'sejours', href: `${base}admin/sejours/`, label: AT['nav.sejours'], icon: '▥' },
   { key: 'revenus', href: `${base}admin/revenus/`, label: AT['nav.revenus'], icon: '€' },
   { key: 'taxe', href: `${base}admin/taxe-sejour/`, label: AT['nav.taxe'], icon: '◑' },
