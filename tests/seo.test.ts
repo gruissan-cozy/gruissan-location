@@ -8,6 +8,7 @@ import {
   alternativesLangues,
   analyserChemin,
   cheminLangue,
+  descriptionPage,
   normaliserChemin,
   titrePage,
 } from '../src/lib/seo';
@@ -142,6 +143,17 @@ describe('lib/seo.ts — titre de la page', () => {
   });
 });
 
+describe('lib/seo.ts — description de la page', () => {
+  it('suit la même règle de repli que le titre', () => {
+    expect(descriptionPage('Informations sur l’éditeur du site.', seo.fr.description)).toBe(
+      'Informations sur l’éditeur du site.',
+    );
+    for (const valeur of [undefined, null, '', '  ']) {
+      expect(descriptionPage(valeur, seo.de.description), String(valeur)).toBe(seo.de.description);
+    }
+  });
+});
+
 describe('Layout.astro — métadonnées branchées sur la page courante', () => {
   const layout = lire('src/layouts/Layout.astro');
 
@@ -175,5 +187,14 @@ describe('layout de la page — la prop title est optionnelle', () => {
 
   it('l’accueil garde le titre SEO de la langue (repli du layout)', () => {
     expect(lire('src/components/Vitrine.astro')).toMatch(/<Layout lang=\{lang\}>/);
+  });
+
+  it('chaque page fournit sa propre description, pas celle de l’accueil', () => {
+    expect(lire('src/components/LegalPage.astro')).toMatch(/description=\{sousTitre\}/);
+    expect(lire('src/components/Guide.astro')).toMatch(/description=\{tr\['guide.subtitle'\]\}/);
+    expect(lire('src/components/Reservation.astro')).toMatch(
+      /description=\{b\['booking.subtitle'\]\}/,
+    );
+    expect(lire('src/layouts/Layout.astro')).toContain('descriptionPage(');
   });
 });

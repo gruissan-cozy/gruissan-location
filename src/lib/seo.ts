@@ -110,3 +110,11 @@ export function titrePage(titre: unknown, repli: string): string {
   const valeur = typeof titre === 'string' ? titre.trim() : '';
   return valeur || repli;
 }
+
+/**
+ * Description du document : même règle que le titre, appliquée au résumé
+ * propre à la page (sous-titre d'une page légale, du guide, du formulaire).
+ */
+export function descriptionPage(description: unknown, repli: string): string {
+  return titrePage(description, repli);
+}

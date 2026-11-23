@@ -122,7 +122,7 @@ const cfg = {
 const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
 ---
 
-<Layout lang={lang} title={b['booking.title']}>
+<Layout lang={lang} title={b['booking.title']} description={b['booking.subtitle']}>
   <section class="max-w-6xl mx-auto px-4 py-16 md:py-24 scroll-mt-16">
     <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
       {b['booking.badge']}

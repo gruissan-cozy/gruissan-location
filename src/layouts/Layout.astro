@@ -6,15 +6,17 @@ import type { Lang } from '../i18n';
 import { libelleNumero, lienWhatsApp, numeroAppel, peutAppeler, peutUtiliserWhatsApp } from '../lib/contact';
 import { htmlEnregistrement } from '../lib/enregistrement';
 import { cheminPage } from '../lib/legal';
-import { adresseCanonique, alternativesLangues, titrePage } from '../lib/seo';
+import { adresseCanonique, alternativesLangues, descriptionPage, titrePage } from '../lib/seo';
 
 interface Props {
   lang?: Lang;
   /** Titre de la page ; sans lui, le titre SEO de la langue (accueil). */
   title?: string;
+  /** Description de la page ; sans elle, celle de la langue (accueil). */
+  description?: string;
 }
 
-const { lang = 'fr', title } = Astro.props as Props;
+const { lang = 'fr', title, description } = Astro.props as Props;
 const tr = t[lang];
 const year = new Date().getFullYear();
 const href = (l: Lang) => `/gruissan-location/${l === 'fr' ? '' : l + '/'}`;
@@ -41,7 +43,7 @@ const pageUrl = adresseCanonique(cheminCourant, siteUrl);
 const translations = alternativesLangues(cheminCourant);
 const ogImage = `${siteUrl}/gruissan-location/images/hero.svg`;
 const metaTitle = titrePage(title, seo[lang].title);
-const metaDesc = seo[lang].description;
+const metaDesc = descriptionPage(description, seo[lang].description);
 ---
 
 <!doctype html>
