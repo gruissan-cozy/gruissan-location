@@ -105,7 +105,7 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.durees.notes':
       "Notes libres de l'état des lieux et fichiers non retenus comme preuve : supprimés à la purge qui suit l'expiration de l'accès.",
     'confidentialite.durees.sejour':
-      "Données de la réservation (nom, adresse email, téléphone, message) : conservées dans le dossier de séjour pendant la durée légale de conservation comptable et fiscale, et non supprimées au bout de {0} jours.",
+      "Données de la réservation (nom, adresse email, téléphone, message) : conservées dans le dossier de séjour pour la durée légale de conservation comptable et fiscale, qui dépasse le délai de {0} jours applicable à l'accès à l'espace locataire.",
     'confidentialite.durees.preuve':
       "Preuve de l'état des lieux (PDF signé et photographies) : conservée {0} ans à compter du départ, pour répondre à un éventuel litige.",
     'confidentialite.durees.note':
@@ -230,7 +230,7 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.durees.notes':
       'Free-text notes from the inventory and files not retained as evidence: deleted by the purge that follows the expiry of the access.',
     'confidentialite.durees.sejour':
-      'Booking data (name, email address, telephone, message): kept in the stay file for the legal accounting and tax retention period, and not deleted after {0} days.',
+      'Booking data (name, email address, telephone, message): kept in the stay file for the legal accounting and tax retention period, which is longer than the {0}-day limit that applies to access to the tenant space.',
     'confidentialite.durees.preuve':
       'Inventory report evidence (signed PDF and photographs): retained for {0} years from departure, to respond to a possible dispute.',
     'confidentialite.durees.note':
@@ -356,7 +356,7 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.durees.notes':
       'Notas libres del inventario y archivos no conservados como prueba: suprimidos en la purga que sigue a la expiración del acceso.',
     'confidentialite.durees.sejour':
-      'Datos de la reserva (nombre, dirección de correo, teléfono, mensaje): conservados en el expediente de la estancia durante el plazo legal de conservación contable y fiscal, y no suprimidos al cabo de {0} días.',
+      'Datos de la reserva (nombre, dirección de correo, teléfono, mensaje): conservados en el expediente de la estancia durante el plazo legal de conservación contable y fiscal, que es superior al plazo de {0} días aplicable al acceso al espacio del inquilino.',
     'confidentialite.durees.preuve':
       'Prueba del inventario (PDF firmado y fotografías): conservada {0} años desde la salida, para responder a un posible litigio.',
     'confidentialite.durees.note':
@@ -481,7 +481,7 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.durees.notes':
       'Freie Notizen des Zustandsberichts und nicht als Nachweis aufbewahrte Dateien: gelöscht durch die Löschroutine, die auf den Ablauf des Zugangs folgt.',
     'confidentialite.durees.sejour':
-      'Buchungsdaten (Name, E-Mail-Adresse, Telefon, Nachricht): aufbewahrt im Aufenthaltsvorgang für die gesetzliche buchhalterische und steuerliche Aufbewahrungsfrist und nicht nach {0} Tagen gelöscht.',
+      'Buchungsdaten (Name, E-Mail-Adresse, Telefon, Nachricht): aufbewahrt im Aufenthaltsvorgang für die gesetzliche buchhalterische und steuerliche Aufbewahrungsfrist, die länger ist als die für den Zugang zum Mieterbereich geltende Frist von {0} Tagen.',
     'confidentialite.durees.preuve':
       'Nachweis des Zustandsberichts (unterzeichnetes PDF und Fotos): {0} Jahre ab der Abreise aufbewahrt, um einen möglichen Streit beantworten zu können.',
     'confidentialite.durees.note':
