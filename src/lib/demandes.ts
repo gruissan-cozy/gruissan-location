@@ -4,7 +4,7 @@
  * Module PUR : aucune dépendance au DOM, au réseau ou à Supabase.
  * Couvert par tests/demandes.test.ts.
  *
- * Depuis la migration 0011, une demande envoyée depuis /reserver/ est une
+ * Depuis la migration 0012, une demande envoyée depuis /reserver/ est une
  * ligne `sejours` au statut `demande`. Elle ne bloque pas le calendrier
  * (plusieurs visiteurs peuvent demander les mêmes dates) : c'est le
  * propriétaire qui la tranche en la passant en `option` (dates tenues) ou

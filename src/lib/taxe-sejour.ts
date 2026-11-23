@@ -8,7 +8,7 @@
  * `content/tarifs.json` (clé `taxe_sejour_par_nuit_personne`) et passé
  * en paramètre : il n'est jamais codé en dur ici.
  *
- * Depuis la migration 0011, `sejours` porte le détail `adultes` / `mineurs`
+ * Depuis la migration 0012, `sejours` porte le détail `adultes` / `mineurs`
  * (le formulaire public le collecte). Les mineurs sont EXONÉRÉS : l'assiette
  * est donc `adultes` quand la colonne est renseignée, avec repli sur
  * `personnes` pour les séjours saisis à la main et les lignes reprises de
@@ -56,7 +56,7 @@ export interface SejourTaxe {
   statut: string;
   /**
    * Adultes assujettis. Prioritaire sur `personnes` quand renseigné (formulaire
-   * public depuis 0011) ; absent sur les séjours saisis à la main et les lignes
+   * public depuis 0012) ; absent sur les séjours saisis à la main et les lignes
    * reprises de `bookings`.
    */
   adultes?: number | null;
@@ -187,7 +187,7 @@ export function nuitsDuSejour(sejour: Pick<SejourTaxe, 'arrivee' | 'depart'>): n
  * Nombre de personnes réellement assujetties : les ADULTES.
  *
  * Règle du dépôt (`src/lib/pricing.ts`) : les mineurs sont exonérés de taxe de
- * séjour. Depuis la migration 0011, `sejours.adultes` porte ce détail pour les
+ * séjour. Depuis la migration 0012, `sejours.adultes` porte ce détail pour les
  * demandes du formulaire public ; les séjours saisis à la main et les lignes
  * reprises de `bookings` ne l'ont pas (la colonne est nulle) et retombent sur
  * `personnes`, qui était alors la seule information disponible.

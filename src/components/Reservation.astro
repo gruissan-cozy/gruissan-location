@@ -891,7 +891,7 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
       const client = sb;
       if (!client) throw new Error('Supabase non configuré');
       const list = chosenPacks();
-      // Depuis la migration 0011, le formulaire écrit dans `sejours` : une
+      // Depuis la migration 0012, le formulaire écrit dans `sejours` : une
       // demande est un séjour au statut `demande`, qui ne bloque pas le
       // calendrier tant que le propriétaire ne l'a pas passée en option ou
       // confirmée. `origine = 'site'` est exigé par la politique RLS.

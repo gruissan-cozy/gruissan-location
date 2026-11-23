@@ -69,10 +69,10 @@ magique, sans mot de passe) : messages, calendrier, packs et guide.
 1. Créez un projet gratuit sur [supabase.com](https://supabase.com).
 2. Dans **SQL Editor**, exécutez dans l'ordre **toutes** les migrations de
    [`migrations/`](migrations/) : `0001_init.sql` (tables + RLS + données
-   initiales), puis `0002` à `0011`. Le fichier
+   initiales), puis `0002` à `0013`. Le fichier
    [`docs/tenant-checkin-setup.md`](docs/tenant-checkin-setup.md) précise l'ordre
-   exact et, pour `0011`, la séquence à respecter avant le déploiement du site
-   (migration → fonctions → merge).
+   exact et, à partir de `0011`, la séquence à respecter avant le déploiement du
+   site (migrations → fonctions → merge).
 3. Dans **Authentication → Providers**, activez **Email** et le **Magic Link**.
    Ajoutez l'URL du site dans **Authentication → URL Configuration → Redirect URLs** :
    `https://gruissan-cozy.github.io/gruissan-location/admin/`

@@ -218,7 +218,7 @@ select
     else 'demande'
   end,
   b.total_estime,
-  '[migration 0011] dates incohérentes reprises de bookings : arrivée '
+  '[migration 0012] dates incohérentes reprises de bookings : arrivée '
     || b.check_in || ', départ ' || b.check_out
     || ' (départ ramené au lendemain de l''arrivée).',
   b.packs,
@@ -355,5 +355,5 @@ begin
 end $$;
 
 comment on table public.bookings is
-  'OBSOLÈTE depuis la migration 0011 : les réservations vivent dans `sejours`. '
+  'OBSOLÈTE depuis la migration 0012 : les réservations vivent dans `sejours`. '
   'Table conservée en lecture seule pour l''audit ; sera supprimée après une saison.';

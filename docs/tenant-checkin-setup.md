@@ -5,25 +5,29 @@ Le code du chantier 10 doit être livré avec `0007_tenant_checkin.sql`,
 pas exécutées par le dépôt ou par GitHub Pages : elles doivent être appliquées
 manuellement dans le SQL Editor Supabase, dans cet ordre.
 
-## 0. Ordre de mise en service de la migration 0011 (à lire en premier)
+## 0. Ordre de mise en service de la migration 0012 (à lire en premier)
 
 `0012_unifier_bookings_sejours.sql` fusionne `bookings` dans `sejours`. Le
 déploiement GitHub Pages est **automatique au merge sur `main`** : si l’ordre
 n’est pas respecté, des demandes sont perdues silencieusement. Séquence
 obligatoire :
 
-1. **Appliquer `0011`** dans le SQL Editor Supabase (colonne `origine`,
+1. **Appliquer `0011_calendar_blocks.sql`** dans le SQL Editor Supabase (table
+   des blocages de dates, source de vérité des indisponibilités hors séjours).
+2. **Appliquer `0012_unifier_bookings_sejours.sql`** (colonne `origine`,
    `adultes`, `mineurs`, `prix_estime`, politique `public_insert_sejours`…).
-2. **Déployer les quatre Edge Functions** (§1.3 ci-dessous) : elles lisent
-   désormais `sejours` et les statuts `confirme` / `termine`.
-3. **Merger la branche sur `main`** — c’est ce merge qui publie le formulaire
+3. **Appliquer `0013_tenant_links.sql`** (jetons du lien locataire généré
+   depuis le back office).
+4. **Déployer les quatre Edge Functions** (§1.3 ci-dessous) : elles lisent désormais
+   `sejours` et les statuts `confirme` / `termine`.
+5. **Merger la branche sur `main`** — c’est ce merge qui publie le formulaire
    public écrivant dans `sejours`.
 
-Entre le merge et l’exécution de `0011`, le formulaire `/reserver/` échoue : il
-envoie des colonnes qui n’existent pas encore et la politique d’insertion
+Entre le merge et l’exécution des migrations, le formulaire `/reserver/` échoue :
+il envoie des colonnes qui n’existent pas encore et la politique d’insertion
 publique n’est pas créée. La demande retombe sur le message d’erreur générique
 (`booking.error`) et **n’est pas enregistrée**. Ne jamais merger avant d’avoir
-appliqué la migration et déployé les fonctions.
+appliqué les migrations et déployé les fonctions.
 
 ## 1. Préparer Supabase
 
@@ -107,7 +111,7 @@ inséparable de la preuve.
 
 ## 3. Créer un lien de locataire
 
-Depuis le chantier 12 (migrations `0011` et `0012` appliquées, fonction
+Depuis le chantier 12 (migrations `0012` et `0013` appliquées, fonction
 `tenant-link` déployée), le lien se crée depuis le back office, sans SQL :
 
 1. ouvrir **`/admin/sejours/`** et se connecter avec l’adresse `ADMIN_EMAIL` ;
@@ -133,7 +137,7 @@ Un lien se révoque de trois façons :
 
 - **manuellement**, avec le bouton « Révoquer le lien » du panneau ;
 - **automatiquement** quand le séjour passe au statut `annule` (trigger de la
-  migration `0012`, plus un appel de la page pour une révocation immédiate) ;
+  migration `0013`, plus un appel de la page pour une révocation immédiate) ;
 - **à l’expiration**, où le jeton cesse d’être accepté puis est purgé par le
   cron.
 

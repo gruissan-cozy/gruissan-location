@@ -2,7 +2,7 @@
 /**
  * /admin/demandes — voir et traiter les demandes de réservation.
  *
- * Depuis la migration 0011, une demande envoyée depuis /reserver/ est une
+ * Depuis la migration 0012, une demande envoyée depuis /reserver/ est une
  * ligne `sejours` au statut `demande`. Cette page liste ces demandes, triées
  * par urgence (arrivée la plus proche d'abord), et permet de les traiter en
  * un clic :
@@ -41,7 +41,7 @@ const configured = isSupabaseConfigured;
           <p id="demandes-count" class="text-sm text-ocean-700/70"></p>
         </header>
 
-        <!-- Alerte : la table des séjours (donc la migration 0011) manque -->
+        <!-- Alerte : la table des séjours (donc la migration 0012) manque -->
         <div
           id="demandes-migration"
           class="mb-5 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"

@@ -143,7 +143,7 @@ const configured = isSupabaseConfigured;
     }
     // Une `demande` n'est pas encore un séjour : elle n'a pas de tâches
     // (ménage, clés) tant que le propriétaire ne l'a pas passée en option ou
-    // confirmée. Depuis la migration 0011, `sejours` contient aussi les
+    // confirmée. Depuis la migration 0012, `sejours` contient aussi les
     // demandes du formulaire public : on les écarte de cette page.
     sejours = ((resSejours.data ?? []) as Sejour[]).filter((s) => s.statut !== 'demande');
 
