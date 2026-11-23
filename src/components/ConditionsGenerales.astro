@@ -7,7 +7,7 @@ import cgv from '../../content/cgv.json';
 import { t } from '../i18n';
 import type { Lang } from '../i18n';
 import { cgvT } from '../i18n/cgv';
-import { cheminPage, interpoler, champsRenseignes } from '../lib/legal';
+import { cheminPage, interpoler, champsRenseignes, ligneEnregistrement } from '../lib/legal';
 import {
   baremeAffiche,
   baremeContractuel,
@@ -31,6 +31,10 @@ const explications = texteAnnulation(annulation, 'explications', lang);
 const noteProprietaire = texteAnnulation(annulation, 'note_proprietaire', lang);
 const version = versionCgv(cgv);
 const mediateur = champsRenseignes(cgv.mediateur);
+const enregistrement = ligneEnregistrement(
+  site.numero_enregistrement_mairie,
+  commun['footer.enregistrement'],
+);
 
 const objet = interpoler(tr['cgv.objet.texte'], [site.ville]);
 const logement = interpoler(tr['cgv.logement.texte'], [site.capacite]);
@@ -50,6 +54,7 @@ const guideHref = `/gruissan-location/${lang === 'fr' ? '' : lang + '/'}guide/`;
     <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['cgv.logement.titre']}</h2>
     <p>{logement}</p>
     <p class="mt-3">{tr['cgv.logement.nonClasse']}</p>
+    {enregistrement && <p class="mt-2">{enregistrement}</p>}
   </section>
 
   <section>

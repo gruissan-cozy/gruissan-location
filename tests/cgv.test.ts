@@ -7,7 +7,7 @@ import tarifs from '../content/tarifs.json';
 import site from '../content/site.json';
 import { LANGUAGES, t } from '../src/i18n';
 import { cgvT } from '../src/i18n/cgv';
-import { cheminPage, interpoler } from '../src/lib/legal';
+import { cheminPage, interpoler, ligneEnregistrement } from '../src/lib/legal';
 import {
   baremeAffiche,
   baremeContractuel,
@@ -289,8 +289,16 @@ describe('composant — aucune donnée juridique fabriquée à l’affichage', (
   });
 
   it('reprend le numéro d’enregistrement quand il est renseigné', () => {
-    // Le numéro vit dans les mentions légales, déjà reliées depuis cette page.
+    // Le numéro vit dans content/site.json et n'apparaît que renseigné.
     expect(site).toHaveProperty('numero_enregistrement_mairie');
+    expect(composant).toContain('ligneEnregistrement(');
+    expect(composant).toContain('site.numero_enregistrement_mairie');
+    expect(composant).toMatch(/\{enregistrement &&/);
     expect(composant).toContain("cheminPage('mentions-legales', lang)");
+  });
+
+  it('n’affiche aucune ligne d’enregistrement tant que le numéro est vide', () => {
+    expect(site.numero_enregistrement_mairie.trim()).toBe('');
+    expect(ligneEnregistrement(site.numero_enregistrement_mairie, t.fr['footer.enregistrement'])).toBe('');
   });
 });
