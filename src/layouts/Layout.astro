@@ -6,13 +6,17 @@ import type { Lang } from '../i18n';
 import { libelleNumero, lienWhatsApp, numeroAppel, peutAppeler, peutUtiliserWhatsApp } from '../lib/contact';
 import { htmlEnregistrement } from '../lib/enregistrement';
 import { adresseContact, cheminPage } from '../lib/legal';
+import { adresseCanonique, alternativesLangues, descriptionPage, titrePage } from '../lib/seo';
 
 interface Props {
   lang?: Lang;
-  title: string;
+  /** Titre de la page ; sans lui, le titre SEO de la langue (accueil). */
+  title?: string;
+  /** Description de la page ; sans elle, celle de la langue (accueil). */
+  description?: string;
 }
 
-const { lang = 'fr' } = Astro.props as Props;
+const { lang = 'fr', title, description } = Astro.props as Props;
 const tr = t[lang];
 const year = new Date().getFullYear();
 const href = (l: Lang) => `/gruissan-location/${l === 'fr' ? '' : l + '/'}`;
@@ -36,11 +40,15 @@ const emailContact = adresseContact(site.email);
 const enregistrementHtml = htmlEnregistrement(site.numero_enregistrement_mairie, lang);
 
 // --- SEO ---
+// Le canonical, og:url et les hreflang suivent la page réellement servie, pas
+// l'accueil : sans cela chaque sous-page se déclarait comme la racine.
 const siteUrl = 'https://gruissan-cozy.github.io';
-const pageUrl = `${siteUrl}/gruissan-location/${lang === 'fr' ? '' : lang + '/'}`;
+const cheminCourant = Astro.url.pathname;
+const pageUrl = adresseCanonique(cheminCourant, siteUrl);
+const translations = alternativesLangues(cheminCourant);
 const ogImage = `${siteUrl}/gruissan-location/images/hero.svg`;
-const metaTitle = seo[lang].title;
-const metaDesc = seo[lang].description;
+const metaTitle = titrePage(title, seo[lang].title);
+const metaDesc = descriptionPage(description, seo[lang].description);
 ---
 
 <!doctype html>
@@ -51,11 +59,9 @@ const metaDesc = seo[lang].description;
     <title>{metaTitle}</title>
     <meta name="description" content={metaDesc} />
     <link rel="canonical" href={pageUrl} />
-    <link rel="alternate" hreflang="fr" href={`${siteUrl}/gruissan-location/`} />
-    <link rel="alternate" hreflang="en" href={`${siteUrl}/gruissan-location/en/`} />
-    <link rel="alternate" hreflang="es" href={`${siteUrl}/gruissan-location/es/`} />
-    <link rel="alternate" hreflang="de" href={`${siteUrl}/gruissan-location/de/`} />
-    <link rel="alternate" hreflang="x-default" href={`${siteUrl}/gruissan-location/`} />
+    {translations.map((lien) => (
+      <link rel="alternate" hreflang={lien.hreflang} href={`${siteUrl}${lien.href}`} />
+    ))}
     <link rel="icon" type="image/svg+xml" href="/gruissan-location/favicon.svg" />
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
