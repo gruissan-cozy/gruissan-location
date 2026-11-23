@@ -4,17 +4,28 @@ import site from '../../content/site.json';
 import { t } from '../i18n';
 import type { Lang } from '../i18n';
 import { legalT } from '../i18n/legal';
-import { DUREES_CONSERVATION, cheminPage, interpoler } from '../lib/legal';
+import { DUREES_CONSERVATION, adresseContact, cheminPage, interpoler } from '../lib/legal';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props as Props;
 const tr = legalT[lang];
 const commun = t[lang];
 
-const email = site.email;
-const exercer = interpoler(tr['confidentialite.droits.exercer'], [email]);
-const responsable = interpoler(tr['confidentialite.responsable.texte'], [email]);
-const dureesDonnees = interpoler(tr['confidentialite.durees.donnees'], [
+// Adresse réellement publiable : un domaine réservé à la documentation
+// (exemple.com) ne reçoit aucun courrier et ne doit jamais être affiché.
+const email = adresseContact(site.email);
+const exercer = email
+  ? interpoler(tr['confidentialite.droits.exercer'], [email])
+  : tr['confidentialite.droits.exercerSansEmail'];
+const responsable = email
+  ? interpoler(tr['confidentialite.responsable.texte'], [email])
+  : tr['confidentialite.responsable.sansEmail'];
+// Deux durées distinctes, jamais confondues : la session locataire est bornée
+// par la purge, les données de réservation relèvent d'une obligation légale.
+const dureesSession = interpoler(tr['confidentialite.durees.session'], [
+  DUREES_CONSERVATION.donneesPersonnellesJours,
+]);
+const dureesSejour = interpoler(tr['confidentialite.durees.sejour'], [
   DUREES_CONSERVATION.donneesPersonnellesJours,
 ]);
 const dureesPreuve = interpoler(tr['confidentialite.durees.preuve'], [
@@ -33,6 +44,7 @@ const dureesPreuve = interpoler(tr['confidentialite.durees.preuve'], [
     <p>{tr['confidentialite.donnees.intro']}</p>
     <ul class="mt-3 space-y-2 list-disc pl-5">
       <li>{tr['confidentialite.donnees.reservation']}</li>
+      <li>{tr['confidentialite.donnees.contact']}</li>
       <li>{tr['confidentialite.donnees.etat']}</li>
       <li>{tr['confidentialite.donnees.techniques']}</li>
     </ul>
@@ -61,6 +73,8 @@ const dureesPreuve = interpoler(tr['confidentialite.durees.preuve'], [
       <li>{tr['confidentialite.destinataires.supabase']}</li>
       <li>{tr['confidentialite.destinataires.resend']}</li>
       <li>{tr['confidentialite.destinataires.hebergeur']}</li>
+      <li>{tr['confidentialite.destinataires.formsubmit']}</li>
+      <li>{tr['confidentialite.destinataires.googlefonts']}</li>
       <li>{tr['confidentialite.destinataires.autorites']}</li>
     </ul>
   </section>
@@ -74,7 +88,9 @@ const dureesPreuve = interpoler(tr['confidentialite.durees.preuve'], [
     <h2 class="font-display text-2xl font-semibold text-ocean-900 mb-3">{tr['confidentialite.durees.titre']}</h2>
     <p>{tr['confidentialite.durees.intro']}</p>
     <ul class="mt-3 space-y-2 list-disc pl-5">
-      <li>{dureesDonnees}</li>
+      <li>{dureesSession}</li>
+      <li>{tr['confidentialite.durees.notes']}</li>
+      <li>{dureesSejour}</li>
       <li>{dureesPreuve}</li>
     </ul>
     <p class="mt-3 text-sm text-ocean-700/80">{tr['confidentialite.durees.note']}</p>
@@ -112,7 +128,9 @@ const dureesPreuve = interpoler(tr['confidentialite.durees.preuve'], [
       </a>
     </p>
     <p class="mt-2 text-ocean-700/80">
-      <a href={`mailto:${email}`} class="text-ocean-600 hover:text-ocean-500 underline">{email}</a>
+      {email
+        ? <a href={`mailto:${email}`} class="text-ocean-600 hover:text-ocean-500 underline">{email}</a>
+        : tr['legal.contactNonPublie']}
     </p>
   </section>
 </LegalPage>

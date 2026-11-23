@@ -129,6 +129,8 @@ export const t: Record<Lang, Record<string, string>> = {
     'contact.appelAccessible': 'Appeler le {0}',
     'contact.whatsappAccessible': 'Écrire sur WhatsApp au {0}',
     'contact.raccrocher': "Aucune coordonnée téléphonique n'est renseignée pour le moment.",
+    'contact.indisponible':
+      "Le formulaire de contact sera actif dès que l'adresse de réception du propriétaire sera renseignée. En attendant, la demande de réservation depuis la page Réserver reste le moyen le plus direct.",
     'galerie.pieces': 'Pièces',
     'galerie.photos': '{0} photo(s)',
     'galerie.pleinEcran': 'Afficher en plein écran',
@@ -279,6 +281,8 @@ export const t: Record<Lang, Record<string, string>> = {
     'contact.appelAccessible': 'Call {0}',
     'contact.whatsappAccessible': 'Message us on WhatsApp at {0}',
     'contact.raccrocher': 'No phone number has been provided yet.',
+    'contact.indisponible':
+      "The contact form will be active as soon as the owner's receiving address is filled in. Meanwhile, the booking request from the Book page remains the most direct route.",
     'galerie.pieces': 'Rooms',
     'galerie.photos': '{0} photo(s)',
     'galerie.pleinEcran': 'View full screen',
@@ -429,6 +433,8 @@ export const t: Record<Lang, Record<string, string>> = {
     'contact.appelAccessible': 'Llamar al {0}',
     'contact.whatsappAccessible': 'Escribir por WhatsApp al {0}',
     'contact.raccrocher': 'Aún no se ha indicado ningún número de teléfono.',
+    'contact.indisponible':
+      'El formulario de contacto estará activo en cuanto se indique la dirección de recepción del propietario. Mientras tanto, la solicitud de reserva desde la página Reservar sigue siendo la vía más directa.',
     'galerie.pieces': 'Estancias',
     'galerie.photos': '{0} foto(s)',
     'galerie.pleinEcran': 'Ver a pantalla completa',
@@ -578,6 +584,8 @@ export const t: Record<Lang, Record<string, string>> = {
     'contact.appelAccessible': '{0} anrufen',
     'contact.whatsappAccessible': 'Per WhatsApp an {0} schreiben',
     'contact.raccrocher': 'Es ist noch keine Telefonnummer hinterlegt.',
+    'contact.indisponible':
+      'Das Kontaktformular ist aktiv, sobald die Empfangsadresse des Eigentümers eingetragen ist. Bis dahin bleibt die Buchungsanfrage über die Seite „Buchen“ der direkteste Weg.',
     'galerie.pieces': 'Räume',
     'galerie.photos': '{0} Foto(s)',
     'galerie.pleinEcran': 'Im Vollbild anzeigen',

@@ -6,6 +6,7 @@ import packsFallback from '../../content/packs.json';
 import type { Lang } from '../i18n';
 import { booking as bt } from '../i18n/booking';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
+import { adresseContact } from '../lib/legal';
 import type { Pack } from '../lib/supabase';
 
 interface Props {
@@ -14,6 +15,10 @@ interface Props {
 
 const { lang } = Astro.props as Props;
 const b = bt[lang];
+
+// Adresse de réception réellement utilisable : un domaine réservé à la
+// documentation (exemple.com) ne reçoit rien. Vide = pas de repli FormSubmit.
+const emailContact = adresseContact(site.email);
 
 // --- Dates pré-remplies depuis le calendrier des disponibilités --------------
 // /reserver?arrivee=2026-08-01&depart=2026-08-08 : on ne retient que des dates
@@ -57,7 +62,7 @@ const cfg = {
   supabaseUrl: isSupabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_URL) : '',
   supabaseKey: isSupabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY) : '',
   supabaseConfigured: isSupabaseConfigured,
-  email: site.email,
+  email: emailContact,
   capacite: site.capacite,
   caution: tarifsData.caution,
   taxeSejour: tarifsData.taxe_sejour_par_nuit_personne,
@@ -91,6 +96,7 @@ const cfg = {
     sending: b['booking.sending'],
     submit: b['booking.submit'],
     error: b['booking.error'],
+    errorSansEmail: b['booking.errorSansEmail'],
     packsChosen: b['booking.packsChosen'],
     none: b['booking.none'],
     seasonHaute: b['booking.season.haute'],
@@ -136,7 +142,7 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
 
     <form
       id="booking-form"
-      action={`https://formsubmit.co/${site.email}`}
+      action={emailContact ? `https://formsubmit.co/${emailContact}` : undefined}
       method="POST"
       class="mt-12 grid lg:grid-cols-[1fr_380px] gap-8 items-start"
     >
@@ -869,7 +875,17 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
       formError.classList.remove('hidden');
       return;
     }
-    if (!supabaseConfigured) return; // fallback FormSubmit (POST natif)
+    if (!supabaseConfigured) {
+      // Repli FormSubmit : sans adresse de réception utilisable, le POST natif
+      // n'aboutit nulle part. On bloque l'envoi et on le dit, plutôt que de
+      // laisser croire que la demande est partie.
+      if (!email) {
+        e.preventDefault();
+        formError.textContent = s.errorSansEmail;
+        formError.classList.remove('hidden');
+      }
+      return;
+    }
     e.preventDefault();
 
     formError.classList.add('hidden');
@@ -937,7 +953,9 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
       confirmation.classList.remove('hidden');
       confirmation.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch (err) {
-      formError.textContent = s.error.replace('{email}', email);
+      formError.textContent = email
+        ? s.error.replace('{email}', email)
+        : s.errorSansEmail;
       formError.classList.remove('hidden');
     } finally {
       submitBtn.disabled = false;

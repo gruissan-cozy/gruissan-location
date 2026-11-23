@@ -72,6 +72,31 @@ export const DUREES_CONSERVATION = {
   preuveAnnees: RETENTION_PREUVE_ANNEES,
 } as const;
 
+/**
+ * Domaines réservés à la documentation (RFC 2606) : ils ne peuvent pas
+ * recevoir de courrier. Une adresse qui en dépend n'est pas une adresse.
+ */
+const DOMAINES_RESERVES = ['exemple.com', 'example.com', 'exemple.fr', 'example.org', 'test.invalid'];
+
+/**
+ * Adresse de contact réellement publiable, ou chaîne vide.
+ *
+ * Publier `contact@exemple.com` comme moyen d'exercer ses droits RGPD serait
+ * une fausse information : le courrier n'arrive nulle part. Tant que la vraie
+ * adresse n'est pas renseignée, la page doit le dire au lieu d'afficher un
+ * domaine d'exemple.
+ */
+export function adresseContact(email: unknown): string {
+  if (typeof email !== 'string') return '';
+  const valeur = email.trim();
+  if (!valeur.includes('@') || valeur.startsWith('@') || valeur.endsWith('@')) return '';
+  const domaine = valeur.split('@').pop()?.toLowerCase() ?? '';
+  if (DOMAINES_RESERVES.some((reserve) => domaine === reserve || domaine.endsWith(`.${reserve}`))) {
+    return '';
+  }
+  return valeur;
+}
+
 /** Remplace les jetons `{0}`, `{1}`… d'un libellé traduit. */
 export function interpoler(modele: string, valeurs: ReadonlyArray<string | number>): string {
   return modele.replace(/\{(\d+)\}/g, (jeton, index: string) => {

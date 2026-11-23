@@ -7,7 +7,13 @@ import cgv from '../../content/cgv.json';
 import { t } from '../i18n';
 import type { Lang } from '../i18n';
 import { cgvT } from '../i18n/cgv';
-import { cheminPage, interpoler, champsRenseignes, ligneEnregistrement } from '../lib/legal';
+import {
+  adresseContact,
+  cheminPage,
+  interpoler,
+  champsRenseignes,
+  ligneEnregistrement,
+} from '../lib/legal';
 import {
   baremeAffiche,
   baremeContractuel,
@@ -21,7 +27,9 @@ const { lang } = Astro.props as Props;
 const tr = cgvT[lang];
 const commun = t[lang];
 
-const email = site.email;
+// Une adresse d'exemple (domaine réservé) n'est pas une adresse : elle est
+// remplacée par un texte qui dit où l'obtenir, jamais affichée telle quelle.
+const email = adresseContact(site.email);
 const caution = Number(tarifs.caution);
 const cautionAffichable = Number.isFinite(caution) && caution > 0 ? caution : null;
 const taxeMontant = montantTaxeAffichable(tarifs);
@@ -39,7 +47,9 @@ const enregistrement = ligneEnregistrement(
 const objet = interpoler(tr['cgv.objet.texte'], [site.ville]);
 const logement = interpoler(tr['cgv.logement.texte'], [site.capacite]);
 const reglement = interpoler(tr['cgv.reglement.texte'], [site.capacite]);
-const reclamation = interpoler(tr['cgv.mediateur.texte'], [email]);
+const reclamation = email
+  ? interpoler(tr['cgv.mediateur.texte'], [email])
+  : tr['cgv.mediateur.sansEmail'];
 const versionTexte = version ? interpoler(tr['cgv.version.texte'], [version]) : '';
 const guideHref = `/gruissan-location/${lang === 'fr' ? '' : lang + '/'}guide/`;
 ---
@@ -175,7 +185,9 @@ const guideHref = `/gruissan-location/${lang === 'fr' ? '' : lang + '/'}guide/`;
   <section class="border-t border-sand-200 pt-6 text-sm">
     <p class="text-ocean-700/80">{tr['cgv.contact']}</p>
     <p class="mt-2">
-      <a href={`mailto:${email}`} class="text-ocean-600 hover:text-ocean-500 underline">{email}</a>
+      {email
+        ? <a href={`mailto:${email}`} class="text-ocean-600 hover:text-ocean-500 underline">{email}</a>
+        : tr['legal.contactNonPublie']}
     </p>
     <p class="mt-4 flex flex-wrap gap-x-5 gap-y-2">
       <a href={cheminPage('mentions-legales', lang)} class="text-ocean-600 hover:text-ocean-500 underline font-medium">

@@ -7,6 +7,7 @@ import { LANGUAGES, t } from '../src/i18n';
 import { legalT } from '../src/i18n/legal';
 import {
   DUREES_CONSERVATION,
+  adresseContact,
   aDesChampsRenseignes,
   champsRenseignes,
   cheminPage,
@@ -126,14 +127,201 @@ describe('durées de conservation — celles du code, pas une promesse séparée
     expect(DUREES_CONSERVATION.preuveAnnees).toBe(5);
   });
 
+  it('ne présente pas la borne de session comme une durée de conservation du séjour', () => {
+    // La purge ne supprime que les sessions expirées, les notes et les fichiers
+    // hors preuve. Les données de réservation (`sejours.client_*`) ne sont
+    // purgées par rien : la page ne doit donc pas annoncer leur effacement.
+    for (const lang of LANGUAGES) {
+      const texte = legalT[lang]['confidentialite.durees.sejour'];
+      expect(texte, `[${lang}] durée du séjour absente`).toBeTruthy();
+      expect(texte, `[${lang}] annonce une suppression à 30 jours`).toMatch(/\{0\}/);
+    }
+  });
+
+  it('distingue explicitement session, notes et dossier de séjour', () => {
+    for (const lang of LANGUAGES) {
+      for (const cle of [
+        'confidentialite.durees.session',
+        'confidentialite.durees.notes',
+        'confidentialite.durees.sejour',
+        'confidentialite.durees.preuve',
+      ]) {
+        expect(legalT[lang][cle], `[${lang}] ${cle} manquant`).toBeTruthy();
+      }
+      // Aucune clé ne doit plus prétendre purger les données de réservation.
+      expect(legalT[lang]).not.toHaveProperty('confidentialite.durees.donnees');
+    }
+  });
+
+  it('reste aligné sur la purge réelle : `client_email` n’y apparaît pas', () => {
+    // Si la purge venait à supprimer les données du séjour, ce test tomberait
+    // et forcerait à mettre le texte à jour dans le même commit.
+    const purge = lire('supabase/functions/purge-tenant-data/index.ts');
+    for (const colonne of ['client_email', 'client_nom', 'client_telephone', 'client_message']) {
+      expect(purge, `la purge touche désormais ${colonne} : mettre à jour la page`).not.toContain(colonne);
+    }
+  });
+
   it('insère ces durées dans le texte publié, jamais un nombre en dur', () => {
     for (const lang of LANGUAGES) {
-      const donnees = interpoler(legalT[lang]['confidentialite.durees.donnees'], [30]);
+      const session = interpoler(legalT[lang]['confidentialite.durees.session'], [30]);
+      const sejour = interpoler(legalT[lang]['confidentialite.durees.sejour'], [30]);
       const preuve = interpoler(legalT[lang]['confidentialite.durees.preuve'], [5]);
-      expect(donnees).toContain('30');
-      expect(preuve).toContain('5');
-      expect(donnees).not.toContain('{0}');
-      expect(preuve).not.toContain('{0}');
+      expect(session, `[${lang}] session sans la borne`).toContain('30');
+      expect(sejour, `[${lang}] séjour sans la borne`).toContain('30');
+      expect(preuve, `[${lang}] preuve sans la durée`).toContain('5');
+      for (const texte of [session, sejour, preuve]) {
+        expect(texte).not.toContain('{0}');
+      }
+    }
+  });
+});
+
+describe('sous-traitants — chaque hôte externe réellement appelé est déclaré', () => {
+  // Une page RGPD qui omet un destinataire est fausse, même si elle est bien
+  // écrite. Ce test relève les hôtes `https://…` des pages qui chargent des
+  // ressources, et exige que chacun soit couvert par une clé
+  // `confidentialite.destinataires.*`.
+  const PAGES = [
+    'src/layouts/Layout.astro',
+    'src/components/Vitrine.astro',
+    'src/components/Reservation.astro',
+    'src/pages/tenant/index.astro',
+  ];
+
+  /**
+   * Hôtes qui ne sont pas des sous-traitants, avec la raison.
+   * - le site lui-même (URL canonique, images, liens internes) ;
+   * - `schema.org` n'est pas appelé : c'est un identifiant de vocabulaire
+   *   JSON-LD, inscrit en texte dans la page, sans requête réseau.
+   */
+  const EXCEPTIONS: Record<string, string> = {
+    'gruissan-cozy.github.io': 'le site lui-même',
+    'schema.org': 'identifiant de vocabulaire JSON-LD, aucune requête réseau',
+  };
+
+  /** Hôte → clé i18n censée le décrire. */
+  const COUVERTURE: Record<string, string> = {
+    'formsubmit.co': 'confidentialite.destinataires.formsubmit',
+    'fonts.googleapis.com': 'confidentialite.destinataires.googlefonts',
+    'fonts.gstatic.com': 'confidentialite.destinataires.googlefonts',
+    'supabase.co': 'confidentialite.destinataires.supabase',
+    'resend.com': 'confidentialite.destinataires.resend',
+  };
+
+  function hotes(): string[] {
+    const trouves = new Set<string>();
+    for (const page of PAGES) {
+      if (!existsSync(join(ROOT, page))) continue;
+      for (const m of lire(page).matchAll(/https:\/\/([a-z0-9.-]+\.[a-z]{2,})/gi)) {
+        trouves.add(m[1].toLowerCase());
+      }
+    }
+    return [...trouves].sort();
+  }
+
+  it('ne laisse aucun hôte non déclaré ni justifié', () => {
+    const orphelins = hotes().filter(
+      (hote) => !(hote in EXCEPTIONS) && !(hote in COUVERTURE),
+    );
+    expect(orphelins, `hôtes externes non déclarés dans la politique : ${orphelins.join(', ')}`).toEqual([]);
+  });
+
+  it('déclare les deux sous-traitants qui transmettent des données visiteurs', () => {
+    // FormSubmit reçoit le contenu des formulaires, Google Fonts l'IP.
+    const liste = hotes();
+    expect(liste).toContain('formsubmit.co');
+    expect(liste.some((h) => h.startsWith('fonts.'))).toBe(true);
+    for (const lang of LANGUAGES) {
+      for (const cle of [
+        'confidentialite.destinataires.formsubmit',
+        'confidentialite.destinataires.googlefonts',
+      ]) {
+        expect(legalT[lang][cle], `[${lang}] ${cle} manquant`).toBeTruthy();
+      }
+    }
+  });
+
+  it('chaque hôte couvert renvoie à une clé réellement présente dans les 4 langues', () => {
+    for (const [hote, cle] of Object.entries(COUVERTURE)) {
+      for (const lang of LANGUAGES) {
+        expect(legalT[lang][cle], `[${hote}] ${cle} absent en ${lang}`).toBeTruthy();
+      }
+    }
+  });
+
+  it('les sous-traitants déclarés sont affichés par la page', () => {
+    const composant = lire('src/components/PolitiqueConfidentialite.astro');
+    for (const cle of ['formsubmit', 'googlefonts', 'supabase', 'resend']) {
+      expect(composant, `destinataire « ${cle} » non rendu`).toContain(
+        `confidentialite.destinataires.${cle}`,
+      );
+    }
+  });
+});
+
+describe('adresse de contact — aucune adresse d’exemple publiée', () => {
+  it('n’affiche jamais un domaine réservé à la documentation', () => {
+    // `contact@exemple.com` ne reçoit aucun courrier : la publier comme moyen
+    // d'exercer ses droits RGPD serait une fausse information.
+    expect(adresseContact('contact@exemple.com')).toBe('');
+    expect(adresseContact('contact@example.com')).toBe('');
+    expect(adresseContact('quelquun@exemple.com')).toBe('');
+    for (const invalide of ['', '   ', 'sans-arobase', '@exemple.com', 'a@', null, 42]) {
+      expect(adresseContact(invalide), JSON.stringify(invalide)).toBe('');
+    }
+    expect(adresseContact('  vrai@gruissan-cozy.fr  ')).toBe('vrai@gruissan-cozy.fr');
+  });
+
+  it('passe l’adresse affichée par le filtre, dans les trois pages légales', () => {
+    // Si un composant affichait `site.email` en direct, l'adresse réservée
+    // redeviendrait visible : on exige le passage par `adresseContact`.
+    for (const composant of [
+      'src/components/MentionsLegales.astro',
+      'src/components/PolitiqueConfidentialite.astro',
+      'src/components/ConditionsGenerales.astro',
+    ]) {
+      const source = lire(composant);
+      expect(source, `${composant} : adresse non filtrée`).toContain('adresseContact(');
+    }
+  });
+
+  it('aucun composant ne publie `site.email` en direct', () => {
+    // Le pied de page, le JSON-LD, le formulaire de contact et le formulaire de
+    // réservation passaient tous `site.email` brut : `contact@exemple.com`
+    // finissait dans le HTML et `formsubmit.co/contact@exemple.com` ne recevait
+    // rien. Tout affichage doit passer par `adresseContact`.
+    const FICHIERS = [
+      'src/layouts/Layout.astro',
+      'src/components/Vitrine.astro',
+      'src/components/Reservation.astro',
+      'src/components/MentionsLegales.astro',
+      'src/components/PolitiqueConfidentialite.astro',
+      'src/components/ConditionsGenerales.astro',
+    ];
+    for (const fichier of FICHIERS) {
+      const source = lire(fichier);
+      const directs = [
+        ...source.matchAll(/(?:mailto:\$\{site\.email\}|formsubmit\.co\/\$\{site\.email\}|email: site\.email)/g),
+      ].map((m) => m[0]);
+      expect(directs, `${fichier} publie site.email sans filtre`).toEqual([]);
+    }
+  });
+
+  it('aucun formulaire ne poste vers une adresse non utilisable', () => {
+    // Sans adresse de réception, `action` doit être absente : un formulaire qui
+    // poste vers un domaine réservé accepte la saisie puis la perd.
+    const vitrine = lire('src/components/Vitrine.astro');
+    expect(vitrine).toContain("action={`https://formsubmit.co/${emailContact}`}");
+    expect(vitrine).toContain("tr['contact.indisponible']");
+    const reservation = lire('src/components/Reservation.astro');
+    expect(reservation).toContain('action={emailContact ?');
+    expect(reservation).toContain('errorSansEmail');
+  });
+
+  it('remplace l’adresse absente par un texte honnête, dans les quatre langues', () => {
+    for (const lang of LANGUAGES) {
+      expect(legalT[lang]['legal.contactNonPublie'], `[${lang}] texte de repli manquant`).toBeTruthy();
     }
   });
 });
@@ -216,13 +404,37 @@ describe('contenu réel — aucun texte d’attente visible en production', () =
     }
   });
 
+  it('n’affiche aucun domaine réservé à la documentation', () => {
+    // `exemple.com` / `example.com` ne reçoivent aucun courrier : les publier
+    // dans un texte légal, c'est publier une adresse qui n'existe pas. La garde
+    // porte sur TOUS les textes légaux, pas seulement sur `site.email`.
+    const RESERVE = /exemple\.(com|fr|org)|example\.(com|fr|org)/i;
+    for (const lang of LANGUAGES) {
+      for (const [cle, valeur] of Object.entries(legalT[lang])) {
+        expect(valeur, `[${lang}] ${cle} publie un domaine d'exemple`).not.toMatch(RESERVE);
+      }
+    }
+    for (const composant of [
+      'src/components/MentionsLegales.astro',
+      'src/components/PolitiqueConfidentialite.astro',
+      'src/components/ConditionsGenerales.astro',
+    ]) {
+      // Les commentaires d'explication citent volontairement « exemple.com » :
+      // on ne teste que le code rendu, lignes de commentaire retirées.
+      const code = lire(composant)
+        .split('\n')
+        .filter((ligne) => !/^\s*(\/\/|\*|\/\*)/.test(ligne))
+        .join('\n');
+      expect(code, `${composant} : domaine d'exemple en dur`).not.toMatch(RESERVE);
+    }
+  });
+
   it('couvre les sujets attendus de la politique de confidentialité', () => {
     for (const lang of LANGUAGES) {
       for (const cle of [
         'confidentialite.donnees.reservation',
         'confidentialite.donnees.etat',
         'confidentialite.donnees.techniques',
-        'confidentialite.durees.donnees',
         'confidentialite.durees.preuve',
         'confidentialite.droits.acces',
         'confidentialite.droits.exercer',

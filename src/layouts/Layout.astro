@@ -5,7 +5,7 @@ import { LANGUAGES, langNames, t, seo } from '../i18n';
 import type { Lang } from '../i18n';
 import { libelleNumero, lienWhatsApp, numeroAppel, peutAppeler, peutUtiliserWhatsApp } from '../lib/contact';
 import { htmlEnregistrement } from '../lib/enregistrement';
-import { cheminPage } from '../lib/legal';
+import { adresseContact, cheminPage } from '../lib/legal';
 
 interface Props {
   lang?: Lang;
@@ -26,6 +26,11 @@ const whatsappLien = lienWhatsApp(coordonnees.telephone, coordonnees.whatsapp);
 const montrerAppel = peutAppeler(coordonnees);
 const montrerWhatsApp = peutUtiliserWhatsApp(coordonnees);
 const telephoneAffiche = libelleNumero(coordonnees);
+
+// Adresse de contact : un domaine réservé à la documentation (exemple.com)
+// n'est jamais affichée. Tant qu'elle n'est pas renseignée, le pied de page
+// omet la ligne au lieu de publier une adresse qui ne reçoit rien.
+const emailContact = adresseContact(site.email);
 
 // Numéro d'enregistrement mairie : fragment vide tant que le champ est vide.
 const enregistrementHtml = htmlEnregistrement(site.numero_enregistrement_mairie, lang);
@@ -80,7 +85,7 @@ const metaDesc = seo[lang].description;
       description: seo.fr.description,
       url: 'https://gruissan-cozy.github.io/gruissan-location/',
       telephone: site.telephone,
-      email: site.email,
+      ...(emailContact ? { email: emailContact } : {}),
       image: ogImage,
       priceRange: '€€',
       address: {
@@ -204,7 +209,9 @@ const metaDesc = seo[lang].description;
             {montrerWhatsApp && whatsappLien && (
               <a href={whatsappLien} target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors block">WhatsApp</a>
             )}
-            <a href={`mailto:${site.email}`} class="hover:text-white transition-colors block">{site.email}</a>
+            {emailContact && (
+              <a href={`mailto:${emailContact}`} class="hover:text-white transition-colors block">{emailContact}</a>
+            )}
           </p>
         </div>
         <div>

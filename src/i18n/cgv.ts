@@ -70,6 +70,8 @@ export const cgvT: Record<Lang, Record<string, string>> = {
     'cgv.mediateur.titre': 'Réclamations et médiation',
     'cgv.mediateur.texte':
       "Toute réclamation doit d'abord être adressée par écrit à {0}, en décrivant les faits. Une réponse est apportée dans le délai d'un mois.",
+    'cgv.mediateur.sansEmail':
+      "Les réclamations sont reçues par écrit via l'adresse de contact communiquée avec la confirmation de la réservation : elle n'est pas encore publiée sur cette page. Une réponse est apportée dans le délai d'un mois.",
     'cgv.mediateur.absent':
       "Le propriétaire n'a pas encore désigné de médiateur de la consommation. Si aucune solution n'est trouvée après une réclamation écrite, le voyageur peut recourir gratuitement à un médiateur de la consommation dans les conditions prévues par le code de la consommation, ou s'adresser à l'association de consommateurs de son choix.",
     'cgv.droit.titre': 'Droit applicable',
@@ -140,6 +142,8 @@ export const cgvT: Record<Lang, Record<string, string>> = {
     'cgv.mediateur.titre': 'Complaints and mediation',
     'cgv.mediateur.texte':
       'Any complaint must first be sent in writing to {0}, describing the facts. A reply is given within one month.',
+    'cgv.mediateur.sansEmail':
+      'Complaints are received in writing via the contact address provided with the booking confirmation: it is not yet published on this page. A reply is given within one month.',
     'cgv.mediateur.absent':
       'The owner has not yet appointed a consumer mediator. If no solution is found after a written complaint, the guest may use a consumer mediator free of charge under the conditions set by the French consumer code, or contact a consumer association of their choice.',
     'cgv.droit.titre': 'Governing law',
@@ -210,6 +214,8 @@ export const cgvT: Record<Lang, Record<string, string>> = {
     'cgv.mediateur.titre': 'Reclamaciones y mediación',
     'cgv.mediateur.texte':
       'Toda reclamación debe dirigirse primero por escrito a {0}, describiendo los hechos. Se responde en el plazo de un mes.',
+    'cgv.mediateur.sansEmail':
+      'Las reclamaciones se reciben por escrito a través de la dirección de contacto comunicada con la confirmación de la reserva: aún no está publicada en esta página. Se responde en el plazo de un mes.',
     'cgv.mediateur.absent':
       'El propietario aún no ha designado un mediador de consumo. Si no se alcanza una solución tras una reclamación escrita, el huésped puede recurrir gratuitamente a un mediador de consumo en las condiciones previstas por el código de consumo francés, o dirigirse a la asociación de consumidores que elija.',
     'cgv.droit.titre': 'Derecho aplicable',
@@ -280,6 +286,8 @@ export const cgvT: Record<Lang, Record<string, string>> = {
     'cgv.mediateur.titre': 'Beschwerden und Mediation',
     'cgv.mediateur.texte':
       'Beschwerden sind zunächst schriftlich an {0} zu richten und dabei die Umstände zu schildern. Eine Antwort erfolgt innerhalb eines Monats.',
+    'cgv.mediateur.sansEmail':
+      'Beschwerden werden schriftlich über die mit der Buchungsbestätigung mitgeteilte Kontaktadresse entgegengenommen: Sie ist auf dieser Seite noch nicht veröffentlicht. Eine Antwort erfolgt innerhalb eines Monats.',
     'cgv.mediateur.absent':
       'Der Eigentümer hat noch keinen Verbraucherschlichter benannt. Wird nach einer schriftlichen Beschwerde keine Lösung gefunden, kann der Gast nach den Vorgaben des französischen Verbrauchergesetzbuchs kostenlos einen Verbraucherschlichter anrufen oder sich an eine Verbraucherorganisation seiner Wahl wenden.',
     'cgv.droit.titre': 'Anwendbares Recht',

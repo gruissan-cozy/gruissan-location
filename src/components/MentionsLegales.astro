@@ -7,6 +7,7 @@ import type { Lang } from '../i18n';
 import { legalT } from '../i18n/legal';
 import {
   aDesChampsRenseignes,
+  adresseContact,
   champsRenseignes,
   cheminPage,
   interpoler,
@@ -18,6 +19,10 @@ interface Props { lang: Lang }
 const { lang } = Astro.props as Props;
 const tr = legalT[lang];
 const commun = t[lang];
+
+// Adresse réellement publiable : un domaine réservé à la documentation
+// (exemple.com) ne reçoit aucun courrier et ne doit jamais être affiché.
+const email = adresseContact(site.email);
 
 const editeur = champsRenseignes(legal.exploitant);
 const assurance = champsRenseignes(legal.assurance);
@@ -48,7 +53,9 @@ const texteActivite = interpoler(tr['mentions.activite.texte'], [
   site.ville,
   site.region,
 ]);
-const textePublication = interpoler(tr['mentions.publication.texte'], [site.email]);
+const textePublication = email
+  ? interpoler(tr['mentions.publication.texte'], [email])
+  : tr['mentions.publication.sansEmail'];
 ---
 
 <LegalPage lang={lang} titre={tr['mentions.title']} sousTitre={tr['mentions.subtitle']}>
@@ -64,7 +71,11 @@ const textePublication = interpoler(tr['mentions.publication.texte'], [site.emai
       ))}
       <div class="flex flex-col sm:flex-row sm:gap-2">
         <dt class="font-semibold text-ocean-900 sm:min-w-56">{tr['mentions.editeur.email']}</dt>
-        <dd><a href={`mailto:${site.email}`} class="text-ocean-600 hover:text-ocean-500 underline">{site.email}</a></dd>
+        <dd>
+          {email
+            ? <a href={`mailto:${email}`} class="text-ocean-600 hover:text-ocean-500 underline">{email}</a>
+            : <span class="text-ocean-700/80">{tr['legal.contactNonPublie']}</span>}
+        </dd>
       </div>
     </dl>
   </section>

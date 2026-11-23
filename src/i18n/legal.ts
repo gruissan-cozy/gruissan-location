@@ -9,12 +9,14 @@ import type { Lang } from '../i18n';
 export const legalT: Record<Lang, Record<string, string>> = {
   fr: {
     'legal.retour': 'Retour au site',
+    'legal.contactNonPublie':
+      "L'adresse de contact n'est pas encore publiée sur cette page. Elle est communiquée avec la confirmation de la réservation, et figure sur le site dès qu'elle est renseignée.",
     'legal.miseAJour': 'Dernière mise à jour :',
     'mentions.title': 'Mentions légales',
     'mentions.subtitle': "Informations sur l'éditeur du site et sur son hébergement.",
     'mentions.editeur.titre': 'Éditeur du site',
     'mentions.editeur.intro':
-      "Ce site présente un appartement proposé en location saisonnière. Il est édité par l'exploitant du logement, joignable aux coordonnées ci-dessous.",
+      "Ce site présente un appartement proposé en location saisonnière. Il est édité par l'exploitant du logement. Les informations le concernant figurent ci-dessous.",
     'mentions.editeur.nom': 'Nom ou raison sociale',
     'mentions.editeur.forme': 'Forme juridique',
     'mentions.editeur.siret': 'SIRET',
@@ -27,6 +29,8 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'mentions.publication.titre': 'Responsable de la publication',
     'mentions.publication.texte':
       "Le responsable de la publication est l'exploitant du logement. Toute demande peut être adressée à l'adresse {0}.",
+    'mentions.publication.sansEmail':
+      "Le responsable de la publication est l'exploitant du logement. L'adresse de contact n'est pas encore publiée sur cette page ; elle est communiquée avec la confirmation de la réservation.",
     'mentions.hebergeur.titre': 'Hébergement du site',
     'mentions.hebergeur.texte':
       'Le site est hébergé par {0}, sur le service GitHub Pages.',
@@ -49,11 +53,15 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.responsable.titre': 'Responsable du traitement',
     'confidentialite.responsable.texte':
       "Le responsable du traitement est l'exploitant du logement présenté sur ce site. Pour toute question relative à vos données, écrivez à {0}.",
+    'confidentialite.responsable.sansEmail':
+      "Le responsable du traitement est l'exploitant du logement présenté sur ce site. L'adresse de contact n'est pas encore publiée sur cette page ; elle est communiquée avec la confirmation de la réservation.",
     'confidentialite.donnees.titre': 'Données collectées',
     'confidentialite.donnees.intro':
       "Le site ne collecte que les données nécessaires à la préparation et au suivi d'un séjour :",
     'confidentialite.donnees.reservation':
       'Réservation : nom, adresse email, numéro de téléphone si vous le communiquez, dates souhaitées, nombre de personnes, message libre et options choisies.',
+    'confidentialite.donnees.contact':
+      "Formulaire de contact : nom, adresse email, dates envisagées et message libre, si vous écrivez depuis le site plutôt que depuis la page de réservation.",
     'confidentialite.donnees.etat':
       "État des lieux : photographies des pièces, notes libres et signature manuscrite numérique, transmises depuis l'espace locataire à l'arrivée et au départ.",
     'confidentialite.donnees.techniques':
@@ -80,20 +88,29 @@ export const legalT: Record<Lang, Record<string, string>> = {
       "Resend : acheminement des emails transactionnels (confirmation de demande, lien de l'espace locataire, état des lieux signé).",
     'confidentialite.destinataires.hebergeur':
       'GitHub Pages : hébergement des pages publiques du site.',
+    'confidentialite.destinataires.formsubmit':
+      "FormSubmit : acheminement par email des messages envoyés depuis les formulaires de contact et de réservation du site.",
+    'confidentialite.destinataires.googlefonts':
+      "Google Fonts : mise à disposition des polices d'écriture utilisées par les pages du site.",
     'confidentialite.destinataires.autorites':
       "Les données peuvent être communiquées aux autorités administratives ou judiciaires lorsque la loi l'exige.",
     'confidentialite.transferts.titre': "Transferts hors de l'Union européenne",
     'confidentialite.transferts.texte':
-      "Certains prestataires peuvent héberger des données en dehors de l'Union européenne. Ces transferts s'appuient sur les garanties contractuelles prévues par le RGPD (clauses contractuelles types de la Commission européenne) et sont limités aux données nécessaires au service.",
+      "Certains prestataires peuvent héberger des données en dehors de l'Union européenne. Ces transferts s'appuient sur les garanties contractuelles prévues par le RGPD (clauses contractuelles types de la Commission européenne) et sont limités aux données nécessaires au service. C'est notamment le cas des polices d'écriture chargées depuis les serveurs de Google : l'adresse IP du visiteur leur est transmise à chaque affichage d'une page, y compris sur celles-ci.",
     'confidentialite.durees.titre': 'Durées de conservation',
     'confidentialite.durees.intro':
-      'Les durées ci-dessous sont appliquées automatiquement par la purge des données locataire :',
-    'confidentialite.durees.donnees':
-      "Données personnelles du séjour (adresse email, jeton d'accès, notes libres) : supprimées {0} jours après le départ.",
+      "Les durées ci-dessous distinguent ce qui est purgé automatiquement de ce qui est conservé au titre d'une obligation légale :",
+    'confidentialite.durees.session':
+      "Accès à l'espace locataire (jeton, adresse email de connexion) : supprimé à l'expiration du lien, au plus tard {0} jours après le départ.",
+    'confidentialite.durees.notes':
+      "Notes libres de l'état des lieux et fichiers non retenus comme preuve : supprimés à la purge qui suit l'expiration de l'accès.",
+    'confidentialite.durees.sejour':
+      "Données de la réservation (nom, adresse email, téléphone, message) : conservées dans le dossier de séjour pendant la durée légale de conservation comptable et fiscale, et non supprimées au bout de {0} jours.",
     'confidentialite.durees.preuve':
       "Preuve de l'état des lieux (PDF signé et photographies) : conservée {0} ans à compter du départ, pour répondre à un éventuel litige.",
     'confidentialite.durees.note':
-      'Les données de réservation nécessaires à la comptabilité et à la déclaration de la taxe de séjour sont conservées pendant la durée légale applicable.',
+      "Les durées de conservation comptable et fiscale applicables à une location saisonnière restent à confirmer par le propriétaire avec son comptable ; elles ne sont pas recopiées ici pour ne pas annoncer un chiffre non vérifié. Une demande d'effacement reste possible à tout moment : voir « Vos droits ».",
+
     'confidentialite.droits.titre': 'Vos droits',
     'confidentialite.droits.intro':
       'Conformément au RGPD, vous disposez des droits suivants sur vos données :',
@@ -107,6 +124,8 @@ export const legalT: Record<Lang, Record<string, string>> = {
       'droit à la portabilité des données que vous avez fournies.',
     'confidentialite.droits.exercer':
       "Pour exercer ces droits, écrivez à {0}. Une réponse vous sera apportée dans un délai d'un mois.",
+    'confidentialite.droits.exercerSansEmail':
+      "Pour exercer ces droits, utilisez l'adresse de contact communiquée avec la confirmation de la réservation : elle n'est pas encore publiée sur cette page. Une réponse vous sera apportée dans un délai d'un mois.",
     'confidentialite.droits.reclamation':
       "Vous pouvez également introduire une réclamation auprès de la CNIL (www.cnil.fr) si vous estimez que vos droits ne sont pas respectés.",
     'confidentialite.cookies.titre': "Cookies et mesure d'audience",
@@ -118,12 +137,14 @@ export const legalT: Record<Lang, Record<string, string>> = {
   },
   en: {
     'legal.retour': 'Back to the website',
+    'legal.contactNonPublie':
+      'The contact address is not yet published on this page. It is provided with the booking confirmation and appears on the site as soon as it is filled in.',
     'legal.miseAJour': 'Last updated:',
     'mentions.title': 'Legal notice',
     'mentions.subtitle': 'Information about the publisher of this website and its hosting.',
     'mentions.editeur.titre': 'Website publisher',
     'mentions.editeur.intro':
-      'This website presents an apartment offered for seasonal rental. It is published by the owner of the accommodation, who can be reached using the contact details below.',
+      'This website presents an apartment offered for seasonal rental. It is published by the owner of the accommodation. The information about the owner is set out below.',
     'mentions.editeur.nom': 'Name or company name',
     'mentions.editeur.forme': 'Legal form',
     'mentions.editeur.siret': 'SIRET',
@@ -136,6 +157,8 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'mentions.publication.titre': 'Publication manager',
     'mentions.publication.texte':
       'The publication manager is the owner of the accommodation. Any request can be sent to {0}.',
+    'mentions.publication.sansEmail':
+      'The publication manager is the owner of the accommodation. The contact address is not yet published on this page; it is provided with the booking confirmation.',
     'mentions.hebergeur.titre': 'Website hosting',
     'mentions.hebergeur.texte': 'The website is hosted by {0}, through the GitHub Pages service.',
     'mentions.hebergeur.site': 'Host website',
@@ -156,11 +179,15 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.responsable.titre': 'Data controller',
     'confidentialite.responsable.texte':
       'The data controller is the owner of the accommodation presented on this website. For any question about your data, write to {0}.',
+    'confidentialite.responsable.sansEmail':
+      'The data controller is the owner of the accommodation presented on this website. The contact address is not yet published on this page; it is provided with the booking confirmation.',
     'confidentialite.donnees.titre': 'Data collected',
     'confidentialite.donnees.intro':
       'The website only collects the data needed to prepare and monitor a stay:',
     'confidentialite.donnees.reservation':
       'Booking: name, email address, phone number if you provide one, requested dates, number of guests, free-text message and selected options.',
+    'confidentialite.donnees.contact':
+      'Contact form: name, email address, intended dates and free-text message, if you write from the site rather than from the booking page.',
     'confidentialite.donnees.etat':
       'Inventory report: photographs of the rooms, free-text notes and a digital handwritten signature, sent from the tenant space on arrival and departure.',
     'confidentialite.donnees.techniques':
@@ -186,20 +213,29 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.destinataires.resend':
       'Resend: delivery of transactional emails (booking request confirmation, tenant space link, signed inventory report).',
     'confidentialite.destinataires.hebergeur': 'GitHub Pages: hosting of the public pages of the website.',
+    'confidentialite.destinataires.formsubmit':
+      'FormSubmit: email delivery of the messages sent from the contact and booking forms on the site.',
+    'confidentialite.destinataires.googlefonts':
+      'Google Fonts: provision of the typefaces used by the pages of the site.',
     'confidentialite.destinataires.autorites':
       'Data may be disclosed to administrative or judicial authorities where required by law.',
     'confidentialite.transferts.titre': 'Transfers outside the European Union',
     'confidentialite.transferts.texte':
-      'Some providers may host data outside the European Union. Such transfers rely on the contractual safeguards provided for by the GDPR (European Commission standard contractual clauses) and are limited to the data needed for the service.',
+      'Some providers may host data outside the European Union. Such transfers rely on the contractual safeguards provided for by the GDPR (European Commission standard contractual clauses) and are limited to the data needed for the service. This applies in particular to the typefaces loaded from Google servers: the visitor’s IP address is sent to them each time a page is displayed, including these pages.',
     'confidentialite.durees.titre': 'Retention periods',
     'confidentialite.durees.intro':
-      'The periods below are applied automatically by the tenant data purge:',
-    'confidentialite.durees.donnees':
-      'Personal data of the stay (email address, access token, free-text notes): deleted {0} days after departure.',
+      'The periods below distinguish what is purged automatically from what is kept under a legal obligation:',
+    'confidentialite.durees.session':
+      'Access to the tenant space (token, sign-in email address): deleted when the link expires, at the latest {0} days after departure.',
+    'confidentialite.durees.notes':
+      'Free-text notes from the inventory and files not retained as evidence: deleted by the purge that follows the expiry of the access.',
+    'confidentialite.durees.sejour':
+      'Booking data (name, email address, telephone, message): kept in the stay file for the legal accounting and tax retention period, and not deleted after {0} days.',
     'confidentialite.durees.preuve':
       'Inventory report evidence (signed PDF and photographs): retained for {0} years from departure, to respond to a possible dispute.',
     'confidentialite.durees.note':
-      'Booking data required for bookkeeping and the tourist tax declaration is kept for the applicable legal period.',
+      'The accounting and tax retention periods applicable to a seasonal rental remain to be confirmed by the owner with their accountant; they are not reproduced here so as not to state an unverified figure. A request for erasure remains possible at any time: see “Your rights”.',
+
     'confidentialite.droits.titre': 'Your rights',
     'confidentialite.droits.intro':
       'Under the GDPR, you have the following rights over your data:',
@@ -213,6 +249,8 @@ export const legalT: Record<Lang, Record<string, string>> = {
       'right to portability of the data you have provided.',
     'confidentialite.droits.exercer':
       'To exercise these rights, write to {0}. A reply will be sent within one month.',
+    'confidentialite.droits.exercerSansEmail':
+      'To exercise these rights, use the contact address provided with the booking confirmation: it is not yet published on this page. A reply will be sent within one month.',
     'confidentialite.droits.reclamation':
       'You may also lodge a complaint with the CNIL (www.cnil.fr) if you believe your rights are not respected.',
     'confidentialite.cookies.titre': 'Cookies and audience measurement',
@@ -224,12 +262,14 @@ export const legalT: Record<Lang, Record<string, string>> = {
   },
   es: {
     'legal.retour': 'Volver al sitio',
+    'legal.contactNonPublie':
+      'La dirección de contacto aún no está publicada en esta página. Se comunica con la confirmación de la reserva y aparece en el sitio en cuanto se complete.',
     'legal.miseAJour': 'Última actualización:',
     'mentions.title': 'Aviso legal',
     'mentions.subtitle': 'Información sobre el editor del sitio y su alojamiento.',
     'mentions.editeur.titre': 'Editor del sitio',
     'mentions.editeur.intro':
-      'Este sitio presenta un apartamento ofrecido en alquiler de temporada. Lo edita el propietario del alojamiento, disponible en los datos de contacto indicados a continuación.',
+      'Este sitio presenta un apartamento ofrecido en alquiler de temporada. Lo edita el propietario del alojamiento. Los datos que le conciernen figuran a continuación.',
     'mentions.editeur.nom': 'Nombre o razón social',
     'mentions.editeur.forme': 'Forma jurídica',
     'mentions.editeur.siret': 'SIRET',
@@ -242,6 +282,8 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'mentions.publication.titre': 'Responsable de la publicación',
     'mentions.publication.texte':
       'El responsable de la publicación es el propietario del alojamiento. Cualquier solicitud puede enviarse a {0}.',
+    'mentions.publication.sansEmail':
+      'El responsable de la publicación es el propietario del alojamiento. La dirección de contacto aún no está publicada en esta página; se comunica con la confirmación de la reserva.',
     'mentions.hebergeur.titre': 'Alojamiento del sitio',
     'mentions.hebergeur.texte':
       'El sitio está alojado por {0}, en el servicio GitHub Pages.',
@@ -263,11 +305,15 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.responsable.titre': 'Responsable del tratamiento',
     'confidentialite.responsable.texte':
       'El responsable del tratamiento es el propietario del alojamiento presentado en este sitio. Para cualquier pregunta sobre sus datos, escriba a {0}.',
+    'confidentialite.responsable.sansEmail':
+      'El responsable del tratamiento es el propietario del alojamiento presentado en este sitio. La dirección de contacto aún no está publicada en esta página; se comunica con la confirmación de la reserva.',
     'confidentialite.donnees.titre': 'Datos recogidos',
     'confidentialite.donnees.intro':
       'El sitio solo recoge los datos necesarios para preparar y seguir una estancia:',
     'confidentialite.donnees.reservation':
       'Reserva: nombre, dirección de correo electrónico, número de teléfono si lo comunica, fechas deseadas, número de personas, mensaje libre y opciones elegidas.',
+    'confidentialite.donnees.contact':
+      'Formulario de contacto: nombre, dirección de correo electrónico, fechas previstas y mensaje libre, si escribe desde el sitio en lugar de desde la página de reserva.',
     'confidentialite.donnees.etat':
       'Inventario: fotografías de las estancias, notas libres y firma manuscrita digital, enviadas desde el espacio del inquilino a la llegada y a la salida.',
     'confidentialite.donnees.techniques':
@@ -293,20 +339,29 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.destinataires.resend':
       'Resend: envío de los correos transaccionales (confirmación de solicitud, enlace del espacio del inquilino, inventario firmado).',
     'confidentialite.destinataires.hebergeur': 'GitHub Pages: alojamiento de las páginas públicas del sitio.',
+    'confidentialite.destinataires.formsubmit':
+      'FormSubmit: envío por correo electrónico de los mensajes enviados desde los formularios de contacto y de reserva del sitio.',
+    'confidentialite.destinataires.googlefonts':
+      'Google Fonts: puesta a disposición de las tipografías utilizadas por las páginas del sitio.',
     'confidentialite.destinataires.autorites':
       'Los datos pueden comunicarse a las autoridades administrativas o judiciales cuando la ley lo exija.',
     'confidentialite.transferts.titre': 'Transferencias fuera de la Unión Europea',
     'confidentialite.transferts.texte':
-      'Algunos proveedores pueden alojar datos fuera de la Unión Europea. Estas transferencias se basan en las garantías contractuales previstas por el RGPD (cláusulas contractuales tipo de la Comisión Europea) y se limitan a los datos necesarios para el servicio.',
+      'Algunos proveedores pueden alojar datos fuera de la Unión Europea. Estas transferencias se basan en las garantías contractuales previstas por el RGPD (cláusulas contractuales tipo de la Comisión Europea) y se limitan a los datos necesarios para el servicio. Es el caso en particular de las tipografías cargadas desde los servidores de Google: la dirección IP del visitante se les transmite cada vez que se muestra una página, incluidas estas.',
     'confidentialite.durees.titre': 'Plazos de conservación',
     'confidentialite.durees.intro':
-      'Los plazos siguientes se aplican automáticamente mediante la purga de los datos del inquilino:',
-    'confidentialite.durees.donnees':
-      'Datos personales de la estancia (dirección de correo, token de acceso, notas libres): suprimidos {0} días después de la salida.',
+      'Los plazos siguientes distinguen lo que se purga automáticamente de lo que se conserva por una obligación legal:',
+    'confidentialite.durees.session':
+      'Acceso al espacio del inquilino (token, dirección de correo de conexión): suprimido al expirar el enlace, a más tardar {0} días después de la salida.',
+    'confidentialite.durees.notes':
+      'Notas libres del inventario y archivos no conservados como prueba: suprimidos en la purga que sigue a la expiración del acceso.',
+    'confidentialite.durees.sejour':
+      'Datos de la reserva (nombre, dirección de correo, teléfono, mensaje): conservados en el expediente de la estancia durante el plazo legal de conservación contable y fiscal, y no suprimidos al cabo de {0} días.',
     'confidentialite.durees.preuve':
       'Prueba del inventario (PDF firmado y fotografías): conservada {0} años desde la salida, para responder a un posible litigio.',
     'confidentialite.durees.note':
-      'Los datos de reserva necesarios para la contabilidad y la declaración de la tasa turística se conservan durante el plazo legal aplicable.',
+      'Los plazos de conservación contable y fiscal aplicables a un alquiler de temporada deben ser confirmados por el propietario con su asesor; no se reproducen aquí para no anunciar una cifra no verificada. En cualquier momento puede solicitarse la supresión: véase «Sus derechos».',
+
     'confidentialite.droits.titre': 'Sus derechos',
     'confidentialite.droits.intro':
       'De conformidad con el RGPD, dispone de los siguientes derechos sobre sus datos:',
@@ -320,6 +375,8 @@ export const legalT: Record<Lang, Record<string, string>> = {
       'derecho a la portabilidad de los datos que haya facilitado.',
     'confidentialite.droits.exercer':
       'Para ejercer estos derechos, escriba a {0}. Recibirá una respuesta en el plazo de un mes.',
+    'confidentialite.droits.exercerSansEmail':
+      'Para ejercer estos derechos, utilice la dirección de contacto comunicada con la confirmación de la reserva: aún no está publicada en esta página. Recibirá una respuesta en el plazo de un mes.',
     'confidentialite.droits.reclamation':
       'También puede presentar una reclamación ante la CNIL (www.cnil.fr) si considera que no se respetan sus derechos.',
     'confidentialite.cookies.titre': 'Cookies y medición de audiencia',
@@ -331,12 +388,14 @@ export const legalT: Record<Lang, Record<string, string>> = {
   },
   de: {
     'legal.retour': 'Zurück zur Website',
+    'legal.contactNonPublie':
+      'Die Kontaktadresse ist auf dieser Seite noch nicht veröffentlicht. Sie wird mit der Buchungsbestätigung mitgeteilt und erscheint auf der Website, sobald sie eingetragen ist.',
     'legal.miseAJour': 'Letzte Aktualisierung:',
     'mentions.title': 'Impressum',
     'mentions.subtitle': 'Angaben zum Betreiber der Website und zum Hosting.',
     'mentions.editeur.titre': 'Betreiber der Website',
     'mentions.editeur.intro':
-      'Diese Website stellt eine Ferienwohnung vor. Betreiber ist der Vermieter der Wohnung; er ist unter den unten angegebenen Kontaktdaten erreichbar.',
+      'Diese Website stellt eine Ferienwohnung vor. Betreiber ist der Vermieter der Wohnung. Die Angaben zu ihm stehen unten.',
     'mentions.editeur.nom': 'Name oder Firma',
     'mentions.editeur.forme': 'Rechtsform',
     'mentions.editeur.siret': 'SIRET',
@@ -349,6 +408,8 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'mentions.publication.titre': 'Verantwortlich für den Inhalt',
     'mentions.publication.texte':
       'Verantwortlich ist der Vermieter der Wohnung. Anfragen können an die Adresse {0} gerichtet werden.',
+    'mentions.publication.sansEmail':
+      'Verantwortlich ist der Vermieter der Wohnung. Die Kontaktadresse ist auf dieser Seite noch nicht veröffentlicht; sie wird mit der Buchungsbestätigung mitgeteilt.',
     'mentions.hebergeur.titre': 'Hosting',
     'mentions.hebergeur.texte': 'Die Website wird von {0} über den Dienst GitHub Pages gehostet.',
     'mentions.hebergeur.site': 'Website des Hosters',
@@ -369,11 +430,15 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.responsable.titre': 'Verantwortlicher',
     'confidentialite.responsable.texte':
       'Verantwortlich ist der Vermieter der auf dieser Website vorgestellten Wohnung. Bei Fragen zu Ihren Daten schreiben Sie an {0}.',
+    'confidentialite.responsable.sansEmail':
+      'Verantwortlich ist der Vermieter der auf dieser Website vorgestellten Wohnung. Die Kontaktadresse ist auf dieser Seite noch nicht veröffentlicht; sie wird mit der Buchungsbestätigung mitgeteilt.',
     'confidentialite.donnees.titre': 'Erhobene Daten',
     'confidentialite.donnees.intro':
       'Die Website erhebt nur die Daten, die für die Vorbereitung und Begleitung eines Aufenthalts erforderlich sind:',
     'confidentialite.donnees.reservation':
       'Buchung: Name, E-Mail-Adresse, Telefonnummer sofern angegeben, gewünschte Daten, Personenzahl, freie Nachricht und gewählte Optionen.',
+    'confidentialite.donnees.contact':
+      'Kontaktformular: Name, E-Mail-Adresse, ins Auge gefasste Daten und freie Nachricht, wenn Sie über die Website statt über die Buchungsseite schreiben.',
     'confidentialite.donnees.etat':
       'Zustandsbericht: Fotos der Räume, freie Notizen und digitale handschriftliche Unterschrift, die bei Ankunft und Abreise über den Mieterbereich übermittelt werden.',
     'confidentialite.donnees.techniques':
@@ -399,20 +464,29 @@ export const legalT: Record<Lang, Record<string, string>> = {
     'confidentialite.destinataires.resend':
       'Resend: Versand der Transaktions-E-Mails (Bestätigung der Anfrage, Link zum Mieterbereich, unterzeichneter Zustandsbericht).',
     'confidentialite.destinataires.hebergeur': 'GitHub Pages: Hosting der öffentlichen Seiten der Website.',
+    'confidentialite.destinataires.formsubmit':
+      'FormSubmit: E-Mail-Versand der über die Kontakt- und Buchungsformulare der Website gesendeten Nachrichten.',
+    'confidentialite.destinataires.googlefonts':
+      'Google Fonts: Bereitstellung der von den Seiten der Website verwendeten Schriftarten.',
     'confidentialite.destinataires.autorites':
       'Daten können an Verwaltungs- oder Justizbehörden übermittelt werden, wenn dies gesetzlich vorgeschrieben ist.',
     'confidentialite.transferts.titre': 'Übermittlungen außerhalb der Europäischen Union',
     'confidentialite.transferts.texte':
-      'Einige Dienstleister können Daten außerhalb der Europäischen Union hosten. Diese Übermittlungen stützen sich auf die im DSGVO vorgesehenen vertraglichen Garantien (Standardvertragsklauseln der Europäischen Kommission) und beschränken sich auf die für den Dienst erforderlichen Daten.',
+      'Einige Dienstleister können Daten außerhalb der Europäischen Union hosten. Diese Übermittlungen stützen sich auf die im DSGVO vorgesehenen vertraglichen Garantien (Standardvertragsklauseln der Europäischen Kommission) und beschränken sich auf die für den Dienst erforderlichen Daten. Das gilt insbesondere für die von Google-Servern geladenen Schriftarten: Die IP-Adresse des Besuchers wird bei jedem Seitenaufruf dorthin übertragen, auch auf diesen Seiten.',
     'confidentialite.durees.titre': 'Speicherdauer',
     'confidentialite.durees.intro':
-      'Die folgenden Fristen werden automatisch durch die Löschroutine der Mieterdaten angewandt:',
-    'confidentialite.durees.donnees':
-      'Personenbezogene Daten des Aufenthalts (E-Mail-Adresse, Zugangstoken, freie Notizen): {0} Tage nach der Abreise gelöscht.',
+      'Die folgenden Fristen unterscheiden, was automatisch gelöscht wird und was aufgrund einer gesetzlichen Pflicht aufbewahrt wird:',
+    'confidentialite.durees.session':
+      'Zugang zum Mieterbereich (Token, E-Mail-Adresse für die Anmeldung): gelöscht mit Ablauf des Links, spätestens {0} Tage nach der Abreise.',
+    'confidentialite.durees.notes':
+      'Freie Notizen des Zustandsberichts und nicht als Nachweis aufbewahrte Dateien: gelöscht durch die Löschroutine, die auf den Ablauf des Zugangs folgt.',
+    'confidentialite.durees.sejour':
+      'Buchungsdaten (Name, E-Mail-Adresse, Telefon, Nachricht): aufbewahrt im Aufenthaltsvorgang für die gesetzliche buchhalterische und steuerliche Aufbewahrungsfrist und nicht nach {0} Tagen gelöscht.',
     'confidentialite.durees.preuve':
       'Nachweis des Zustandsberichts (unterzeichnetes PDF und Fotos): {0} Jahre ab der Abreise aufbewahrt, um einen möglichen Streit beantworten zu können.',
     'confidentialite.durees.note':
-      'Buchungsdaten, die für die Buchhaltung und die Erklärung der Kurtaxe erforderlich sind, werden für die geltende gesetzliche Frist aufbewahrt.',
+      'Die für eine Ferienvermietung geltenden buchhalterischen und steuerlichen Aufbewahrungsfristen sind vom Eigentümer mit seinem Steuerberater zu bestätigen; sie werden hier nicht wiedergegeben, um keine ungeprüfte Zahl zu nennen. Eine Löschung kann jederzeit beantragt werden: siehe „Ihre Rechte“.',
+
     'confidentialite.droits.titre': 'Ihre Rechte',
     'confidentialite.droits.intro':
       'Gemäß DSGVO haben Sie folgende Rechte an Ihren Daten:',
@@ -426,6 +500,8 @@ export const legalT: Record<Lang, Record<string, string>> = {
       'Recht auf Übertragbarkeit der von Ihnen bereitgestellten Daten.',
     'confidentialite.droits.exercer':
       'Um diese Rechte auszuüben, schreiben Sie an {0}. Sie erhalten innerhalb eines Monats eine Antwort.',
+    'confidentialite.droits.exercerSansEmail':
+      'Um diese Rechte auszuüben, nutzen Sie die mit der Buchungsbestätigung mitgeteilte Kontaktadresse: Sie ist auf dieser Seite noch nicht veröffentlicht. Sie erhalten innerhalb eines Monats eine Antwort.',
     'confidentialite.droits.reclamation':
       'Sie können sich auch bei der CNIL (www.cnil.fr) beschweren, wenn Sie der Ansicht sind, dass Ihre Rechte nicht beachtet werden.',
     'confidentialite.cookies.titre': 'Cookies und Reichweitenmessung',

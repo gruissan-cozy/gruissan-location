@@ -68,6 +68,8 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.confirmText': 'Merci ! Nous revenons vers vous sous 24 h pour confirmer votre réservation.',
     'booking.again': 'Faire une nouvelle demande',
     'booking.error': 'L’envoi a échoué. Réessayez ou écrivez-nous à {email}.',
+    'booking.errorSansEmail':
+      'L’envoi a échoué. Réessayez dans un instant ; si le problème persiste, la demande peut être refaite depuis cette page le lendemain.',
     'booking.dateError': 'La date de départ doit être postérieure à la date d’arrivée.',
     'booking.packsChosen': 'Options choisies',
     'booking.none': 'Aucune',
@@ -135,6 +137,8 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.confirmText': 'Thank you! We get back to you within 24 h to confirm your booking.',
     'booking.again': 'Make another request',
     'booking.error': 'Sending failed. Please try again or email us at {email}.',
+    'booking.errorSansEmail':
+      'Sending failed. Please try again shortly; if the problem persists, the request can be resubmitted from this page tomorrow.',
     'booking.dateError': 'The check-out date must be after the check-in date.',
     'booking.packsChosen': 'Chosen options',
     'booking.none': 'None',
@@ -202,6 +206,8 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.confirmText': '¡Gracias! Te respondemos en 24 h para confirmar tu reserva.',
     'booking.again': 'Hacer otra solicitud',
     'booking.error': 'El envío ha fallado. Inténtalo de nuevo o escríbenos a {email}.',
+    'booking.errorSansEmail':
+      'El envío ha fallado. Inténtalo de nuevo en un momento; si el problema persiste, la solicitud puede volver a enviarse desde esta página mañana.',
     'booking.dateError': 'La fecha de salida debe ser posterior a la fecha de llegada.',
     'booking.packsChosen': 'Opciones elegidas',
     'booking.none': 'Ninguna',
@@ -269,6 +275,8 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.confirmText': 'Vielen Dank! Wir melden uns innerhalb von 24 h zur Bestätigung Ihrer Buchung.',
     'booking.again': 'Neue Anfrage stellen',
     'booking.error': 'Senden fehlgeschlagen. Versuchen Sie es erneut oder schreiben Sie an {email}.',
+    'booking.errorSansEmail':
+      'Senden fehlgeschlagen. Versuchen Sie es gleich noch einmal; bleibt das Problem bestehen, kann die Anfrage ab morgen erneut über diese Seite gesendet werden.',
     'booking.dateError': 'Das Abreisedatum muss nach dem Anreisedatum liegen.',
     'booking.packsChosen': 'Gewählte Optionen',
     'booking.none': 'Keine',
