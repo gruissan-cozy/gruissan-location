@@ -152,18 +152,25 @@ génère un jeton, l'affiche une seule fois, et permet de l'envoyer par e-mail a
 locataire.
 
 **Critères d'acceptation**
-- [ ] Le jeton est généré côté serveur (`gen_random_bytes`), jamais dans le
-      navigateur.
-- [ ] L'expiration est fixée au lendemain du départ à 12 h, heure de Paris.
-- [ ] Un seul lien actif par séjour ; un bouton « révoquer » puis « recréer »
+- [x] Le jeton est généré côté serveur (`crypto.getRandomValues`, 32 octets),
+      jamais dans le navigateur : `supabase/functions/_shared/lien.ts`.
+- [x] L'expiration est fixée au lendemain du départ à 12 h, heure de Paris
+      (et bornée à 30 jours après le départ, en TypeScript et en base).
+- [x] Un seul lien actif par séjour ; un bouton « révoquer » puis « recréer »
       remplace l'ancien.
-- [ ] Le jeton n'apparaît dans aucun log ni aucune liste après la création.
-- [ ] Fonctionne pour un séjour saisi à la main (sans ligne `bookings`).
-- [ ] Tests : création, révocation, recréation, séjour non confirmé refusé.
+- [x] Le jeton n'apparaît dans aucun log ni aucune liste après la création
+      (seul un lien actif est réaffiché, jamais un jeton expiré).
+- [x] Fonctionne pour un séjour saisi à la main (sans ligne `bookings`) :
+      `tenant_sessions.email` devient facultatif en 0012.
+- [x] Tests : règles de création, d'expiration et de révocation, refus d'un
+      séjour non confirmé (`tests/tenant-lien.test.ts`). La fonction elle-même
+      n'a pas de test d'exécution : le dépôt ne fait pas tourner Deno.
 
 **Fichiers concernés** : `src/pages/admin/sejours.astro`,
-`supabase/functions/tenant-link/` (nouveau) ou Edge Function existante,
-`src/lib/tenant.ts`, `src/i18n/admin.ts`, `docs/tenant-checkin-setup.md`.
+`supabase/functions/tenant-link/index.ts` (nouveau),
+`supabase/functions/_shared/lien.ts`, `src/lib/lien-locataire.ts`,
+`migrations/0012_tenant_links.sql`, `src/i18n/admin.ts`,
+`docs/tenant-checkin-setup.md`.
 
 ---
 
