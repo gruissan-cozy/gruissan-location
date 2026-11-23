@@ -92,6 +92,11 @@ const configured = isSupabaseConfigured;
   let demandes: Sejour[] = [];
   /** Tous les séjours (dates + statut), pour la détection de chevauchement. */
   let tous: Sejour[] = [];
+  /**
+   * Vrai quand l'occupation du calendrier n'a pas pu être lue : aucune décision
+   * n'est alors proposée, pour ne jamais écraser un séjour existant à l'aveugle.
+   */
+  let occupationInconnue = false;
 
   const motifPour: Record<string, string> = {};
   /** Décision en attente de confirmation (chevauchement) ou de motif (refus). */
@@ -124,6 +129,25 @@ const configured = isSupabaseConfigured;
       return;
     }
 
+    // Le garde-fou anti-écrasement repose ENTIÈREMENT sur `tous` : si cette
+    // seconde lecture échoue, on ne connaît pas l'occupation réelle du
+    // calendrier. Traiter « lecture en échec » comme « aucun séjour » rendrait
+    // le garde-fou contournable et permettrait un double booking silencieux.
+    // On refuse donc d'afficher les actions tant que l'occupation est inconnue.
+    if (resTous.error) {
+      demandes = [];
+      tous = [];
+      occupationInconnue = true;
+      if (countEl) countEl.textContent = '';
+      if (listEl) {
+        listEl.innerHTML = `<div class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-8 text-center text-sm text-amber-800 shadow-card">${esc(
+          AT['demandes.occupancyUnknown'],
+        )}</div>`;
+      }
+      return;
+    }
+
+    occupationInconnue = false;
     demandes = trierDemandes((resDemandes.data ?? []) as Sejour[]);
     tous = (resTous.data ?? []) as Sejour[];
     renderList();

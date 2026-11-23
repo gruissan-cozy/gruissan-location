@@ -54,6 +54,15 @@ describe('page /admin/demandes — décisions', () => {
     expect(page).toMatch(/\.from\(\s*['"]sejours['"]\s*\)\s*\.update\(/);
   });
 
+  it('ne propose aucune décision quand l’occupation est illisible', () => {
+    // Sans la liste complète des séjours, on ne peut pas savoir si les dates
+    // sont libres : masquer les actions est la seule façon de ne jamais
+    // écraser un séjour existant en silence.
+    expect(page).toContain('occupationInconnue');
+    expect(page).toContain('demandes.occupancyUnknown');
+    expect(page).toMatch(/if\s*\(\s*resTous\.error\s*\)/);
+  });
+
   it('exige une confirmation en cas de chevauchement', () => {
     expect(page).toContain('confirmationRequise');
     expect(page).toContain('chevauchementsDemande');

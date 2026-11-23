@@ -298,7 +298,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'demandes.subtitle':
       'Les demandes envoyées depuis /reserver/, de la plus urgente (arrivée la plus proche) à la plus lointaine.',
     'demandes.tableMissing':
-      'La table des séjours n’existe pas encore dans Supabase. Appliquez la migration migrations/0011_unifier_bookings_sejours.sql (SQL Editor du dashboard Supabase), puis rechargez cette page.',
+      'La table des séjours n’existe pas encore dans Supabase. Appliquez la migration migrations/0012_unifier_bookings_sejours.sql (SQL Editor du dashboard Supabase), puis rechargez cette page.',
+    'demandes.occupancyUnknown':
+      'Impossible de lire l’occupation du calendrier : les décisions sont masquées pour ne pas écraser un séjour existant. Rechargez la page.',
     'demandes.empty': 'Aucune demande en attente. Tout est traité.',
     'demandes.count': 'demande(s) en attente',
     'demandes.colPersonnes': 'Personnes',
@@ -779,7 +781,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'demandes.subtitle':
       'The requests sent from /reserver/, from the most urgent (closest check-in) to the most distant.',
     'demandes.tableMissing':
-      'The stays table does not exist yet in Supabase. Run the migration migrations/0011_unifier_bookings_sejours.sql (Supabase dashboard SQL Editor), then reload this page.',
+      'The stays table does not exist yet in Supabase. Run the migration migrations/0012_unifier_bookings_sejours.sql (Supabase dashboard SQL Editor), then reload this page.',
+    'demandes.occupancyUnknown':
+      'The calendar occupancy could not be read: decisions are hidden so an existing stay is never overwritten. Reload the page.',
     'demandes.empty': 'No pending request. Everything is handled.',
     'demandes.count': 'pending request(s)',
     'demandes.colPersonnes': 'Guests',
@@ -1261,7 +1265,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'demandes.subtitle':
       'Las solicitudes enviadas desde /reserver/, de la más urgente (llegada más próxima) a la más lejana.',
     'demandes.tableMissing':
-      'La tabla de estancias aún no existe en Supabase. Ejecute la migración migrations/0011_unifier_bookings_sejours.sql (SQL Editor del panel de Supabase) y recargue esta página.',
+      'La tabla de estancias aún no existe en Supabase. Ejecute la migración migrations/0012_unifier_bookings_sejours.sql (SQL Editor del panel de Supabase) y recargue esta página.',
+    'demandes.occupancyUnknown':
+      'No se pudo leer la ocupación del calendario: las decisiones están ocultas para no sobrescribir una estancia existente. Recargue la página.',
     'demandes.empty': 'Ninguna solicitud pendiente. Todo está gestionado.',
     'demandes.count': 'solicitud(es) pendiente(s)',
     'demandes.colPersonnes': 'Personas',
@@ -1743,7 +1749,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'demandes.subtitle':
       'Die über /reserver/ gesendeten Anfragen, von der dringendsten (nächste Anreise) zur entferntesten.',
     'demandes.tableMissing':
-      'Die Tabelle der Aufenthalte existiert noch nicht in Supabase. Führen Sie die Migration migrations/0011_unifier_bookings_sejours.sql aus (SQL Editor des Supabase-Dashboards) und laden Sie diese Seite neu.',
+      'Die Tabelle der Aufenthalte existiert noch nicht in Supabase. Führen Sie die Migration migrations/0012_unifier_bookings_sejours.sql aus (SQL Editor des Supabase-Dashboards) und laden Sie diese Seite neu.',
+    'demandes.occupancyUnknown':
+      'Die Kalenderbelegung konnte nicht gelesen werden: Entscheidungen sind ausgeblendet, damit kein bestehender Aufenthalt überschrieben wird. Seite neu laden.',
     'demandes.empty': 'Keine offene Anfrage. Alles ist erledigt.',
     'demandes.count': 'offene Anfrage(n)',
     'demandes.colPersonnes': 'Personen',
