@@ -73,6 +73,10 @@ const montrerWhatsApp = peutUtiliserWhatsApp(coordonnees);
 // L'email compte comme contact direct : une adresse réelle suffit à afficher
 // le bloc, même sans numéro de téléphone renseigné.
 const montrerContactDirect = montrerAppel || montrerWhatsApp || Boolean(emailContact);
+// Le formulaire de contact a deux moteurs : l'insert Supabase (script client)
+// et le POST FormSubmit natif. Il ne doit disparaître que si AUCUN des deux ne
+// peut aboutir.
+const formulaireContactUtilisable = Boolean(emailContact) || supabaseConfigured;
 
 // --- Galerie : photos regroupées par pièce (content/galerie.json reste le seul maître) ---
 const galerieGroupes = chargerGalerie(galerieData);
@@ -813,10 +817,10 @@ const cfgCalendrier = {
     </p>
     <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['contact.title']}</h2>
     <div class="mt-14 grid md:grid-cols-2 gap-10">
-      {emailContact ? (
+      {formulaireContactUtilisable ? (
       <form
         id="contact-form"
-        action={`https://formsubmit.co/${emailContact}`}
+        action={emailContact ? `https://formsubmit.co/${emailContact}` : undefined}
         method="POST"
         class="bg-white rounded-2xl p-8 shadow-card border border-sand-200 space-y-5"
       >

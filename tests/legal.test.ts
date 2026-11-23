@@ -309,10 +309,16 @@ describe('adresse de contact — aucune adresse d’exemple publiée', () => {
   });
 
   it('aucun formulaire ne poste vers une adresse non utilisable', () => {
-    // Sans adresse de réception, `action` doit être absente : un formulaire qui
-    // poste vers un domaine réservé accepte la saisie puis la perd.
+    // Sans adresse de réception, `action` doit être conditionnelle : un
+    // formulaire qui poste vers un domaine réservé accepte la saisie puis la
+    // perd. Mais le formulaire de contact reste rendu si Supabase est
+    // configuré : le script client écrit alors dans `messages` et n'a pas
+    // besoin de l'email (qui ne sert qu'au repli FormSubmit).
     const vitrine = lire('src/components/Vitrine.astro');
-    expect(vitrine).toContain("action={`https://formsubmit.co/${emailContact}`}");
+    expect(vitrine).toContain(
+      'action={emailContact ? `https://formsubmit.co/${emailContact}` : undefined}',
+    );
+    expect(vitrine).toContain('formulaireContactUtilisable');
     expect(vitrine).toContain("tr['contact.indisponible']");
     const reservation = lire('src/components/Reservation.astro');
     expect(reservation).toContain('action={emailContact ?');
