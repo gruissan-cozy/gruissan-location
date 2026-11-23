@@ -1,0 +1,11 @@
+{
+  "$note_edition": "Métadonnées des conditions générales de vente. `version` sert de référence d'acceptation (chantier suivant : case à cocher au moment de la réservation) : toute modification du texte doit changer cette valeur. `mediateur` reste vide tant que le propriétaire n'a pas adhéré à un dispositif de médiation de la consommation : aucune coordonnée n'est inventée, la page renvoie alors vers une demande écrite.",
+  "version": "2026-11-23",
+  "date_mise_a_jour": "2026-11-23",
+  "a_valider": true,
+  "mediateur": {
+    "nom": { "valeur": "", "a_valider": true },
+    "adresse": { "valeur": "", "a_valider": true },
+    "site": { "valeur": "", "a_valider": true }
+  }
+}

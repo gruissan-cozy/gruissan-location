@@ -54,6 +54,14 @@ describe('page /admin/demandes — décisions', () => {
     expect(page).toMatch(/\.from\(\s*['"]sejours['"]\s*\)\s*\.update\(/);
   });
 
+  it('bloque aussi le clic quand l’occupation est illisible', () => {
+    // Masquer le HTML ne suffit pas : `appliquer` et le gestionnaire de clic
+    // doivent refuser d'écrire tant que l'occupation est inconnue.
+    const occurrences = (page.match(/occupationInconnue/g) ?? []).length;
+    expect(occurrences, 'occupationInconnue doit être lu, pas seulement écrit').toBeGreaterThan(2);
+    expect(page).toMatch(/async function appliquer[\s\S]{0,400}if \(occupationInconnue\)/);
+  });
+
   it('ne propose aucune décision quand l’occupation est illisible', () => {
     // Sans la liste complète des séjours, on ne peut pas savoir si les dates
     // sont libres : masquer les actions est la seule façon de ne jamais

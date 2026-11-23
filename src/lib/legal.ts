@@ -19,7 +19,7 @@ import {
   RETENTION_PREUVE_ANNEES,
 } from '../../supabase/functions/_shared/purge';
 
-export type PageLegale = 'mentions-legales' | 'confidentialite';
+export type PageLegale = 'mentions-legales' | 'confidentialite' | 'conditions-generales';
 
 /** Champ éditable : valeur connue, ou marqueur `a_valider` sans valeur. */
 export interface ChampSource {

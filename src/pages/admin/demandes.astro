@@ -348,6 +348,12 @@ const configured = isSupabaseConfigured;
   // Décisions
   // -------------------------------------------------------------------
   async function appliquer(d: Sejour, action: ActionDemande) {
+    // Dernier verrou avant écriture : sans lecture fiable de l'occupation, on
+    // ne peut pas garantir l'absence de chevauchement, donc on n'écrit pas.
+    if (occupationInconnue) {
+      toast(AT['demandes.occupancyUnknown'], 'error');
+      return;
+    }
     const maintenant = new Date().toISOString();
     const patch = construirePatchAction(d, action, maintenant, motifPour[d.id] ?? null);
 
@@ -374,6 +380,13 @@ const configured = isSupabaseConfigured;
 
     const actionBtn = target.closest<HTMLElement>('[data-action]');
     if (actionBtn) {
+      // Ceinture et bretelles : le HTML ne rend déjà aucune action quand
+      // l'occupation est illisible, mais un clic sur un bouton resté dans le
+      // DOM (ou injecté) ne doit jamais écrire à l'aveugle.
+      if (occupationInconnue) {
+        toast(AT['demandes.occupancyUnknown'], 'error');
+        return;
+      }
       const id = actionBtn.dataset.id ?? '';
       const action = actionBtn.dataset.action as ActionDemande;
       const d = demandes.find((x) => x.id === id);
