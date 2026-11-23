@@ -46,7 +46,7 @@ appliqué la migration et déployé les fonctions.
    place l’en-tête secret `x-cron-secret`.
 
 4. Déployer aussi la fonction du back office qui émet les liens locataire
-   (chantier 12, migration `0012_tenant_links.sql`) :
+   (chantier 12, migration `0013_tenant_links.sql`) :
 
    ```sh
    supabase functions deploy tenant-link --project-ref ykvieyeftewvxjralcym

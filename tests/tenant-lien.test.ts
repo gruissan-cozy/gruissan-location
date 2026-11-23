@@ -192,7 +192,7 @@ describe('Edge Function tenant-link', () => {
 });
 
 describe('migration 0012 — lien locataire', () => {
-  const sql = lire('migrations/0012_tenant_links.sql');
+  const sql = lire('migrations/0013_tenant_links.sql');
 
   it('autorise un séjour sans email à recevoir un lien', () => {
     expect(sql).toMatch(/alter column email drop not null/i);

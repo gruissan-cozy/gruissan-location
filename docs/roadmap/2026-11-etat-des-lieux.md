@@ -169,7 +169,7 @@ locataire.
 **Fichiers concernés** : `src/pages/admin/sejours.astro`,
 `supabase/functions/tenant-link/index.ts` (nouveau),
 `supabase/functions/_shared/lien.ts`, `src/lib/lien-locataire.ts`,
-`migrations/0012_tenant_links.sql`, `src/i18n/admin.ts`,
+`migrations/0013_tenant_links.sql`, `src/i18n/admin.ts`,
 `docs/tenant-checkin-setup.md`.
 
 ---
