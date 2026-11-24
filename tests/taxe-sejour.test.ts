@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   arrondi2,
+  assietteTaxe,
   calculerTaxeSejour,
   estAssujetti,
   estAlerte,
+  ligneTaxe,
   nuitsDuSejour,
   personnesExploitables,
   recapitulerTaxe,
@@ -59,6 +61,109 @@ describe('nuitsDuSejour', () => {
     expect(nuitsDuSejour(sejour({ id: 'a', arrivee: '2026-07-10', depart: '2026-07-17' }))).toBe(7);
     expect(nuitsDuSejour(sejour({ id: 'a', arrivee: '2026-07-17', depart: '2026-07-10' }))).toBe(0);
     expect(nuitsDuSejour(sejour({ id: 'a', arrivee: '', depart: '' }))).toBe(0);
+  });
+});
+
+describe('assietteTaxe — les mineurs sont exonérés (migration 0012)', () => {
+  it('taxe les adultes quand le détail est renseigné', () => {
+    expect(assietteTaxe({ personnes: 4, adultes: 2 })).toBe(2);
+  });
+
+  it('retombe sur personnes quand le détail manque (saisie manuelle, import)', () => {
+    expect(assietteTaxe({ personnes: 3, adultes: null })).toBe(3);
+    expect(assietteTaxe({ personnes: 3 })).toBe(3);
+  });
+
+  it('ignore un adultes nul ou illisible plutôt que de calculer une taxe à 0', () => {
+    expect(assietteTaxe({ personnes: 2, adultes: 0 })).toBe(2);
+    expect(assietteTaxe({ personnes: 2, adultes: Number.NaN })).toBe(2);
+  });
+});
+
+describe('calculerTaxeSejour — détail adultes / mineurs', () => {
+  it('2 adultes + 2 mineurs → nuits × 2 × taux', () => {
+    const t = calculerTaxeSejour(
+      sejour({ id: 'a', personnes: 4, adultes: 2, mineurs: 2, arrivee: '2026-07-10', depart: '2026-07-17' }),
+      TAUX,
+    );
+    expect(t.assiette).toBe(2);
+    expect(t.personnes).toBe(4);
+    expect(t.montant).toBe(arrondi2(7 * 2 * TAUX));
+  });
+
+  it('sans détail, le calcul reste sur personnes (non-régression)', () => {
+    const t = calculerTaxeSejour(sejour({ id: 'a', personnes: 3 }), TAUX);
+    expect(t.assiette).toBe(3);
+    expect(t.montant).toBe(arrondi2(7 * 3 * TAUX));
+  });
+
+  it('ventile la répartition par année sur l’assiette adultes', () => {
+    const parts = repartirTaxeParAnnee(
+      { arrivee: '2026-12-30', depart: '2027-01-02', personnes: 4, adultes: 1 },
+      TAUX,
+    );
+    expect(parts).toEqual([
+      { annee: 2026, montant: 2.3, nuits: 2 },
+      { annee: 2027, montant: 1.15, nuits: 1 },
+    ]);
+  });
+
+  it('le récapitulatif annuel applique la même assiette', () => {
+    const r = recapitulerTaxe(
+      [sejour({ id: 'a', personnes: 4, adultes: 2, arrivee: '2026-07-10', depart: '2026-07-17' })],
+      TAUX,
+    );
+    expect(r.total).toBe(arrondi2(7 * 2 * TAUX));
+  });
+});
+
+describe('ligneTaxe — une demande n’affiche jamais de taxe', () => {
+  it('demande → aucun taux, aucun montant, non assujetti', () => {
+    const l = ligneTaxe(sejour({ id: 'a', statut: 'demande', personnes: 2, adultes: 2 }), TAUX);
+    expect(l.assujetti).toBe(false);
+    expect(l.taux).toBeNull();
+    expect(l.montant).toBeNull();
+    expect(l.nonCalculable).toBe(false);
+  });
+
+  it('option et annulé → aucun montant non plus', () => {
+    for (const statut of ['option', 'annule']) {
+      const l = ligneTaxe(sejour({ id: 'a', statut }), TAUX);
+      expect(l.montant, statut).toBeNull();
+      expect(l.taux, statut).toBeNull();
+    }
+  });
+
+  it('confirmé → montant calculé sur les adultes', () => {
+    const l = ligneTaxe(
+      sejour({ id: 'a', statut: 'confirme', personnes: 4, adultes: 2 }),
+      TAUX,
+    );
+    expect(l.assujetti).toBe(true);
+    expect(l.assiette).toBe(2);
+    expect(l.montant).toBe(arrondi2(7 * 2 * TAUX));
+    expect(l.nonCalculable).toBe(false);
+  });
+
+  it('confirmé sans taux → non calculable, jamais un montant inventé', () => {
+    const l = ligneTaxe(sejour({ id: 'a', statut: 'confirme' }), null);
+    expect(l.assujetti).toBe(true);
+    expect(l.montant).toBeNull();
+    expect(l.nonCalculable).toBe(true);
+  });
+
+  it('le tableau et le récapitulatif ne se contredisent pas sur une demande', () => {
+    const sejours = [
+      sejour({ id: 'a', statut: 'demande', personnes: 2 }),
+      sejour({ id: 'b', statut: 'confirme', personnes: 2 }),
+    ];
+    const recap = recapitulerTaxe(sejours, TAUX);
+    const lignes = sejours.map((s) => ligneTaxe(s, TAUX));
+    // Le total du récapitulatif est exactement la somme des lignes qui
+    // affichent un montant : aucune taxe « fantôme » sur la demande.
+    const somme = lignes.reduce((s, l) => s + (l.montant ?? 0), 0);
+    expect(arrondi2(somme)).toBe(recap.total);
+    expect(lignes.find((l) => l.id === 'a')!.montant).toBeNull();
   });
 });
 

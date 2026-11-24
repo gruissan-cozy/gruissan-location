@@ -1,0 +1,22 @@
+{
+  "date_mise_a_jour": "2026-11-23",
+  "exploitant": {
+    "nom": { "valeur": "", "a_valider": true },
+    "forme_juridique": { "valeur": "", "a_valider": true },
+    "siret": { "valeur": "", "a_valider": true },
+    "adresse": { "valeur": "", "a_valider": true },
+    "telephone": { "valeur": "", "a_valider": true }
+  },
+  "assurance": {
+    "assureur": { "valeur": "", "a_valider": true },
+    "numero_contrat": { "valeur": "", "a_valider": true }
+  },
+  "hebergeur": {
+    "nom": { "valeur": "GitHub, Inc.", "a_valider": false },
+    "adresse": {
+      "valeur": "88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis",
+      "a_valider": false
+    },
+    "site": { "valeur": "https://github.com", "a_valider": false }
+  }
+}

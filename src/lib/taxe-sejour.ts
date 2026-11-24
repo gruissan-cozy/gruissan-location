@@ -4,9 +4,17 @@
  * Module PUR : aucune dépendance au DOM, au réseau, à Supabase ni au
  * système de fichiers. Couvert par tests/taxe-sejour.test.ts.
  *
- * Montant = taux × nuits × personnes, le taux étant lu dans
+ * Montant = taux × nuits × adultes, le taux étant lu dans
  * `content/tarifs.json` (clé `taxe_sejour_par_nuit_personne`) et passé
  * en paramètre : il n'est jamais codé en dur ici.
+ *
+ * Depuis la migration 0012, `sejours` porte le détail `adultes` / `mineurs`
+ * (le formulaire public le collecte). Les mineurs sont EXONÉRÉS : l'assiette
+ * est donc `adultes` quand la colonne est renseignée, avec repli sur
+ * `personnes` pour les séjours saisis à la main et les lignes reprises de
+ * `bookings`, qui ne portaient pas ce détail. Sans ce repli, ces lignes
+ * perdraient leur taxe ; sans la priorité à `adultes`, une demande
+ * « 2 adultes + 2 enfants » serait surévaluée.
  *
  * Trois règles de prudence, appliquées partout :
  *   1. un taux absent (null / NaN / négatif) n'est JAMAIS remplacé par un
@@ -28,8 +36,8 @@
  *     d'un certain nombre de nuits par personne ; il n'est PAS inventé
  *     ici (un plafond doit être ajouté à `content/tarifs.json` et au
  *     calcul, pas supposé) ;
- *   - il ne retient que les séjours « confirmé » et « terminé » : un
- *     séjour « option » n'est pas assujetti tant qu'il n'est pas confirmé.
+ *   - il ne retient que les séjours « confirmé » et « terminé » : ni une
+ *     demande, ni une option, ni une annulation n'est assujettie.
  */
 
 import { nuits as nombreDeNuits } from './sejours';
@@ -43,8 +51,17 @@ export interface SejourTaxe {
   id: string;
   arrivee: string;
   depart: string;
+  /** Nombre total de voyageurs déclaré (adultes + mineurs). */
   personnes: number;
   statut: string;
+  /**
+   * Adultes assujettis. Prioritaire sur `personnes` quand renseigné (formulaire
+   * public depuis 0012) ; absent sur les séjours saisis à la main et les lignes
+   * reprises de `bookings`.
+   */
+  adultes?: number | null;
+  /** Mineurs exonérés de taxe de séjour. Jamais facturés. */
+  mineurs?: number | null;
 }
 
 /** Une année civile et le montant de taxe qu'elle porte. */
@@ -58,7 +75,10 @@ export interface TaxeParAnnee {
 export interface TaxeSejour {
   id: string;
   nuits: number;
+  /** Nombre total de voyageurs déclaré (adultes + mineurs). */
   personnes: number;
+  /** Personnes réellement assujetties : les adultes (mineurs exonérés). */
+  assiette: number;
   /** Taux unitaire (nuit × personne) lu dans content/tarifs.json. */
   taux: number | null;
   /** Montant total, null si le taux est absent du contenu (jamais inventé). */
@@ -163,6 +183,25 @@ export function nuitsDuSejour(sejour: Pick<SejourTaxe, 'arrivee' | 'depart'>): n
   return nombreDeNuits(sejour.arrivee, sejour.depart);
 }
 
+/**
+ * Nombre de personnes réellement assujetties : les ADULTES.
+ *
+ * Règle du dépôt (`src/lib/pricing.ts`) : les mineurs sont exonérés de taxe de
+ * séjour. Depuis la migration 0012, `sejours.adultes` porte ce détail pour les
+ * demandes du formulaire public ; les séjours saisis à la main et les lignes
+ * reprises de `bookings` ne l'ont pas (la colonne est nulle) et retombent sur
+ * `personnes`, qui était alors la seule information disponible.
+ *
+ * `adultes = 0` n'est pas une assiette valide — un séjour sans adulte n'est pas
+ * une réservation (règle de `computeQuote`) — on retombe donc sur `personnes`
+ * plutôt que de calculer une taxe nulle sur une donnée douteuse.
+ */
+export function assietteTaxe(sejour: Pick<SejourTaxe, 'personnes' | 'adultes'>): number {
+  const adultes = sejour.adultes;
+  if (personnesExploitables(adultes)) return adultes as number;
+  return typeof sejour.personnes === 'number' ? sejour.personnes : 0;
+}
+
 // ---------------------------------------------------------------------------
 // Répartition par année civile
 // ---------------------------------------------------------------------------
@@ -200,23 +239,24 @@ export function repartirNuitsParAnnee(arrivee: string, depart: string): TaxeParA
  * parts est exactement égale au montant total du séjour.
  */
 export function repartirTaxeParAnnee(
-  sejour: Pick<SejourTaxe, 'arrivee' | 'depart' | 'personnes'>,
+  sejour: Pick<SejourTaxe, 'arrivee' | 'depart' | 'personnes' | 'adultes'>,
   taux: number,
 ): TaxeParAnnee[] {
-  if (!tauxExploitable(taux) || !personnesExploitables(sejour.personnes)) return [];
+  const assiette = assietteTaxe(sejour);
+  if (!tauxExploitable(taux) || !personnesExploitables(assiette)) return [];
 
   const parts = repartirNuitsParAnnee(sejour.arrivee, sejour.depart);
   if (parts.length === 0) return [];
 
   const total = parts.reduce((s: number, p: TaxeParAnnee) => s + p.nuits, 0);
-  let reste = arrondi2(total * sejour.personnes * taux);
+  let reste = arrondi2(total * assiette * taux);
 
   return parts.map((part: TaxeParAnnee, index: number) => {
     // Dernière année : on prend tout ce qui reste (aucun centime perdu).
     const montant =
       index === parts.length - 1
         ? arrondi2(reste)
-        : arrondi2(part.nuits * sejour.personnes * taux);
+        : arrondi2(part.nuits * assiette * taux);
     reste = arrondi2(reste - montant);
     return { annee: part.annee, montant, nuits: part.nuits };
   });
@@ -227,7 +267,10 @@ export function repartirTaxeParAnnee(
 // ---------------------------------------------------------------------------
 
 /**
- * Taxe de séjour d'un séjour : nuits × personnes × taux.
+ * Taxe de séjour d'un séjour : nuits × adultes × taux.
+ *
+ * L'assiette est `adultes` quand il est renseigné (mineurs exonérés), avec
+ * repli sur `personnes` — voir `assietteTaxe`.
  *
  * Renvoie un résultat complet même quand le montant est impossible à
  * calculer (`montant: null`, `tauxAbsent: true`) : l'affichage reste
@@ -239,6 +282,7 @@ export function calculerTaxeSejour(
 ): TaxeSejour {
   const nombreNuits = nuitsDuSejour(sejour);
   const personnes = typeof sejour.personnes === 'number' ? sejour.personnes : 0;
+  const assiette = assietteTaxe(sejour);
   const tauxConnu = tauxExploitable(taux);
   const alertes: AlerteTaxe[] = [];
 
@@ -249,7 +293,7 @@ export function calculerTaxeSejour(
       detail: `taux absent de content/tarifs.json (${String(taux)})`,
     });
   }
-  if (!personnesExploitables(sejour.personnes)) {
+  if (!personnesExploitables(assiette)) {
     alertes.push({
       code: 'personnes_nulles',
       detail: `${String(personnes)} personne(s) déclarée(s)`,
@@ -268,22 +312,21 @@ export function calculerTaxeSejour(
 
   // Plafond de nuits par personne : SIGNALÉ, jamais appliqué.
   if (
-    personnesExploitables(sejour.personnes) &&
-    nombreNuits / Math.max(1, personnes) >= SEUIL_DUREE_LONGUE
+    personnesExploitables(assiette) &&
+    nombreNuits / Math.max(1, assiette) >= SEUIL_DUREE_LONGUE
   ) {
     alertes.push({
       code: 'duree_longue',
-      detail: `${nombreNuits} nuit(s) pour ${personnes} personne(s)`,
+      detail: `${nombreNuits} nuit(s) pour ${assiette} personne(s)`,
     });
   }
 
   const parAnnee = repartirTaxeParAnnee(sejour, tauxConnu ? (taux as number) : 0);
   // Un séjour de 0 nuit (dates identiques) n'occupe rien : 0 €, et non
   // « non calculable » — c'est le cas limite explicite de l'issue #22.
-  const calculable =
-    tauxConnu && personnesExploitables(sejour.personnes) && nombreNuits >= 0;
+  const calculable = tauxConnu && personnesExploitables(assiette) && nombreNuits >= 0;
 
-  const montant = calculable ? arrondi2(nombreNuits * personnes * (taux as number)) : null;
+  const montant = calculable ? arrondi2(nombreNuits * assiette * (taux as number)) : null;
   // Montant « de base » = le même montant : aucune exonération n'est appliquée.
   const montantBase = montant;
 
@@ -298,12 +341,61 @@ export function calculerTaxeSejour(
     id: sejour.id,
     nuits: nombreNuits,
     personnes,
+    assiette,
     taux: tauxConnu ? (taux as number) : null,
     montant,
     montantBase,
     tauxAbsent: !tauxConnu,
     parAnnee,
     alertes,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Ligne de tableau / d'export
+// ---------------------------------------------------------------------------
+
+/** Ce qu'une ligne de tableau (et d'export CSV) doit afficher pour un séjour. */
+export interface LigneTaxe {
+  id: string;
+  nuits: number;
+  /**
+   * Personnes réellement taxées (adultes ; repli sur `personnes`). C'est
+   * l'assiette du calcul ; la colonne « Pers. » continue d'afficher le total
+   * déclaré, pour ne pas faire croire à un effectif réduit.
+   */
+  assiette: number;
+  /** false pour une demande, une option ou une annulation. */
+  assujetti: boolean;
+  /** Taux unitaire, null quand la ligne n'est pas assujettie ou sans taux. */
+  taux: number | null;
+  /**
+   * Montant à afficher / exporter. TOUJOURS null quand le séjour n'est pas
+   * assujetti : c'est la règle qui empêche une simple demande de ressortir
+   * avec une taxe due, en contradiction avec `recapitulerTaxe`.
+   */
+  montant: number | null;
+  /** true si le séjour est assujetti mais que le montant est impossible. */
+  nonCalculable: boolean;
+}
+
+/**
+ * Résume un séjour pour l'affichage et l'export.
+ *
+ * Point unique de la règle « pas de taxe sur une demande » : le tableau et le
+ * CSV s'appuient dessus, ce qui les empêche de diverger du récapitulatif.
+ */
+export function ligneTaxe(sejour: SejourTaxe, taux: unknown): LigneTaxe {
+  const calcul = calculerTaxeSejour(sejour, taux);
+  const assujetti = estAssujetti(sejour);
+  return {
+    id: sejour.id,
+    nuits: calcul.nuits,
+    assiette: calcul.assiette,
+    assujetti,
+    taux: assujetti ? calcul.taux : null,
+    montant: assujetti ? calcul.montant : null,
+    nonCalculable: assujetti && calcul.montant === null,
   };
 }
 
@@ -339,7 +431,7 @@ export function recapitulerTaxe(
       sansTaux += 1;
       continue;
     }
-    if (!personnesExploitables(sejour.personnes)) {
+    if (!personnesExploitables(assietteTaxe(sejour))) {
       nonCalculables += 1;
       continue;
     }

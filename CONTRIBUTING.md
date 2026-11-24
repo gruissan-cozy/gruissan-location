@@ -207,6 +207,16 @@ l'unique constante `TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE` (lue dans
 `content/tarifs.json`) ; sa valeur actuelle est provisoire et reste à
 confirmer auprès de la mairie de Gruissan.
 
+Le meublé étant **non classé** (DA-2), le taux est en plus **plafonné au tarif
+de la catégorie la plus basse** : `content/tarifs.json` porte
+`plafond_par_nuit_et_personne` (marqué `a_valider: true`), et le calcul retient
+`min(taux, plafond)` par nuit et par personne assujettie (`tauxPlafonne`). Le
+détail exporté (`taxeSejourDetail.tauxApplique`, `.plafond`,
+`.plafondApplique`) permet au récapitulatif d'afficher le taux réellement
+appliqué et de mentionner le plafond quand il mord, dans les 4 langues. Sans
+plafond exploitable, le taux brut s'applique : aucune valeur légale n'est
+inventée.
+
 Le devis public applique en plus la **capacité du logement**
 (`content/site.json`, clé `capacite`) : `computeQuote` retourne `null` dès que
 `adultes + mineurs` la dépasse, et le formulaire plafonne les options

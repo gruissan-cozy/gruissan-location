@@ -22,6 +22,7 @@ import {
   type EtatJour,
   type JourCalendrier,
 } from '../lib/calendrier';
+import { adresseContact } from '../lib/legal';
 import { chargerDisponibilites } from '../lib/disponibilites';
 import {
   chargerGalerie,
@@ -60,6 +61,7 @@ const supabaseKey = supabaseConfigured ? String(import.meta.env.PUBLIC_SUPABASE_
 // --- Contact direct : les boutons n'existent que si une vraie coordonnée est renseignée ---
 // Aucun numéro n'est fabriqué : téléphone et WhatsApp vides => rien n'est affiché.
 const coordonnees = site;
+const emailContact = adresseContact(site.email);
 const appelLien = numeroAppel(coordonnees.telephone);
 const appelLibelle = libelleNumero(coordonnees);
 const whatsappLien = lienWhatsApp(coordonnees.telephone, coordonnees.whatsapp);
@@ -68,7 +70,13 @@ const whatsappNumero = extraitNumeroAppel(coordonnees.whatsapp) || extraitNumero
 const whatsappLibelle = whatsappNumero ? `+${whatsappNumero}` : '';
 const montrerAppel = peutAppeler(coordonnees);
 const montrerWhatsApp = peutUtiliserWhatsApp(coordonnees);
-const montrerContactDirect = montrerAppel || montrerWhatsApp;
+// L'email compte comme contact direct : une adresse réelle suffit à afficher
+// le bloc, même sans numéro de téléphone renseigné.
+const montrerContactDirect = montrerAppel || montrerWhatsApp || Boolean(emailContact);
+// Le formulaire de contact a deux moteurs : l'insert Supabase (script client)
+// et le POST FormSubmit natif. Il ne doit disparaître que si AUCUN des deux ne
+// peut aboutir.
+const formulaireContactUtilisable = Boolean(emailContact) || supabaseConfigured;
 
 // --- Galerie : photos regroupées par pièce (content/galerie.json reste le seul maître) ---
 const galerieGroupes = chargerGalerie(galerieData);
@@ -203,7 +211,7 @@ const cfgCalendrier = {
 };
 ---
 
-<Layout lang={lang} title={tr['hero.title']}>
+<Layout lang={lang}>
   <!-- Hero — photo plein cadre avec voile sombre -->
   <section class="relative min-h-[85vh] flex items-center overflow-hidden">
     <img
@@ -809,9 +817,10 @@ const cfgCalendrier = {
     </p>
     <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['contact.title']}</h2>
     <div class="mt-14 grid md:grid-cols-2 gap-10">
+      {formulaireContactUtilisable ? (
       <form
         id="contact-form"
-        action={`https://formsubmit.co/${site.email}`}
+        action={emailContact ? `https://formsubmit.co/${emailContact}` : undefined}
         method="POST"
         class="bg-white rounded-2xl p-8 shadow-card border border-sand-200 space-y-5"
       >
@@ -847,6 +856,11 @@ const cfgCalendrier = {
         >
         </p>
       </form>
+      ) : (
+        <p class="bg-white rounded-2xl p-8 shadow-card border border-sand-200 text-sm text-ocean-700/80 leading-relaxed">
+          {tr['contact.indisponible']}
+        </p>
+      )}
       <div class="space-y-6 md:pt-2">
         <p class="text-ocean-700/70">{tr['contact.ou']}</p>
         <!-- Contact direct : les boutons n'existent que si une vraie coordonnée est renseignée -->
@@ -878,10 +892,12 @@ const cfgCalendrier = {
                 </a>
               </p>
             )}
-            <p class="flex items-baseline justify-between gap-4">
-              <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.emailLabel']}</span>
-              <a href={`mailto:${site.email}`} class="font-semibold text-ocean-700 hover:text-ocean-500 transition-colors break-all">{site.email}</a>
-            </p>
+            {emailContact && (
+              <p class="flex items-baseline justify-between gap-4">
+                <span class="text-sm text-ocean-700/60 uppercase tracking-wider">{tr['contact.emailLabel']}</span>
+                <a href={`mailto:${emailContact}`} class="font-semibold text-ocean-700 hover:text-ocean-500 transition-colors break-all">{emailContact}</a>
+              </p>
+            )}
           </div>
         )}
         {!montrerContactDirect && (

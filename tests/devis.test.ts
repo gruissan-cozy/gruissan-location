@@ -4,11 +4,14 @@ import siteData from '../content/site.json';
 import {
   computeQuote,
   exceedsCapacity,
+  normalizePlafondTaxe,
   normalizeTauxTaxe,
   nightlyRate,
   seasonIdForDate,
   round2,
+  tauxPlafonne,
   MAX_NUITES,
+  PLAFOND_TAXE_SEJOUR_PAR_NUIT_PERSONNE,
   TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE,
   type PackSelection,
   type Saison,
@@ -17,6 +20,7 @@ import {
 const saisons = tarifsData.saisons as Saison[];
 const CAUTION = 800;
 const TAXE = TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE;
+const PLAFOND = PLAFOND_TAXE_SEJOUR_PAR_NUIT_PERSONNE;
 const CAPACITE = siteData.capacite;
 
 /** Construit un devis avec des valeurs par défaut cohérentes. */
@@ -76,6 +80,128 @@ describe('TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE (source unique)', () => {
     expect(TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE).toBe(tarifsData.taxe_sejour_par_nuit_personne);
     expect(TAUX_TAXE_SEJOUR_PAR_NUIT_PERSONNE).toBeGreaterThan(0);
   });
+
+  it('le plafond « non classé » provient aussi de content/tarifs.json', () => {
+    expect(PLAFOND_TAXE_SEJOUR_PAR_NUIT_PERSONNE).toBe(
+      (tarifsData as { plafond_par_nuit_et_personne?: number | string | null })
+        .plafond_par_nuit_et_personne,
+    );
+    expect(PLAFOND_TAXE_SEJOUR_PAR_NUIT_PERSONNE).not.toBeNull();
+    // Le fichier de contenu porte le marqueur de validation.
+    expect(tarifsData.a_valider).toBe(true);
+  });
+
+  it('la clé du plafond est OPTIONNELLE : son retrait ne casse pas le contrat', () => {
+    // Contrat de lecture défensive : le propriétaire peut supprimer la clé de
+    // content/tarifs.json (README) sans casser `astro check` ni la CI. La
+    // constante vaut alors null et le calcul applique le taux brut, sans
+    // plafond inventé.
+    const contenuSansPlafond: { plafond_par_nuit_et_personne?: number | string | null } = {};
+    expect(normalizePlafondTaxe(contenuSansPlafond.plafond_par_nuit_et_personne)).toBeNull();
+
+    const d = devis({
+      checkIn: '2027-07-10',
+      checkOut: '2027-07-17',
+      adults: 2,
+      taxeSejourParNuitPersonne: 2.5,
+      plafondTaxeParNuitPersonne: normalizePlafondTaxe(
+        contenuSansPlafond.plafond_par_nuit_et_personne,
+      ),
+    });
+    expect(d!.taxeSejourDetail.plafond).toBeNull();
+    expect(d!.taxeSejourDetail.tauxApplique).toBe(2.5);
+    expect(d!.taxeSejourDetail.plafondApplique).toBe(false);
+    expect(d!.taxeSejour).toBe(round2(7 * 2 * 2.5));
+  });
+});
+
+describe('plafond « non classé » (min(taux, plafond), adultes seulement)', () => {
+  it('plafonne le taux quand il dépasse le plafond', () => {
+    const d = devis({
+      checkIn: '2027-07-10',
+      checkOut: '2027-07-17',
+      adults: 2,
+      taxeSejourParNuitPersonne: 2.5,
+      plafondTaxeParNuitPersonne: 1.5,
+    });
+    expect(d!.taxeSejourDetail.taux).toBe(2.5); // taux brut conservé pour le détail
+    expect(d!.taxeSejourDetail.tauxApplique).toBe(1.5);
+    expect(d!.taxeSejourDetail.plafond).toBe(1.5);
+    expect(d!.taxeSejourDetail.plafondApplique).toBe(true);
+    expect(d!.taxeSejour).toBe(round2(7 * 2 * 1.5)); // 21 €, pas 35 €
+    expect(d!.total).toBe(round2(d!.stay + d!.taxeSejour));
+  });
+
+  it('laisse le taux intact quand il est inférieur au plafond', () => {
+    const d = devis({
+      checkIn: '2027-07-10',
+      checkOut: '2027-07-17',
+      adults: 2,
+      taxeSejourParNuitPersonne: 0.9,
+      plafondTaxeParNuitPersonne: 1.5,
+    });
+    expect(d!.taxeSejourDetail.tauxApplique).toBe(0.9);
+    expect(d!.taxeSejourDetail.plafondApplique).toBe(false);
+    expect(d!.taxeSejour).toBe(round2(7 * 2 * 0.9));
+  });
+
+  it('le plafond ne touche jamais les mineurs (toujours exonérés)', () => {
+    const d = devis({
+      checkIn: '2027-07-10',
+      checkOut: '2027-07-17',
+      adults: 2,
+      minors: 2,
+      taxeSejourParNuitPersonne: 2.5,
+      plafondTaxeParNuitPersonne: 1.5,
+    });
+    expect(d!.taxeSejourDetail.adultes).toBe(2);
+    expect(d!.taxeSejourDetail.mineurs).toBe(2);
+    expect(d!.taxeSejour).toBe(round2(2 * 7 * 1.5)); // 2 adultes, pas 4 personnes
+  });
+
+  it('sans plafond fourni, applique le plafond du contenu (jamais inventé)', () => {
+    const d = devis({
+      checkIn: '2027-07-10',
+      checkOut: '2027-07-17',
+      adults: 2,
+      taxeSejourParNuitPersonne: 2.5,
+    });
+    expect(d!.taxeSejourDetail.plafond).toBe(PLAFOND);
+    expect(d!.taxeSejourDetail.tauxApplique).toBe(PLAFOND);
+    expect(d!.taxeSejourDetail.plafondApplique).toBe(PLAFOND !== null && 2.5 > PLAFOND);
+  });
+
+  it('plafond explicitement nul → aucun plafonnement, taux brut appliqué', () => {
+    const d = devis({
+      checkIn: '2027-07-10',
+      checkOut: '2027-07-17',
+      adults: 2,
+      taxeSejourParNuitPersonne: 2.5,
+      plafondTaxeParNuitPersonne: null,
+    });
+    expect(d!.taxeSejourDetail.plafond).toBeNull();
+    expect(d!.taxeSejourDetail.tauxApplique).toBe(2.5);
+    expect(d!.taxeSejourDetail.plafondApplique).toBe(false);
+    expect(d!.taxeSejour).toBe(round2(7 * 2 * 2.5));
+  });
+
+  it('normalizePlafondTaxe : plafond exploitable ou null', () => {
+    expect(normalizePlafondTaxe(1.15)).toBe(1.15);
+    expect(normalizePlafondTaxe('1.5')).toBe(1.5);
+    expect(normalizePlafondTaxe(0)).toBe(0);
+    expect(normalizePlafondTaxe(undefined)).toBeNull();
+    expect(normalizePlafondTaxe(null)).toBeNull();
+    expect(normalizePlafondTaxe('')).toBeNull();
+    expect(normalizePlafondTaxe(Number.NaN)).toBeNull();
+    expect(normalizePlafondTaxe(-1)).toBeNull();
+  });
+
+  it('tauxPlafonne : minimum du taux et du plafond, plafond nul = taux brut', () => {
+    expect(tauxPlafonne(2.5, 1.5)).toBe(1.5);
+    expect(tauxPlafonne(0.9, 1.5)).toBe(0.9);
+    expect(tauxPlafonne(1.5, 1.5)).toBe(1.5);
+    expect(tauxPlafonne(2.5, null)).toBe(2.5);
+  });
 });
 
 describe('computeQuote — chemin nominal', () => {
@@ -94,6 +220,9 @@ describe('computeQuote — chemin nominal', () => {
       mineurs: 0,
       nuits: 7,
       taux: TAXE,
+      tauxApplique: PLAFOND,
+      plafond: PLAFOND,
+      plafondApplique: false,
       montant: round2(7 * 2 * TAXE),
       calculable: true,
     });
@@ -139,6 +268,9 @@ describe('computeQuote — mineurs exonérés de la taxe de séjour', () => {
       mineurs: 2,
       nuits: 7,
       taux: TAXE,
+      tauxApplique: PLAFOND,
+      plafond: PLAFOND,
+      plafondApplique: false,
       montant: round2(2 * 7 * TAXE),
       calculable: true,
     });

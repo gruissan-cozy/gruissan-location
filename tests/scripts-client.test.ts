@@ -63,4 +63,58 @@ describe('scripts client des composants Astro', () => {
     expect(code).toContain('id="calendrier-cfg"');
     expect(code).toMatch(/<script>\s*\nimport \{ ajouterMois/);
   });
+
+  it('/reserver passe les lectures brutes au contrôle, sans écraser null par []', () => {
+    // `controlerLectures` distingue null (lecture en échec → « à confirmer »)
+    // de [] (aucune ligne → « libre »). Un `?? []` dans le composant efface
+    // cette distinction et affiche « libre » alors que rien n'a été vérifié.
+    const code = readFileSync(join(SRC, 'components/Reservation.astro'), 'utf8');
+    expect(code).toContain('controlerLectures(');
+    expect(code).not.toContain('sejours ?? []');
+    expect(code).not.toContain('blocages ?? []');
+  });
+
+  it('/reserver rend les trois verdicts de disponibilité atteignables', () => {
+    // libre → available · occupe → unavailable · a_confirmer (et absence de
+    // Supabase) → toConfirm. Aucun des trois ne doit disparaître du script.
+    const code = readFileSync(join(SRC, 'components/Reservation.astro'), 'utf8');
+    for (const cle of ['s.available', 's.unavailable', 's.toConfirm']) {
+      expect(code, `${cle} doit rester affiché`).toContain(cle);
+    }
+    expect(code).toContain("verdict === 'a_confirmer'");
+    expect(code).toContain("verdict === 'occupe'");
+  });
+});
+
+/**
+ * Garde sur la page taxe de séjour : depuis la fusion `bookings` → `sejours`,
+ * une simple DEMANDE arrive dans `sejours` et s'affiche dans ce tableau. Le
+ * rendu doit passer par `ligneTaxe()` (qui neutralise taux et montant d'un
+ * séjour non assujetti), sinon il affiche une taxe due sur une demande et
+ * contredit le récapitulatif annuel.
+ */
+describe('page /admin/taxe-sejour — aucune taxe sur une demande', () => {
+  const code = readFileSync(join(SRC, 'pages/admin/taxe-sejour.astro'), 'utf8');
+
+  it('calcule ses lignes avec `ligneTaxe`, pas directement', () => {
+    expect(code).toContain('ligneTaxe(s as SejourTaxe, TAUX)');
+    expect(code).not.toContain('calculerTaxeSejour(s as SejourTaxe');
+  });
+
+  it('affiche le libellé « non assujetti » quand il n’y a pas de montant', () => {
+    expect(code).toContain("AT['taxe.notApplicable']");
+    expect(code).toContain("AT['taxe.notCalculable']");
+  });
+
+  it('n’exporte ni taux ni montant sans assujettissement', () => {
+    const exportLignes = (code.match(/const lignes = sejoursDuPerimetre\(\)[\s\S]*?\n    \}\);/) ?? [''])[0];
+    expect(exportLignes).toContain('ligneTaxe(');
+    expect(exportLignes).toMatch(/ligne\.taux === null \? '' : String\(ligne\.taux\)/);
+    expect(exportLignes).toMatch(/ligne\.montant === null \? '' : String\(ligne\.montant\)/);
+  });
+
+  it('libelle la colonne « Pers. » comme l’assiette adultes', () => {
+    expect(code).toContain("AT['taxe.colAdults']");
+    expect(code).not.toContain("AT['taxe.colPeople']");
+  });
 });

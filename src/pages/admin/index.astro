@@ -128,6 +128,21 @@ const CARDS = [
             <p class="mt-1.5 text-sm text-ocean-700/80">{AT['dash.subtitle']}</p>
           </header>
 
+          <!-- Bandeau : demandes de réservation en attente (page /admin/demandes) -->
+          <a
+            id="dash-demandes"
+            href={`${base}admin/demandes/`}
+            class="mb-6 hidden items-center justify-between gap-4 rounded-2xl border border-sunset-300/70 bg-sunset-50 px-4 py-3 text-sm shadow-card transition-colors hover:bg-sunset-100/70"
+          >
+            <span class="flex items-center gap-2.5">
+              <span class="text-lg" aria-hidden="true">✧</span>
+              <span id="dash-demandes-text" class="font-semibold text-sunset-700"></span>
+            </span>
+            <span class="shrink-0 text-xs font-semibold text-sunset-600">
+              {AT['demandes.dashBannerCta']} →
+            </span>
+          </a>
+
           <!-- Alerte : la migration du suivi lu / non lu n'est pas appliquée -->
           <div
             id="dash-migration-lu"
@@ -244,6 +259,7 @@ const CARDS = [
   import { errText, toast, majBadgeNonLus, fmtPrice } from '../../lib/admin-runtime';
   import { estErreurColonneLuAbsente } from '../../lib/lu';
   import { aggreger, estTableSejoursAbsente } from '../../lib/revenus';
+  import { compterEnAttente } from '../../lib/demandes';
   import type { Sejour } from '../../lib/supabase';
   import { AT } from '../../i18n/admin';
 
@@ -425,6 +441,17 @@ const CARDS = [
           const ca = aggreger(sejours).total;
           set('stat-ca', fmtPrice(ca, true));
           document.getElementById('dash-card-ca')?.classList.remove('hidden');
+
+          // Demandes de réservation en attente : un compteur cliquable qui
+          // mène directement à /admin/demandes/. Masqué à zéro (règle du
+          // tableau de bord : un compteur qui ne mène à rien est du bruit).
+          const enAttente = compterEnAttente(sejours);
+          const banner = document.getElementById('dash-demandes');
+          const bannerText = document.getElementById('dash-demandes-text');
+          if (banner && bannerText && enAttente > 0) {
+            bannerText.textContent = `${enAttente} ${AT['demandes.dashBanner']}`;
+            banner.classList.remove('hidden');
+          }
         }
       } catch (error) {
         toast(errText(error) || AT['common.errorGeneric'], 'error');

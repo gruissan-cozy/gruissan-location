@@ -265,3 +265,136 @@ export function summarizePurge(entries: readonly PurgeEntry[]): {
     retained: entries.reduce((total, entry) => total + entry.retained.length, 0),
   };
 }
+
+/* ============================================================
+ * Effacement des données de réservation (`sejours.client_*`)
+ * et des messages du formulaire de contact (`messages`).
+ *
+ * Décision de kiki (2026-11-23) : aucune conservation au titre d'une durée
+ * légale n'est retenue ici. Passé le délai ci-dessous, les coordonnées du
+ * voyageur sont effacées.
+ *
+ * Ce que la purge ne peut pas supprimer : `sejours.client_nom` est
+ * `not null` (contrainte de 0003, reprise par 0012) et ce nom est encore
+ * utilisé par l'export de la taxe de séjour et par l'export comptable.
+ * Il est donc REMPLACÉ par un libellé neutre, jamais mis à NULL — une
+ * mise à NULL échouerait et ferait échouer toute la purge.
+ *
+ * L'anonymisation laisse le dossier de séjour intact (dates, montants,
+ * nombre de personnes, statut) : ce sont ces champs, et non l'identité du
+ * voyageur, qui servent à établir la taxe de séjour et la comptabilité.
+ * ============================================================ */
+
+/**
+ * Délai après le départ au-delà duquel les coordonnées du voyageur sont
+ * effacées. Volontairement court : le nécessaire pour absorber une
+ * contestation de dernière minute, pas une conservation légale.
+ */
+export const RETENTION_COORDONNEES_JOURS = 30;
+
+/** Libellé inscrit à la place du nom du voyageur après effacement. */
+export const NOM_ANONYMISE = 'Voyageur (effacé)';
+
+/** Date (ISO AAAA-MM-JJ) à partir de laquelle les coordonnées sont échues. */
+export function coordonneesExpiryCutoff(now: Date, jours = RETENTION_COORDONNEES_JOURS): string {
+  const cutoff = new Date(now.getTime());
+  cutoff.setUTCDate(cutoff.getUTCDate() - jours);
+  return isoDay(cutoff);
+}
+
+/** Les coordonnées d'un séjour sont-elles arrivées à échéance ? */
+export function coordonneesExpirees(
+  depart: string | Date | null | undefined,
+  now: Date,
+  jours = RETENTION_COORDONNEES_JOURS,
+): boolean {
+  if (!depart) return false;
+  const cutoff = coordonneesExpiryCutoff(now, jours);
+  const jour = depart instanceof Date ? isoDay(depart) : String(depart).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(jour)) return false;
+  return jour < cutoff;
+}
+
+/**
+ * Champs personnels d'un séjour à effacer, et ce qui reste.
+ *
+ * Fonction pure : elle décide QUOI écrire, l'Edge Function se contente de
+ * l'appliquer. `client_nom` reçoit `NOM_ANONYMISE` ; les autres passent à
+ * NULL, ce que leurs colonnes acceptent.
+ */
+export function anonymiserSejour(): {
+  client_nom: string;
+  client_email: null;
+  client_telephone: null;
+  client_message: null;
+} {
+  return {
+    client_nom: NOM_ANONYMISE,
+    client_email: null,
+    client_telephone: null,
+    client_message: null,
+  };
+}
+
+/**
+ * Un séjour porte-t-il encore des coordonnées à effacer ?
+ *
+ * Évite une écriture inutile (et une ligne de rapport) pour les séjours
+ * déjà anonymisés : la purge est idempotente.
+ */
+export function sejourPorteDesCoordonnees(sejour: {
+  client_nom?: string | null;
+  client_email?: string | null;
+  client_telephone?: string | null;
+  client_message?: string | null;
+}): boolean {
+  if (sejour.client_nom !== NOM_ANONYMISE) return true;
+  return Boolean(sejour.client_email || sejour.client_telephone || sejour.client_message);
+}
+
+/**
+ * Décide de l'effacement d'un séjour : ses coordonnées sont-elles échues ?
+ * Renvoie le patch à appliquer, ou `null` s'il n'y a rien à faire.
+ */
+export function planEffacementSejour(
+  sejour: {
+    depart?: string | null;
+    client_nom?: string | null;
+    client_email?: string | null;
+    client_telephone?: string | null;
+    client_message?: string | null;
+  },
+  now: Date,
+  jours = RETENTION_COORDONNEES_JOURS,
+): ReturnType<typeof anonymiserSejour> | null {
+  if (!coordonneesExpirees(sejour.depart ?? null, now, jours)) return null;
+  if (!sejourPorteDesCoordonnees(sejour)) return null;
+  return anonymiserSejour();
+}
+
+/** Motif inscrit dans le rapport de purge pour un effacement de coordonnées. */
+export const MOTIF_EFFACEMENT_COORDONNEES =
+  'coordonnées du voyageur effacées : délai de conservation écoulé';
+
+/** Ligne de rapport pour un séjour dont les coordonnées ont été effacées. */
+export function buildEffacementCoordonneesEntry(depart: string): PurgeEntry {
+  return {
+    deleted: [
+      'sejours: nom remplacé par un libellé neutre',
+      'sejours: email, téléphone et message effacés',
+    ],
+    anonymized: [],
+    retained: [],
+    reason: `${MOTIF_EFFACEMENT_COORDONNEES} (départ ${depart}, ${RETENTION_COORDONNEES_JOURS} jours)`,
+  };
+}
+
+/** Ligne de rapport pour un message de contact effacé. */
+export function buildEffacementMessageEntry(nombre: number): PurgeEntry {
+  return {
+    deleted: [`messages: ${nombre} (nom, email, téléphone et message effacés)`],
+    anonymized: [],
+    retained: [],
+    reason: `${MOTIF_EFFACEMENT_COORDONNEES} (${RETENTION_COORDONNEES_JOURS} jours)`,
+  };
+}

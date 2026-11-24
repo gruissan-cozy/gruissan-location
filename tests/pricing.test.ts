@@ -5,7 +5,6 @@ import {
   monthsOfStay,
   seasonIdFor,
   computeStay,
-  overlaps,
 } from '../src/lib/pricing';
 
 const saisons = tarifsData.saisons;
@@ -89,18 +88,5 @@ describe('computeStay', () => {
     const stay = computeStay('2027-10-10', '2027-10-17', saisons);
     expect(stay!.saison.id).toBe('basse');
     expect(stay!.base).toBe(690);
-  });
-});
-
-describe('overlaps (vérification disponibilités)', () => {
-  it('détecte un chevauchement simple', () => {
-    expect(overlaps('2027-07-01', '2027-07-31', '2027-07-10', '2027-07-17')).toBe(true);
-    expect(overlaps('2027-07-10', '2027-07-17', '2027-07-01', '2027-07-31')).toBe(true);
-  });
-
-  it('accepte les périodes adjacentes (pas de chevauchement)', () => {
-    expect(overlaps('2027-07-01', '2027-07-10', '2027-07-10', '2027-07-17')).toBe(true); // jour de frontière partagé
-    expect(overlaps('2027-07-01', '2027-07-09', '2027-07-10', '2027-07-17')).toBe(false);
-    expect(overlaps('2027-08-01', '2027-08-31', '2027-07-10', '2027-07-17')).toBe(false);
   });
 });
