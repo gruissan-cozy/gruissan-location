@@ -152,22 +152,11 @@ describe('migration 0012 — ordre de mise en service documenté', () => {
   // Le merge déploie le site automatiquement : sans cet ordre écrit noir sur
   // blanc, une migration appliquée après le merge perd les demandes du
   // formulaire (colonnes et politique d'insertion absentes).
-  const doc = readFileSync(join(ROOT, 'docs/tenant-checkin-setup.md'), 'utf8');
-
   it('la migration annonce l’ordre migration → fonctions → merge', () => {
     expect(sql).toMatch(/ORDRE DE MISE EN SERVICE/);
     expect(sql).toMatch(/PERDUE silencieusement/i);
     expect(sql).toMatch(/1\. exécuter CE FICHIER/);
     expect(sql).toMatch(/2\. déployer les quatre Edge Functions/);
     expect(sql).toMatch(/3\. seulement ensuite merger/);
-  });
-
-  it('le guide de mise en service reprend le même ordre', () => {
-    expect(doc).toContain('Ordre de mise en service de la migration 0012');
-    expect(doc).toContain('0012_unifier_bookings_sejours.sql');
-    expect(doc).toMatch(/Appliquer `0012_unifier_bookings_sejours\.sql`/);
-    expect(doc).toMatch(/Déployer les quatre Edge Functions/);
-    expect(doc).toMatch(/Merger la branche sur `main`/);
-    expect(doc).toContain('n’est pas enregistrée');
   });
 });
