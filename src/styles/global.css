@@ -34,9 +34,13 @@
   --color-sunset-600: #b85a30;
 
   /* Ombres douces et cohérentes */
-  --shadow-card: 0 1px 2px rgb(7 40 54 / 0.04), 0 4px 12px rgb(7 40 54 / 0.06);
-  --shadow-card-hover: 0 2px 4px rgb(7 40 54 / 0.06), 0 12px 28px rgb(7 40 54 / 0.12);
-  --shadow-nav: 0 1px 0 rgb(7 40 54 / 0.06);
+  --shadow-card: 0 1px 2px rgb(7 40 54 / 0.04), 0 8px 24px rgb(7 40 54 / 0.07);
+  --shadow-card-hover: 0 4px 8px rgb(7 40 54 / 0.06), 0 16px 40px rgb(7 40 54 / 0.13);
+  --shadow-nav: 0 1px 0 rgb(7 40 54 / 0.06), 0 4px 16px rgb(7 40 54 / 0.04);
+  --shadow-hero: 0 24px 60px rgb(7 40 54 / 0.25);
+
+  /* Rythme vertical */
+  --space-section: 7rem;
 }
 
 /* Typographie display soignée */
@@ -47,10 +51,18 @@
   body {
     font-family: var(--font-sans);
     text-wrap: pretty;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   h1, h2, h3 {
     font-family: var(--font-display);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
+    font-feature-settings: "ss01", "liga";
+  }
+  h1 { letter-spacing: -0.03em; }
+  ::selection {
+    background: rgb(217 114 68 / 0.25);
+    color: #072836;
   }
 }
 

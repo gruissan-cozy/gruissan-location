@@ -212,37 +212,39 @@ const cfgCalendrier = {
 ---
 
 <Layout lang={lang}>
-  <!-- Hero — photo plein cadre avec voile sombre -->
-  <section class="relative min-h-[85vh] flex items-center overflow-hidden">
+  <!-- Hero — photo plein cadre, voile léger, typographie affirmée -->
+  <section class="relative min-h-[90vh] flex items-center overflow-hidden">
     <img
       src="/gruissan-location/images/hero.svg"
       alt=""
       aria-hidden="true"
-      class="absolute inset-0 w-full h-full object-cover"
+      class="absolute inset-0 w-full h-full object-cover scale-105"
     />
-    <div class="absolute inset-0 bg-gradient-to-r from-ocean-900/85 via-ocean-900/55 to-ocean-900/20"></div>
-    <div class="relative max-w-6xl mx-auto px-4 py-24 w-full">
-      <p class="text-sunset-400 text-xs font-semibold tracking-[0.25em] uppercase mb-5">
+    <div class="absolute inset-0 bg-gradient-to-br from-ocean-900/75 via-ocean-900/40 to-transparent"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-ocean-900/60 via-transparent to-transparent"></div>
+    <div class="relative max-w-6xl mx-auto px-4 sm:px-6 py-28 w-full">
+      <p class="text-sunset-300 text-xs font-semibold tracking-[0.3em] uppercase mb-6 flex items-center gap-3">
+        <span class="inline-block w-8 h-px bg-sunset-400"></span>
         {tr['hero.badge']}
       </p>
-      <h1 class="font-display text-4xl md:text-6xl lg:text-7xl font-semibold text-white max-w-3xl leading-[1.05]">
+      <h1 class="font-display text-5xl md:text-7xl lg:text-8xl font-semibold text-white max-w-4xl leading-[0.95] tracking-tight">
         {tr['hero.title']}
       </h1>
-      <p class="mt-6 text-lg md:text-xl text-sand-100/90 max-w-xl leading-relaxed">
+      <p class="mt-8 text-lg md:text-2xl text-sand-100/90 max-w-2xl leading-relaxed font-light">
         {tr['hero.subtitle']}
       </p>
-      <div class="mt-10 flex flex-wrap gap-4">
+      <div class="mt-12 flex flex-wrap gap-3">
         <a
           href="#tarifs"
-          class="bg-sunset-500 hover:bg-sunset-600 text-white font-semibold px-7 py-3.5 rounded-full transition-colors shadow-lg shadow-sunset-600/25"
+          class="bg-sunset-500 hover:bg-sunset-600 text-white font-semibold px-8 py-4 rounded-full transition-all shadow-lg shadow-sunset-600/30 hover:shadow-xl hover:-translate-y-0.5"
         >{tr['hero.cta1']}</a>
         <a
           href="#contact"
-          class="border border-white/40 hover:bg-white/10 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
+          class="border border-white/50 hover:bg-white/10 text-white font-semibold px-8 py-4 rounded-full transition-all backdrop-blur-sm"
         >{tr['hero.cta2']}</a>
         <a
           href={`/gruissan-location/${lang === 'fr' ? '' : lang + '/'}reserver/`}
-          class="bg-white/10 border border-white/40 hover:bg-white/20 text-white font-semibold px-7 py-3.5 rounded-full transition-colors"
+          class="bg-white/15 border border-white/40 hover:bg-white/25 text-white font-semibold px-8 py-4 rounded-full transition-all backdrop-blur-sm"
         >{tr['nav.reserver']}</a>
         <!-- Contact direct : masqué tant que content/site.json n'a pas de vraie coordonnée -->
         {montrerAppel && appelLien && (
@@ -280,62 +282,59 @@ const cfgCalendrier = {
   </section>
 
   <!-- Appartement -->
-  <section id="appart" class="max-w-6xl mx-auto px-4 py-24 scroll-mt-16">
-    <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
-      {tr['appart.subtitle']}
-    </p>
-    <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900 max-w-2xl leading-tight">
-      {tr['appart.title']}
-    </h2>
-    <p class="mt-8 max-w-2xl text-ocean-700/80 text-lg leading-relaxed">{tr['appart.desc']}</p>
-    <div class="mt-14 grid grid-cols-2 md:grid-cols-4 gap-px bg-sand-200 rounded-2xl overflow-hidden shadow-card">
-      <div class="bg-sand-50 p-8 text-center">
-        <p class="font-display text-5xl font-semibold text-ocean-600">{site.capacite}</p>
-        <p class="text-xs text-ocean-700/60 mt-2 uppercase tracking-wider">{tr['appart.capacite']}</p>
+  <section id="appart" class="max-w-6xl mx-auto px-4 sm:px-6 py-28 scroll-mt-16">
+    <div class="grid md:grid-cols-2 gap-12 items-end">
+      <div>
+        <p class="text-sunset-600 text-xs font-semibold tracking-[0.3em] uppercase mb-5 flex items-center gap-3">
+          <span class="inline-block w-8 h-px bg-sunset-500"></span>
+          {tr['appart.subtitle']}
+        </p>
+        <h2 class="font-display text-4xl md:text-6xl font-semibold text-ocean-900 leading-[1.02] tracking-tight">
+          {tr['appart.title']}
+        </h2>
       </div>
-      <div class="bg-sand-50 p-8 text-center">
-        <p class="font-display text-5xl font-semibold text-ocean-600">{site.chambres}</p>
-        <p class="text-xs text-ocean-700/60 mt-2 uppercase tracking-wider">{tr['appart.chambres']}</p>
-      </div>
-      <div class="bg-sand-50 p-8 text-center">
-        <p class="font-display text-5xl font-semibold text-ocean-600">{site.surface_m2}<span class="text-2xl font-normal"> m²</span></p>
-        <p class="text-xs text-ocean-700/60 mt-2 uppercase tracking-wider">{tr['appart.surface']}</p>
-      </div>
-      <div class="bg-sand-50 p-8 text-center">
-        <p class="font-display text-5xl font-semibold text-ocean-600">{site.terrasse_m2}<span class="text-2xl font-normal"> m²</span></p>
-        <p class="text-xs text-ocean-700/60 mt-2 uppercase tracking-wider">{tr['appart.terrasse']}</p>
-      </div>
+      <p class="text-ocean-700/80 text-lg leading-relaxed md:pb-2">{tr['appart.desc']}</p>
+    </div>
+    <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
+      {[
+        { val: site.capacite, label: tr['appart.capacite'] },
+        { val: site.chambres, label: tr['appart.chambres'] },
+        { val: `${site.surface_m2} m²`, label: tr['appart.surface'] },
+        { val: `${site.terrasse_m2} m²`, label: tr['appart.terrasse'] },
+      ].map((item) => (
+        <div class="group bg-white rounded-2xl p-8 text-center border border-sand-200 shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all">
+          <p class="font-display text-5xl md:text-6xl font-semibold text-ocean-600 tabular-nums">{item.val}</p>
+          <p class="text-xs text-ocean-700/60 mt-3 uppercase tracking-[0.2em]">{item.label}</p>
+        </div>
+      ))}
     </div>
   </section>
 
   <!-- À proximité -->
-  <section id="proxi" class="bg-sand-100 py-24 scroll-mt-16">
-    <div class="max-w-6xl mx-auto px-4">
-      <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+  <section id="proxi" class="bg-sand-100 py-28 scroll-mt-16">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <p class="text-sunset-600 text-xs font-semibold tracking-[0.3em] uppercase mb-5 flex items-center gap-3">
+        <span class="inline-block w-8 h-px bg-sunset-500"></span>
         {tr['proxi.subtitle']}
       </p>
-      <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['proxi.title']}</h2>
-      <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <h2 class="font-display text-4xl md:text-6xl font-semibold text-ocean-900 tracking-tight">{tr['proxi.title']}</h2>
+      <div class="mt-16 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {proxiData.points.map((p) => (
-          <div class="bg-white rounded-xl p-6 shadow-card flex flex-col">
-            <p class="font-display text-2xl font-semibold text-ocean-800">{p.nom[lang]}</p>
-            <p class="mt-1 text-sm text-ocean-700/70 mb-4">{p.detail[lang]}</p>
-            <div class="mt-auto space-y-1.5 text-sm">
-              <p class="flex items-center gap-2">
-                <span aria-hidden="true">🚶</span>
-                <span class="text-ocean-600 font-semibold tabular-nums">{p.routes.walking.duration_min} min</span>
-                <span class="text-ocean-700/50">{fmtDist(p.routes.walking.distance_m)}</span>
-              </p>
-              <p class="flex items-center gap-2">
-                <span aria-hidden="true">🚲</span>
-                <span class="text-ocean-600 font-semibold tabular-nums">{p.routes.cycling.duration_min} min</span>
-                <span class="text-ocean-700/50">{fmtDist(p.routes.cycling.distance_m)}</span>
-              </p>
-              <p class="flex items-center gap-2">
-                <span aria-hidden="true">🚗</span>
-                <span class="text-ocean-600 font-semibold tabular-nums">{p.routes.driving.duration_min} min</span>
-                <span class="text-ocean-700/50">{fmtDist(p.routes.driving.distance_m)}</span>
-              </p>
+          <div class="group bg-white rounded-2xl p-7 border border-sand-200 shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all flex flex-col">
+            <p class="font-display text-2xl font-semibold text-ocean-800 leading-tight">{p.nom[lang]}</p>
+            <p class="mt-2 text-sm text-ocean-700/70 mb-6">{p.detail[lang]}</p>
+            <div class="mt-auto space-y-2.5 text-sm">
+              {[
+                { icon: '🚶', val: p.routes.walking.duration_min, dist: p.routes.walking.distance_m },
+                { icon: '🚲', val: p.routes.cycling.duration_min, dist: p.routes.cycling.distance_m },
+                { icon: '🚗', val: p.routes.driving.duration_min, dist: p.routes.driving.distance_m },
+              ].map((r) => (
+                <p class="flex items-center gap-3">
+                  <span aria-hidden="true" class="text-base">{r.icon}</span>
+                  <span class="text-ocean-600 font-semibold tabular-nums">{r.val} min</span>
+                  <span class="text-ocean-700/50 tabular-nums">{fmtDist(r.dist)}</span>
+                </p>
+              ))}
             </div>
           </div>
         ))}
@@ -344,13 +343,14 @@ const cfgCalendrier = {
   </section>
 
   <!-- Galerie -->
-  <section id="galerie" class="bg-ocean-900 py-24 scroll-mt-16">
-    <div class="max-w-6xl mx-auto px-4">
-      <p class="text-sunset-400 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+  <section id="galerie" class="bg-ocean-900 py-28 scroll-mt-16">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <p class="text-sunset-400 text-xs font-semibold tracking-[0.3em] uppercase mb-5 flex items-center gap-3">
+        <span class="inline-block w-8 h-px bg-sunset-400"></span>
         {tr['galerie.subtitle']}
       </p>
-      <h2 class="font-display text-3xl md:text-5xl font-semibold text-white">{tr['galerie.title']}</h2>
-      <p class="mt-4 text-ocean-100/70 text-sm">
+      <h2 class="font-display text-4xl md:text-6xl font-semibold text-white tracking-tight">{tr['galerie.title']}</h2>
+      <p class="mt-5 text-ocean-100/70 text-base">
         {tr['galerie.piecesTitre']} · {nombrePhotos} {tr['galerie.photos'].replace('{0}', '')}
       </p>
 
@@ -359,7 +359,7 @@ const cfgCalendrier = {
         {galerieGroupes.map((groupe) => (
           <a
             href={`#galerie-${groupe.categorie.id}`}
-            class="text-sm font-medium px-4 py-2 rounded-full border border-ocean-700 text-ocean-100/80 hover:bg-ocean-800 hover:text-white transition-colors"
+            class="text-sm font-medium px-4 py-2 rounded-full border border-ocean-700/60 text-ocean-100/80 hover:bg-ocean-800 hover:text-white hover:border-ocean-600 transition-colors"
           >
             {groupe.categorie.titre[lang]}
             <span class="ml-1.5 text-ocean-300/70 tabular-nums">{groupe.photos.length}</span>
@@ -381,7 +381,7 @@ const cfgCalendrier = {
                 const index = photosVisionneuse.findIndex((p) => p.src === photo.src);
                 const legende = legendePhoto(photo, lang);
                 return (
-                  <figure class="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-ocean-800">
+                  <figure class="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-ocean-800 shadow-card hover:shadow-card-hover transition-shadow">
                     <img
                       src={photo.src}
                       alt={legende}
@@ -464,11 +464,12 @@ const cfgCalendrier = {
   </div>
 
   <!-- Tarifs -->
-  <section id="tarifs" class="max-w-6xl mx-auto px-4 py-24 scroll-mt-16">
-    <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+  <section id="tarifs" class="max-w-6xl mx-auto px-4 sm:px-6 py-28 scroll-mt-16">
+    <p class="text-sunset-600 text-xs font-semibold tracking-[0.3em] uppercase mb-5 flex items-center gap-3">
+      <span class="inline-block w-8 h-px bg-sunset-500"></span>
       {tr['tarifs.subtitle']}
     </p>
-    <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['tarifs.title']}</h2>
+    <h2 class="font-display text-4xl md:text-6xl font-semibold text-ocean-900 tracking-tight">{tr['tarifs.title']}</h2>
     <div class="mt-14 grid md:grid-cols-3 gap-6">
       {tarifsData.saisons.map((saison, i) => (
         <div
@@ -531,12 +532,13 @@ const cfgCalendrier = {
   </section>
 
   <!-- Disponibilités — calendrier mois par mois (séjours réels, repli JSON) -->
-  <section id="dispo" class="bg-sand-100 py-24 scroll-mt-16">
-    <div class="max-w-6xl mx-auto px-4">
-      <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+  <section id="dispo" class="bg-sand-100 py-28 scroll-mt-16">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <p class="text-sunset-600 text-xs font-semibold tracking-[0.3em] uppercase mb-5 flex items-center gap-3">
+        <span class="inline-block w-8 h-px bg-sunset-500"></span>
         {tr['dispo.subtitle']}
       </p>
-      <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['dispo.title']}</h2>
+      <h2 class="font-display text-4xl md:text-6xl font-semibold text-ocean-900 tracking-tight">{tr['dispo.title']}</h2>
 
       <!-- Sélecteur de mois : bascule gérée en JavaScript, mois courant rendu côté serveur -->
       <div class="mt-12 flex flex-wrap items-center justify-between gap-4">
@@ -666,7 +668,7 @@ const cfgCalendrier = {
 
   <!-- Avis clients — totalement masquée tant que content/avis.json ne contient pas d'avis réel -->
   {montrerAvis && (
-    <section id="avis" class="bg-sand-100 py-24 scroll-mt-16">
+    <section id="avis" class="bg-sand-100 py-28 scroll-mt-16">
       <div class="max-w-6xl mx-auto px-4">
         <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
           {tr['avis.title']}
@@ -710,7 +712,7 @@ const cfgCalendrier = {
   )}
 
   <!-- Questions fréquentes -->
-  <section id="faq" class="max-w-6xl mx-auto px-4 py-24 scroll-mt-16">
+  <section id="faq" class="max-w-6xl mx-auto px-4 sm:px-6 py-28 scroll-mt-16">
     <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
       {tr['faq.title']}
     </p>
@@ -756,7 +758,7 @@ const cfgCalendrier = {
   </section>
 
   <!-- Conditions d'annulation — barème type, à valider par le propriétaire -->
-  <section id="annulation" class="bg-ocean-900 py-24 scroll-mt-16">
+  <section id="annulation" class="bg-ocean-900 py-28 scroll-mt-16">
     <div class="max-w-6xl mx-auto px-4">
       <p class="text-sunset-400 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
         {tr['annulation.title']}
@@ -811,11 +813,12 @@ const cfgCalendrier = {
   </section>
 
   <!-- Contact -->
-  <section id="contact" class="max-w-6xl mx-auto px-4 py-24 scroll-mt-16">
-    <p class="text-sunset-600 text-xs font-semibold tracking-[0.25em] uppercase mb-4">
+  <section id="contact" class="max-w-6xl mx-auto px-4 sm:px-6 py-28 scroll-mt-16">
+    <p class="text-sunset-600 text-xs font-semibold tracking-[0.3em] uppercase mb-5 flex items-center gap-3">
+      <span class="inline-block w-8 h-px bg-sunset-500"></span>
       {tr['contact.subtitle']}
     </p>
-    <h2 class="font-display text-3xl md:text-5xl font-semibold text-ocean-900">{tr['contact.title']}</h2>
+    <h2 class="font-display text-4xl md:text-6xl font-semibold text-ocean-900 tracking-tight">{tr['contact.title']}</h2>
     <div class="mt-14 grid md:grid-cols-2 gap-10">
       {formulaireContactUtilisable ? (
       <form
