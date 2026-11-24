@@ -123,26 +123,26 @@ const metaDesc = descriptionPage(description, seo[lang].description);
   </head>
   <body class="bg-sand-50 text-ocean-900 font-sans antialiased">
     <!-- Header -->
-    <header class="fixed top-0 inset-x-0 z-50 bg-sand-50/95 backdrop-blur-sm border-b border-sand-200/60 shadow-nav">
-      <nav class="max-w-6xl mx-auto flex items-center justify-between px-4 h-16">
-        <a href={href(lang)} class="flex items-center gap-2">
-          <svg class="w-7 h-7" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-            <rect width="64" height="64" rx="14" fill="#15648a"/>
+    <header class="fixed top-0 inset-x-0 z-50 bg-sand-50/80 backdrop-blur-md border-b border-sand-200/50 shadow-nav">
+      <nav class="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
+        <a href={href(lang)} class="flex items-center gap-2.5 group">
+          <svg class="w-8 h-8 transition-transform group-hover:scale-105" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <rect width="64" height="64" rx="16" fill="#15648a"/>
             <path d="M8 44 Q20 36 32 42 T56 40 V56 H8 Z" fill="#a9d9ec"/>
             <circle cx="44" cy="20" r="8" fill="#e8926b"/>
           </svg>
-          <span class="font-display text-xl font-semibold text-ocean-800">Gruissan Cozy</span>
+          <span class="font-display text-xl font-semibold text-ocean-800 tracking-tight">Gruissan Cozy</span>
         </a>
-        <div class="hidden md:flex items-center gap-7 text-sm">
-          <a href="#appart" class="text-ocean-700/80 hover:text-ocean-600 transition-colors">{tr['nav.appart']}</a>
-          <a href="#proxi" class="text-ocean-700/80 hover:text-ocean-600 transition-colors">{tr['proxi.title']}</a>
-          <a href="#galerie" class="text-ocean-700/80 hover:text-ocean-600 transition-colors">{tr['nav.galerie']}</a>
-          <a href="#tarifs" class="text-ocean-700/80 hover:text-ocean-600 transition-colors">{tr['nav.tarifs']}</a>
-          <a href="#dispo" class="text-ocean-700/80 hover:text-ocean-600 transition-colors">{tr['nav.dispo']}</a>
-          <a href={guideHref} class="text-sunset-600 hover:text-sunset-500 transition-colors font-medium">{tr['nav.guide']}</a>
+        <div class="hidden md:flex items-center gap-1 text-sm">
+          <a href="#appart" class="px-3 py-2 rounded-full text-ocean-700/80 hover:text-ocean-600 hover:bg-ocean-50 transition-colors">{tr['nav.appart']}</a>
+          <a href="#proxi" class="px-3 py-2 rounded-full text-ocean-700/80 hover:text-ocean-600 hover:bg-ocean-50 transition-colors">{tr['proxi.title']}</a>
+          <a href="#galerie" class="px-3 py-2 rounded-full text-ocean-700/80 hover:text-ocean-600 hover:bg-ocean-50 transition-colors">{tr['nav.galerie']}</a>
+          <a href="#tarifs" class="px-3 py-2 rounded-full text-ocean-700/80 hover:text-ocean-600 hover:bg-ocean-50 transition-colors">{tr['nav.tarifs']}</a>
+          <a href="#dispo" class="px-3 py-2 rounded-full text-ocean-700/80 hover:text-ocean-600 hover:bg-ocean-50 transition-colors">{tr['nav.dispo']}</a>
+          <a href={guideHref} class="px-3 py-2 rounded-full text-sunset-600 hover:text-sunset-500 hover:bg-sand-200/60 transition-colors font-medium">{tr['nav.guide']}</a>
           <a
             href={`/gruissan-location/${lang === 'fr' ? '' : lang + '/'}reserver/`}
-            class="text-ocean-700/80 hover:text-ocean-600 transition-colors font-semibold"
+            class="ml-2 bg-ocean-600 hover:bg-ocean-700 text-white font-semibold px-5 py-2 rounded-full transition-colors"
           >{tr['nav.reserver']}</a>
         </div>
         <div class="flex items-center gap-4">
@@ -200,7 +200,7 @@ const metaDesc = descriptionPage(description, seo[lang].description);
 
     <!-- Footer -->
     <footer class="bg-ocean-900 text-ocean-100/80">
-      <div class="max-w-6xl mx-auto px-4 py-14 grid md:grid-cols-3 gap-10 text-sm">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-20 grid md:grid-cols-3 gap-12 text-sm">
         <div>
           <p class="font-display text-xl font-semibold text-white mb-4">Gruissan Cozy</p>
           <p class="leading-relaxed">
