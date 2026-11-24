@@ -12,7 +12,7 @@
 --   3. un séjour qui passe à `annule` voit son lien révoqué : aucun accès
 --      ne survit à l'annulation.
 --
--- À exécuter APRÈS 0011_unifier_bookings_sejours.sql, dans le SQL Editor
+-- À exécuter APRÈS 0012_unifier_bookings_sejours.sql, dans le SQL Editor
 -- Supabase. Le script est IDEMPOTENT : il peut être relancé sans effet de
 -- bord.
 --

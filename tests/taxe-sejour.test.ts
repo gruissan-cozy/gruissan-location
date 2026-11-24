@@ -64,7 +64,7 @@ describe('nuitsDuSejour', () => {
   });
 });
 
-describe('assietteTaxe — les mineurs sont exonérés (migration 0011)', () => {
+describe('assietteTaxe — les mineurs sont exonérés (migration 0012)', () => {
   it('taxe les adultes quand le détail est renseigné', () => {
     expect(assietteTaxe({ personnes: 4, adultes: 2 })).toBe(2);
   });

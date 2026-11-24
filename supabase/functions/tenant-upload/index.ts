@@ -18,7 +18,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createServiceClient();
-    // Depuis la migration 0011, la réservation vit dans `sejours` avec le
+    // Depuis la migration 0012, la réservation vit dans `sejours` avec le
     // vocabulaire unifié (`confirme` / `termine`, et non plus `confirmee` /
     // `terminee`). La règle est centralisée dans _shared/reservation.ts pour
     // que les quatre fonctions locataire ne puissent pas diverger.

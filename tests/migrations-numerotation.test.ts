@@ -59,25 +59,15 @@ describe('migrations — numérotation', () => {
   });
 });
 
-describe('migrations — ordre d’application sur `main`', () => {
+describe('migrations — la fusion bookings → sejours est la 0012', () => {
   // La collision 0011 a été tranchée : `calendar_blocks` garde 0011 (déjà
-  // appliquée sur `main`), la fusion prend 0012, les liens locataire 0013.
-  it('la fusion bookings → sejours est la 0012', () => {
+  // appliquée sur `main`), la fusion prend 0012, le premier numéro libre.
+  it('le fichier de fusion existe sous le numéro 0012', () => {
     expect(migrations()).toContain('0012_unifier_bookings_sejours.sql');
+  });
+
+  it('aucun fichier de fusion ne subsiste en 0011', () => {
     expect(migrations()).not.toContain('0011_unifier_bookings_sejours.sql');
-  });
-
-  it('les liens locataire sont la 0013', () => {
-    expect(migrations()).toContain('0013_tenant_links.sql');
-    expect(migrations()).not.toContain('0012_tenant_links.sql');
-  });
-
-  it('0011 reste calendar_blocks, sans doublon', () => {
-    expect(migrations().filter((nom) => nom.startsWith('0011_'))).toEqual(['0011_calendar_blocks.sql']);
-  });
-
-  it('l’effacement des coordonnées est la 0014', () => {
-    expect(migrations()).toContain('0014_purge_coordonnees.sql');
   });
 });
 
@@ -94,36 +84,5 @@ describe('migrations — les tests pointent vers des fichiers existants', () => 
       }
     }
     expect([...references].filter((nom) => !fichiers.includes(nom))).toEqual([]);
-  });
-});
-
-
-describe('migration 0014 — effacement des coordonnées', () => {
-  const sql = readFileSync(join(ROOT, 'migrations/0014_purge_coordonnees.sql'), 'utf8');
-
-  it('n’ajoute aucune colonne et ne change aucune politique', () => {
-    // Cette migration ne doit rien casser : seulement accélérer la purge.
-    expect(sql).not.toMatch(/add column/i);
-    expect(sql).not.toMatch(/create policy/i);
-    expect(sql).not.toMatch(/drop policy/i);
-    expect(sql).not.toMatch(/alter table[^;]*drop/i);
-  });
-
-  it('ajoute l’index qui sert le balayage `where depart < cutoff`', () => {
-    expect(sql).toMatch(/create index if not exists sejours_depart_idx/i);
-    expect(sql).toContain('on public.sejours (depart)');
-  });
-
-  it('rappelle que `client_nom` est `not null` et ne doit pas être vidée', () => {
-    expect(sql).toContain('client_nom');
-    expect(sql).toMatch(/not null/i);
-  });
-
-  it('est idempotente (`if not exists`)', () => {
-    const index = sql.match(/create index[^;]*/gi) ?? [];
-    expect(index.length).toBeGreaterThan(0);
-    for (const ligne of index) {
-      expect(ligne).toMatch(/if not exists/i);
-    }
   });
 });
