@@ -132,7 +132,7 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // Migration 0011 : la réservation vit dans `sejours`, dont le champ de
+      // Migration 0012 : la réservation vit dans `sejours`, dont le champ de
       // départ est nommé `depart` (vocabulaire unifié).
       const [{ data: sejour, error: sejourError }, paths, checklistCount, reportCount, photoCount] = await Promise.all([
         supabase.from('sejours').select('depart').eq('id', reservationId).maybeSingle(),

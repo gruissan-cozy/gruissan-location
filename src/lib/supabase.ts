@@ -44,7 +44,7 @@ export interface Message {
 /**
  * Ancienne table des demandes de réservation.
  *
- * OBSOLÈTE depuis la migration 0011 : les demandes vivent dans `sejours` au
+ * OBSOLÈTE depuis la migration 0012 : les demandes vivent dans `sejours` au
  * statut `demande`. Le type est conservé le temps de la période de lecture
  * seule (audit) ; plus aucun code applicatif ne lit ni n'écrit `bookings`.
  */
@@ -113,7 +113,7 @@ export interface GuideSection {
 
 /**
  * Séjour daté du logement — dossier de réservation unique depuis la
- * migration 0011 (`bookings` y a été fusionnée).
+ * migration 0012 (`bookings` y a été fusionnée).
  *
  * Cycle de vie : `demande` → `option` → `confirme` → `termine`, ou `annule`.
  * `origine` distingue une demande du site ('site'), une saisie du back office

@@ -7,7 +7,7 @@
  *
  * Contexte : jusqu'ici un lien locataire ne pouvait être émis qu'en écrivant
  * du SQL à la main dans le SQL Editor Supabase, sur une ligne `bookings`.
- * Depuis la migration 0011 la réservation vit dans `sejours` ; ce module
+ * Depuis la migration 0012 la réservation vit dans `sejours` ; ce module
  * porte les règles que le bouton du back office applique :
  *
  *   - seuls un séjour `confirme` ou `termine` peuvent recevoir un lien ;

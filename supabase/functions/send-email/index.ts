@@ -87,7 +87,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (reportError || !report) return jsonResponse({ error: 'Rapport PDF introuvable.' }, 404);
 
-    // Migration 0011 : la réservation vit dans `sejours` (statuts `confirme` /
+    // Migration 0012 : la réservation vit dans `sejours` (statuts `confirme` /
     // `termine`). Règle partagée par les quatre fonctions locataire.
     const { data: sejour, error: sejourError } = await supabase
       .from('sejours')

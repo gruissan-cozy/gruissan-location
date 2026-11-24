@@ -44,7 +44,7 @@ Deno.serve(async (req: Request) => {
     const signatureBytes = Uint8Array.from(atob(signatureMatch[1]), (char) => char.charCodeAt(0));
 
     const supabase = createServiceClient();
-    // Migration 0011 : la réservation est un `sejour` (statuts `confirme` /
+    // Migration 0012 : la réservation est un `sejour` (statuts `confirme` /
     // `termine`). La règle vient de _shared/reservation.ts, partagée avec les
     // trois autres fonctions locataire.
     const { data: sejour, error: sejourError } = await supabase

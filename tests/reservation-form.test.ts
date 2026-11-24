@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 /**
  * Le formulaire public `/reserver/` écrit désormais dans `sejours` (migration
- * 0011), avec `statut = 'demande'` et `origine = 'site'`.
+ * 0012), avec `statut = 'demande'` et `origine = 'site'`.
  *
  * Le composant est un script client Astro : Vitest ne l'exécute pas, on
  * vérifie donc son contrat d'écriture à la source, en verrouillant les

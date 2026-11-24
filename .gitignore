@@ -9,6 +9,11 @@ node_modules/
 # logs
 npm-debug.log*
 
+# secrets locaux : jamais versionnés (.env.example est le modèle)
+.env
+.env.*
+!.env.example
+
 # macOS / editors
 .DS_Store
 .vscode/
