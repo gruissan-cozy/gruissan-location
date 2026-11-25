@@ -70,6 +70,15 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.error': 'L’envoi a échoué. Réessayez ou écrivez-nous à {email}.',
     'booking.errorSansEmail':
       'L’envoi a échoué. Réessayez dans un instant ; si le problème persiste, la demande peut être refaite depuis cette page le lendemain.',
+    'booking.errorMigration':
+      'Le formulaire ne peut pas enregistrer votre demande pour le moment (maintenance technique) : rien n’a été envoyé. Écrivez-nous directement à {email}, nous vous répondons sous 24 h.',
+    'booking.errorMigrationSansEmail':
+      'Le formulaire ne peut pas enregistrer votre demande pour le moment (maintenance technique) : rien n’a été envoyé. Merci de réessayer plus tard, vos dates ne sont pas bloquées par cette tentative.',
+    'booking.errorReseau':
+      'L’envoi a échoué : la connexion a été interrompue. Vérifiez votre réseau et réessayez, ou écrivez-nous à {email}.',
+    'booking.errorReseauSansEmail':
+      'L’envoi a échoué : la connexion a été interrompue. Vérifiez votre réseau puis réessayez.',
+    'booking.repliMailto': 'Envoyer ma demande par email',
     'booking.dateError': 'La date de départ doit être postérieure à la date d’arrivée.',
     'booking.packsChosen': 'Options choisies',
     'booking.none': 'Aucune',
@@ -139,6 +148,15 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.error': 'Sending failed. Please try again or email us at {email}.',
     'booking.errorSansEmail':
       'Sending failed. Please try again shortly; if the problem persists, the request can be resubmitted from this page tomorrow.',
+    'booking.errorMigration':
+      'The form cannot record your request right now (technical maintenance): nothing was sent. Email us directly at {email} and we will reply within 24 h.',
+    'booking.errorMigrationSansEmail':
+      'The form cannot record your request right now (technical maintenance): nothing was sent. Please try again later — your dates are not held by this attempt.',
+    'booking.errorReseau':
+      'Sending failed: the connection was interrupted. Check your network and try again, or email us at {email}.',
+    'booking.errorReseauSansEmail':
+      'Sending failed: the connection was interrupted. Check your network and try again.',
+    'booking.repliMailto': 'Send my request by email',
     'booking.dateError': 'The check-out date must be after the check-in date.',
     'booking.packsChosen': 'Chosen options',
     'booking.none': 'None',
@@ -208,6 +226,15 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.error': 'El envío ha fallado. Inténtalo de nuevo o escríbenos a {email}.',
     'booking.errorSansEmail':
       'El envío ha fallado. Inténtalo de nuevo en un momento; si el problema persiste, la solicitud puede volver a enviarse desde esta página mañana.',
+    'booking.errorMigration':
+      'El formulario no puede registrar tu solicitud por ahora (mantenimiento técnico): no se ha enviado nada. Escríbenos directamente a {email} y te respondemos en 24 h.',
+    'booking.errorMigrationSansEmail':
+      'El formulario no puede registrar tu solicitud por ahora (mantenimiento técnico): no se ha enviado nada. Inténtalo más tarde: este intento no bloquea tus fechas.',
+    'booking.errorReseau':
+      'El envío ha fallado: la conexión se ha interrumpido. Comprueba tu red e inténtalo de nuevo, o escríbenos a {email}.',
+    'booking.errorReseauSansEmail':
+      'El envío ha fallado: la conexión se ha interrumpido. Comprueba tu red e inténtalo de nuevo.',
+    'booking.repliMailto': 'Enviar mi solicitud por email',
     'booking.dateError': 'La fecha de salida debe ser posterior a la fecha de llegada.',
     'booking.packsChosen': 'Opciones elegidas',
     'booking.none': 'Ninguna',
@@ -277,6 +304,15 @@ export const booking: Record<Lang, Record<string, string>> = {
     'booking.error': 'Senden fehlgeschlagen. Versuchen Sie es erneut oder schreiben Sie an {email}.',
     'booking.errorSansEmail':
       'Senden fehlgeschlagen. Versuchen Sie es gleich noch einmal; bleibt das Problem bestehen, kann die Anfrage ab morgen erneut über diese Seite gesendet werden.',
+    'booking.errorMigration':
+      'Das Formular kann Ihre Anfrage derzeit nicht speichern (technische Wartung): Es wurde nichts gesendet. Schreiben Sie uns direkt an {email}, wir antworten innerhalb von 24 h.',
+    'booking.errorMigrationSansEmail':
+      'Das Formular kann Ihre Anfrage derzeit nicht speichern (technische Wartung): Es wurde nichts gesendet. Bitte versuchen Sie es später erneut — dieser Versuch blockiert Ihre Daten nicht.',
+    'booking.errorReseau':
+      'Senden fehlgeschlagen: Die Verbindung wurde unterbrochen. Prüfen Sie Ihr Netzwerk und versuchen Sie es erneut oder schreiben Sie an {email}.',
+    'booking.errorReseauSansEmail':
+      'Senden fehlgeschlagen: Die Verbindung wurde unterbrochen. Prüfen Sie Ihr Netzwerk und versuchen Sie es erneut.',
+    'booking.repliMailto': 'Anfrage per E-Mail senden',
     'booking.dateError': 'Das Abreisedatum muss nach dem Anreisedatum liegen.',
     'booking.packsChosen': 'Gewählte Optionen',
     'booking.none': 'Keine',
