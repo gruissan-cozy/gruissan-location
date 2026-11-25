@@ -306,7 +306,10 @@ décision de kiki (voir §6 et la note de déploiement ci-dessous).
 | Sujet | État |
 |---|---|
 | Purger `sejours.client_*` et `messages` | ✅ **tranché par kiki (2026-11-23) : on purge, sans conservation légale.** Effacement 30 jours après le départ / réception, `client_nom` remplacé par un libellé neutre (`not null`), messages vidés. `migrations/0014_purge_coordonnees.sql` + `_shared/purge.ts` |
-| `public/sitemap.xml` statique (4 URL, sans les pages légales ni le guide) | à planifier |
+| `public/sitemap.xml` statique (4 URL, sans les pages légales ni le guide) | ✅ corrigé — généré au build depuis `src/pages` (`scripts/generate-sitemap.mjs`), 24 URL avec `hreflang` + `x-default` |
+| Aperçu social (`og:image` en SVG, refusé par Facebook/X/LinkedIn) | ✅ corrigé — `public/images/og-cover.jpg` 1200×630 + dimensions déclarées |
+| Formulaire `/reserver/` : échec d'envoi générique | ✅ corrigé — cause classée (`src/lib/diagnostic-envoi.ts`), repli `mailto:` pré-rempli, 4 langues |
+| Migrations 0011→0014 absentes en production | ⚠️ **action manuelle** — `docs/runbook-migrations-production.md` |
 | Champ `title`/`description` du `Layout` | ✅ corrigé (`src/lib/seo.ts`, 21 tests) |
 
 ### Note de déploiement — aucun merge GitHub avant les migrations
@@ -323,8 +326,11 @@ dans cet ordre seulement :
 6. pousser `main`
 
 Sauter l'étape 1 ou 2 publie un formulaire `/reserver/` qui écrit dans des
-colonnes inexistantes : la demande affiche une erreur générique et **n'est pas
-enregistrée**. Le détail est dans `docs/tenant-checkin-setup.md` §0.
+colonnes inexistantes : la demande n'est **pas enregistrée**. Le formulaire
+détecte désormais cette cause et affiche un message de maintenance avec un
+repli email (voir `docs/runbook-migrations-production.md`, qui remplace la
+présente note comme mode d'emploi : contrôles SQL après chaque étape,
+redéploiement des cinq Edge Functions, vérification de bout en bout).
 
 ---
 

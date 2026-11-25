@@ -51,7 +51,8 @@ const translations = alternativesLangues(cheminCourant);
 // refusé par Facebook, X, LinkedIn et WhatsApp : aucun aperçu ne s'affichait.
 // Le hero reste en SVG dans la page (net à toutes les tailles, léger).
 const ogImage = `${siteUrl}/gruissan-location/images/og-cover.jpg`;
-const ogImageAlt = `${site.nom} — ${site.ville}`;
+// `site.nom` contient déjà la ville (« … — Gruissan ») : ne pas la répéter.
+const ogImageAlt = site.nom;
 const metaTitle = titrePage(title, seo[lang].title);
 const metaDesc = descriptionPage(description, seo[lang].description);
 ---
