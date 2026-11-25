@@ -15,7 +15,9 @@
     "verify": "npm run validate:i18n && npm run security:check && npm run check && npm test && npm run build",
     "prebuild": "npm run validate:i18n",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "postbuild": "node scripts/generate-sitemap.mjs",
+    "sitemap:build": "node scripts/generate-sitemap.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

@@ -97,6 +97,11 @@ const cfg = {
     submit: b['booking.submit'],
     error: b['booking.error'],
     errorSansEmail: b['booking.errorSansEmail'],
+    errorMigration: b['booking.errorMigration'],
+    errorMigrationSansEmail: b['booking.errorMigrationSansEmail'],
+    errorReseau: b['booking.errorReseau'],
+    errorReseauSansEmail: b['booking.errorReseauSansEmail'],
+    repliMailto: b['booking.repliMailto'],
     packsChosen: b['booking.packsChosen'],
     none: b['booking.none'],
     seasonHaute: b['booking.season.haute'],
@@ -339,6 +344,15 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
           </div>
           <p id="form-error" class="text-sm text-rose-700 bg-rose-50 rounded-xl px-4 py-3 hidden" role="alert">
           </p>
+          <p id="form-repli" class="hidden">
+            <a
+              id="form-repli-lien"
+              href="#"
+              class="inline-flex items-center gap-2 text-sm font-semibold text-ocean-700 hover:text-ocean-500 underline underline-offset-4 transition-colors"
+            >
+              {b['booking.repliMailto']}
+            </a>
+          </p>
         </div>
       </div>
 
@@ -443,6 +457,7 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
   import { computeQuote, exceedsCapacity } from '../lib/pricing';
   import type { PackUnite, Saison, SaisonId } from '../lib/pricing';
   import { controlerLectures } from '../lib/reservation-disponibilite';
+  import { diagnostiquerEnvoi, lienMailtoRepli, messageEchecEnvoi } from '../lib/diagnostic-envoi';
   import type { SupabaseClient } from '@supabase/supabase-js';
 
   interface BookingPack {
@@ -526,6 +541,8 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
   const totalField = byId<HTMLInputElement>('total-field');
   const submitBtn = byId<HTMLButtonElement>('booking-submit');
   const formError = byId<HTMLElement>('form-error');
+  const formRepli = byId<HTMLElement>('form-repli');
+  const formRepliLien = byId<HTMLAnchorElement>('form-repli-lien');
   const confirmation = byId<HTMLElement>('booking-confirmation');
   const confirmationDetails = byId<HTMLElement>('confirmation-details');
 
@@ -840,6 +857,55 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
     dispoTimer = setTimeout(verifierDates, 400);
   }
 
+  /**
+   * Affiche l'échec d'envoi au visiteur, sans jargon technique.
+   *
+   * La cause est classée par `src/lib/diagnostic-envoi.ts` : une base non
+   * migrée (colonnes ou droits manquants) n'appelle pas la même réponse qu'une
+   * coupure réseau. Quand une adresse de contact utilisable existe, un lien
+   * `mailto:` pré-rempli (dates, voyageurs, message) est proposé : c'est le
+   * seul moyen pour le visiteur de ne pas perdre sa demande. Le détail
+   * technique reste en console, pour le propriétaire.
+   */
+  function afficherEchec(err: unknown): void {
+    const diagnostic = diagnostiquerEnvoi(err);
+    // Journalisé pour le propriétaire (console du navigateur) : le visiteur
+    // ne voit jamais un code PostgREST ni un message SQL.
+    console.error(
+      `[réservation] envoi impossible — cause=${diagnostic.cause} code=${diagnostic.code || '—'} :`,
+      diagnostic.technique || err,
+    );
+
+    formError.textContent = messageEchecEnvoi(
+      diagnostic.cause,
+      {
+        migration: s.errorMigration,
+        migrationSansEmail: s.errorMigrationSansEmail,
+        reseau: s.errorReseau,
+        reseauSansEmail: s.errorReseauSansEmail,
+        inconnu: s.error,
+        inconnuSansEmail: s.errorSansEmail,
+      },
+      email,
+    );
+    formError.classList.remove('hidden');
+
+    const lien = lienMailtoRepli(email, {
+      arrivee: checkIn.value,
+      depart: checkOut.value,
+      adultes: Number(adults.value) || 0,
+      mineurs: Number(minors.value) || 0,
+      nom: nomField.value,
+      message: messageField.value,
+    });
+    if (lien) {
+      formRepliLien.href = lien;
+      formRepli.classList.remove('hidden');
+    } else {
+      formRepli.classList.add('hidden');
+    }
+  }
+
   [checkIn, checkOut].forEach((el) => {
     el.addEventListener('change', () => {
       if (checkIn.value && checkOut.value && checkOut.value <= checkIn.value) {
@@ -873,6 +939,7 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
       e.preventDefault();
       formError.textContent = s.capacityError.replace('{n}', String(capacite));
       formError.classList.remove('hidden');
+      formRepli.classList.add('hidden');
       return;
     }
     if (!supabaseConfigured) {
@@ -883,12 +950,14 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
         e.preventDefault();
         formError.textContent = s.errorSansEmail;
         formError.classList.remove('hidden');
+        formRepli.classList.add('hidden');
       }
       return;
     }
     e.preventDefault();
 
     formError.classList.add('hidden');
+    formRepli.classList.add('hidden');
     const quote = currentQuote();
     if (!quote) {
       formError.textContent = s.dateError;
@@ -898,6 +967,7 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
     if (blocked) {
       formError.textContent = s.unavailable;
       formError.classList.remove('hidden');
+      formRepli.classList.add('hidden');
       return;
     }
 
@@ -953,10 +1023,9 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
       confirmation.classList.remove('hidden');
       confirmation.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch (err) {
-      formError.textContent = email
-        ? s.error.replace('{email}', email)
-        : s.errorSansEmail;
-      formError.classList.remove('hidden');
+      // Cause classée (migration non appliquée, réseau, autre) : le visiteur
+      // reçoit une phrase honnête et, si possible, un lien email pré-rempli.
+      afficherEchec(err);
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = s.submit;
