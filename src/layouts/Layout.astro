@@ -47,7 +47,12 @@ const siteUrl = 'https://gruissan-cozy.github.io';
 const cheminCourant = Astro.url.pathname;
 const pageUrl = adresseCanonique(cheminCourant, siteUrl);
 const translations = alternativesLangues(cheminCourant);
-const ogImage = `${siteUrl}/gruissan-location/images/hero.svg`;
+// Aperçu social : une image MATRICIELLE 1200×630. Un SVG (`hero.svg`) est
+// refusé par Facebook, X, LinkedIn et WhatsApp : aucun aperçu ne s'affichait.
+// Le hero reste en SVG dans la page (net à toutes les tailles, léger).
+const ogImage = `${siteUrl}/gruissan-location/images/og-cover.jpg`;
+// `site.nom` contient déjà la ville (« … — Gruissan ») : ne pas la répéter.
+const ogImageAlt = site.nom;
 const metaTitle = titrePage(title, seo[lang].title);
 const metaDesc = descriptionPage(description, seo[lang].description);
 ---
@@ -72,11 +77,16 @@ const metaDesc = descriptionPage(description, seo[lang].description);
     <meta property="og:description" content={metaDesc} />
     <meta property="og:url" content={pageUrl} />
     <meta property="og:image" content={ogImage} />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={ogImageAlt} />
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={metaTitle} />
     <meta name="twitter:description" content={metaDesc} />
     <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
