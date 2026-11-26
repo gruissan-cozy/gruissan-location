@@ -7,6 +7,15 @@ Identité du bien, coordonnées, réseaux/plateformes de réservation.
 ## tarifs.json
 Tarification par saison (haute / moyenne / basse), en euros par semaine ou par nuit.
 
+Les listes `inclus` et `options[].nom` sont **multilingues** : chaque entrée est
+un objet `{ "fr": …, "en": …, "es": …, "de": … }`. Il en va de même pour
+`periode_i18n` et `note_i18n` de chaque saison (les clés `periode` et `note`
+d'origine restent en place, en français, pour les consommateurs historiques).
+Le site affiche la langue de la page, avec repli sur le français ; les anciennes
+chaînes françaises plates restent acceptées telles quelles (rien n'est inventé).
+Seuls les montants (`prix_semaine`, `prix_nuit_min`, `prix`) restent des nombres :
+ils ne changent jamais selon la langue.
+
 La taxe de séjour figure à deux clés, toutes deux **provisoires et marquées
 `a_valider: true`** tant que le propriétaire n'a pas confirmé le barème
 communal de Gruissan auprès de la mairie :

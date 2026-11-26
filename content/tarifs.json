@@ -3,39 +3,124 @@
     {
       "id": "haute",
       "periode": "Juillet – Août",
+      "periode_i18n": {
+        "fr": "Juillet – Août",
+        "en": "July – August",
+        "es": "Julio – Agosto",
+        "de": "Juli – August"
+      },
       "prix_semaine": 1450,
       "prix_nuit_min": 240,
       "nuits_min": 7,
-      "note": "Haute saison estivale — réservation à la semaine"
+      "note": "Haute saison estivale — réservation à la semaine",
+      "note_i18n": {
+        "fr": "Haute saison estivale — réservation à la semaine",
+        "en": "Peak summer season — bookings by the week",
+        "es": "Temporada alta de verano — reserva por semanas",
+        "de": "Hochsaison im Sommer — Buchung wochenweise"
+      }
     },
     {
       "id": "moyenne",
       "periode": "Juin – Septembre",
+      "periode_i18n": {
+        "fr": "Juin – Septembre",
+        "en": "June – September",
+        "es": "Junio – Septiembre",
+        "de": "Juni – September"
+      },
       "prix_semaine": 1050,
       "prix_nuit_min": 180,
       "nuits_min": 3,
-      "note": "Printemps et début d'automne"
+      "note": "Printemps et début d'automne",
+      "note_i18n": {
+        "fr": "Printemps et début d'automne",
+        "en": "Spring and early autumn",
+        "es": "Primavera y principios de otoño",
+        "de": "Frühling und Frühherbst"
+      }
     },
     {
       "id": "basse",
       "periode": "Octobre – Mai",
+      "periode_i18n": {
+        "fr": "Octobre – Mai",
+        "en": "October – May",
+        "es": "Octubre – Mayo",
+        "de": "Oktober – Mai"
+      },
       "prix_semaine": 690,
       "prix_nuit_min": 120,
       "nuits_min": 2,
-      "note": "Arrière-saison et hiver doux"
+      "note": "Arrière-saison et hiver doux",
+      "note_i18n": {
+        "fr": "Arrière-saison et hiver doux",
+        "en": "Late season and mild winter",
+        "es": "Temporada baja y invierno suave",
+        "de": "Nachsaison und milder Winter"
+      }
     }
   ],
   "inclus": [
-    "Wi-Fi fibre",
-    "Draps et linge de maison",
-    "Parking privatif",
-    "Climatisation réversible",
-    "Lave-linge"
+    {
+      "fr": "Wi-Fi fibre",
+      "en": "Fibre Wi-Fi",
+      "es": "Wi-Fi de fibra",
+      "de": "Glasfaser-WLAN"
+    },
+    {
+      "fr": "Draps et linge de maison",
+      "en": "Bed linen and household linen",
+      "es": "Ropa de cama y de hogar",
+      "de": "Bettwäsche und Handtücher"
+    },
+    {
+      "fr": "Parking privatif",
+      "en": "Private parking",
+      "es": "Aparcamiento privado",
+      "de": "Privatparkplatz"
+    },
+    {
+      "fr": "Climatisation réversible",
+      "en": "Reversible air conditioning",
+      "es": "Aire acondicionado reversible",
+      "de": "Umkehrbare Klimaanlage"
+    },
+    {
+      "fr": "Lave-linge",
+      "en": "Washing machine",
+      "es": "Lavadora",
+      "de": "Waschmaschine"
+    }
   ],
   "options": [
-    { "nom": "Ménage de fin de séjour", "prix": 65 },
-    { "nom": "Location de vélos", "prix": 45 },
-    { "nom": "Forfait plage (parasol + transats)", "prix": 70 }
+    {
+      "nom": {
+        "fr": "Ménage de fin de séjour",
+        "en": "End-of-stay cleaning",
+        "es": "Limpieza de fin de estancia",
+        "de": "Endreinigung"
+      },
+      "prix": 65
+    },
+    {
+      "nom": {
+        "fr": "Location de vélos",
+        "en": "Bike rental",
+        "es": "Alquiler de bicicletas",
+        "de": "Fahrradverleih"
+      },
+      "prix": 45
+    },
+    {
+      "nom": {
+        "fr": "Forfait plage (parasol + transats)",
+        "en": "Beach package (parasol + sun loungers)",
+        "es": "Pack de playa (sombrilla + hamacas)",
+        "de": "Strand-Paket (Sonnenschirm + Liegestühle)"
+      },
+      "prix": 70
+    }
   ],
   "caution": 800,
   "taxe_sejour_par_nuit_personne": 1.15,
