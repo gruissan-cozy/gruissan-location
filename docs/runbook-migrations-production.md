@@ -39,15 +39,14 @@ il écrit dans des colonnes qui n'existent pas encore.
 - [ ] Une sauvegarde : **Database → Backups**. Les migrations sont idempotentes
       et non destructrices, mais une sauvegarde coûte trente secondes.
 - [ ] Le dépôt à jour sur `main` (les fichiers `migrations/*.sql` sont la
-      source de vérité : ne rien recopier de mémoire).
+      source de vérité : ne rien recopier de mémoire). Le pack
+      `docs/migrations-prod-0011-0014.sql` en est généré — s'il manque ou
+      semble périmé, lancer `npm run migrations:pack`.
 
 **Ordre imposé.** Chaque migration suppose la précédente appliquée :
 
 ```
-0011_calendar_blocks.sql
-0012_unifier_bookings_sejours.sql
-0013_tenant_links.sql
-0014_purge_coordonnees.sql
+docs/migrations-prod-0011-0014.sql   (0011 → 0012 → 0013 → 0014, en une fois)
 → redéploiement des 5 Edge Functions
 → vérification finale
 ```
@@ -58,21 +57,50 @@ Ne pas sauter d'étape. `0012` référence `calendar_blocks` dans ses contrôles
 
 ---
 
-## 2. Étape 1 — `0011_calendar_blocks.sql`
+## 2. Étape 1 — coller le pack `docs/migrations-prod-0011-0014.sql`
 
-**Où** : Dashboard → SQL Editor → New query → coller le fichier → **Run**.
+**Où** : Dashboard → SQL Editor → New query → coller **le fichier entier**
+`docs/migrations-prod-0011-0014.sql` → **Run**, une seule fois.
 
-Cette migration crée la table des blocages de dates (travaux, séjour personnel,
-futur import iCal) et ses politiques RLS. Elle est indépendante du reste :
-elle peut être appliquée seule sans rien casser.
+Ce fichier est généré par `scripts/generate-migrations-prod.mjs` à partir des
+quatre migrations du dépôt, reprises octet pour octet, dans l'ordre :
 
-**Contrôle** — doit renvoyer une ligne, sans erreur :
+| Bloc | Fichier source | Ce qu'il fait |
+|---|---|---|
+| 0011 | `0011_calendar_blocks.sql` | table des blocages de dates (travaux, séjour personnel, futur import iCal) + RLS |
+| 0012 | `0012_unifier_bookings_sejours.sql` | **critique** : colonnes du formulaire (`adultes`, `mineurs`, `client_message`, `packs`, `prix_estime`, `origine`, `lang`), insertion anonyme, reprise de `bookings` |
+| 0013 | `0013_tenant_links.sql` | email facultatif sur `tenant_sessions`, expiration bornée à 30 jours après le départ, révocation à l'annulation |
+| 0014 | `0014_purge_coordonnees.sql` | deux index pour la purge des coordonnées |
+
+**Pourquoi un seul collage.** Quatre copier-coller successifs multiplient le
+risque d'exécution partielle : l'état de production du 2026-11-25 vient
+probablement d'un `0012` interrompu (colonnes manquantes). Le pack s'exécute
+d'un seul bloc, aucune migration n'ouvre de transaction qu'elle ne referme, et
+chacune est idempotente — le relancer ne duplique rien (les lignes sont
+reprises avec `on conflict (id) do nothing`).
+
+**Si le SQL Editor signale une erreur** : noter la migration concernée (le
+séparateur `-- ===== 00NN_….sql =====` la nomme), corriger la cause, puis
+relancer le pack **entier** — jamais un fragment isolé.
+
+**Ne pas éditer le pack à la main** : il est régénéré par
+`npm run migrations:pack`, et `tests/migrations-prod-pack.test.ts` rougit dès
+qu'il diverge d'une migration du dépôt.
+
+### Contrôles — à lancer séparément, un par un
+
+Les requêtes ci-dessous restent la preuve que chaque migration est passée.
+Elles se lancent **après** le Run du pack, chacune dans une nouvelle requête.
+
+#### Contrôle 0011 — la table et sa RLS
+
+Doit renvoyer une ligne, sans erreur :
 
 ```sql
 select count(*) as blocages from public.calendar_blocks;
 ```
 
-**Contrôle RLS** — le public ne doit voir que les dates :
+Le public ne doit voir que les dates :
 
 ```sql
 select grantee, privilege_type, column_name
@@ -85,18 +113,7 @@ order by column_name;
 Attendu : deux lignes, `debut` et `fin` en `SELECT` uniquement. Aucune ligne
 pour `note`, `source` ou `external_uid`.
 
----
-
-## 3. Étape 2 — `0012_unifier_bookings_sejours.sql`
-
-**C'est la migration critique** : elle ajoute les colonnes que le formulaire
-écrit (`adultes`, `mineurs`, `client_message`, `packs`, `prix_estime`,
-`origine`, `lang`), ouvre l'insertion anonyme et reprend les lignes de
-`bookings`.
-
-**Où** : SQL Editor → coller → **Run**. Le script est idempotent : une seconde
-exécution ne duplique rien (les lignes sont reprises avec `on conflict (id) do
-nothing`).
+#### Contrôle 0012 — les colonnes, les droits, la politique, la reprise
 
 **Contrôle 1 — les colonnes existent** :
 
@@ -157,15 +174,11 @@ select
 (départ ≤ arrivée) reprises avec une note interne : c'est prévu, elles sont
 conservées.
 
----
-
-## 4. Étape 3 — `0013_tenant_links.sql`
+#### Contrôle 0013 — lien locataire
 
 Rend l'email facultatif sur `tenant_sessions`, borne l'expiration d'un lien
 locataire à 30 jours après le départ et révoque le lien à l'annulation du
 séjour.
-
-**Contrôle** :
 
 ```sql
 select column_name, is_nullable
@@ -183,14 +196,10 @@ where tgrelid = 'public.tenant_sessions'::regclass and not tgisinternal;
 
 Attendu : `tenant_sessions_expiration_check`.
 
----
-
-## 5. Étape 4 — `0014_purge_coordonnees.sql`
+#### Contrôle 0014 — les index de purge
 
 Deux index seulement (`sejours_depart_idx` et le rappel sur `messages`). Aucune
 colonne, aucune politique : rien ne casse si elle passe après les autres.
-
-**Contrôle** :
 
 ```sql
 select indexname from pg_indexes
@@ -202,7 +211,7 @@ Attendu : une ligne.
 
 ---
 
-## 6. Étape 5 — redéployer les 5 Edge Functions
+## 3. Étape 2 — redéployer les 5 Edge Functions
 
 Le code des fonctions suppose les statuts unifiés (`confirme`, `termine`) et
 les tables de `0012`. Déployer **après** les migrations, jamais avant.
@@ -231,7 +240,7 @@ est dans `docs/tenant-checkin-setup.md` §2.
 
 ---
 
-## 7. Étape 6 — vérification finale, depuis le site
+## 4. Étape 3 — vérification finale, depuis le site
 
 1. Ouvrir `/reserver/` en navigation privée (pour ne pas réutiliser un cache).
 2. Remplir une demande réelle sur deux dates libres, l'envoyer.
@@ -260,7 +269,7 @@ signifie qu'une étape ci-dessus a été sautée ou a échoué.
 
 ---
 
-## 8. Le repli email du formulaire (à faire par le propriétaire)
+## 5. Le repli email du formulaire (à faire par le propriétaire)
 
 Tant que la base n'est pas migrée — et même après, en cas d'incident — le
 formulaire propose un lien `mailto:` pré-rempli. Ce lien n'apparaît **que si**
@@ -282,7 +291,7 @@ agent ne peut inventer cette valeur à la place du propriétaire.
 
 ---
 
-## 9. Ce qu'il ne faut pas faire
+## 6. Ce qu'il ne faut pas faire
 
 - **Ne pas merger de code qui écrit dans une colonne non migrée.** L'ordre est
   toujours : migrations → Edge Functions → merge/déploiement.
@@ -290,16 +299,23 @@ agent ne peut inventer cette valeur à la place du propriétaire.
   le génère depuis `src/pages` (`scripts/generate-sitemap.mjs`).
 - **Ne pas régénérer `package-lock.json` avec npm 11** : la CI tourne sous
   Node 22 / npm 10.
-- **Ne pas relancer `0012` en espérant « réparer »** : elle est idempotente,
-  mais une colonne manquante vient d'une exécution interrompue — relire le
-  rapport d'erreur du SQL Editor avant de réessayer.
+- **Ne pas découper le pack en quatre collages** : c'est précisément ce qui a
+  laissé la production dans un état partiel. Relancer le pack entier est sans
+  danger (migrations idempotentes) ; relancer un fragment isolé ne l'est pas.
+- **Ne pas éditer `docs/migrations-prod-0011-0014.sql` à la main** : il est
+  régénéré par `npm run migrations:pack`, et
+  `tests/migrations-prod-pack.test.ts` rougit dès qu'il diverge des migrations.
+- **Ne pas relancer un fragment isolé en espérant « réparer »** : relire
+  d'abord le rapport d'erreur du SQL Editor, corriger la cause, puis relancer
+  le pack entier.
 
 ---
 
-## 10. Journal
+## 7. Journal
 
 | Date | Étape | Résultat | Par |
 |---|---|---|---|
 | 2026-11-25 | Audit | 0011→0014 absentes en production, formulaire inopérant | agent (lecture anon) |
 | 2026-11-25 | Correctifs de code | diagnostic d'échec, repli email, sitemap, aperçu social | agent |
+| 2026-11-26 | Pack de migrations | `docs/migrations-prod-0011-0014.sql` généré (4 migrations, un seul collage), générateur `scripts/generate-migrations-prod.mjs`, garde `tests/migrations-prod-pack.test.ts` ; runbook ramené à un seul copier-coller, contrôles SQL conservés | agent |
 | _à remplir_ | 0011 → 0014 + Edge Functions | | |
