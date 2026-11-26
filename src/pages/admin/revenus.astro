@@ -48,7 +48,8 @@ const configured = isSupabaseConfigured;
         </div>
       </header>
 
-      <!-- Alerte : la table `sejours` n'existe pas encore dans Supabase -->
+      <!-- Alerte : lecture de `sejours` impossible (table absente ou droits
+           manquants). Le texte est choisi à l'exécution. -->
       <div
         id="revenus-migration"
         class="mb-6 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
@@ -214,7 +215,8 @@ const configured = isSupabaseConfigured;
     csvSejours,
     csvMessages,
     nomFichierExport,
-    estTableSejoursAbsente,
+    diagnosticLectureSejours,
+    messageDiagnosticSejours,
     type MessageMetier,
     type Revenus,
     type SaisonId,
@@ -464,8 +466,15 @@ const configured = isSupabaseConfigured;
       // Cas particulier : la migration n'a pas encore été appliquée sur le
       // projet Supabase — on l'explique clairement plutôt qu'un code abscons.
       const message = errText(resSejours.error);
-      if (estTableSejoursAbsente(resSejours.error)) {
-        el('revenus-migration')?.classList.remove('hidden');
+      const diagnostic = diagnosticLectureSejours(resSejours.error);
+      const texte = messageDiagnosticSejours(diagnostic, {
+        tableAbsente: AT['revenus.tableMissing'],
+        droitsManquants: AT['common.sejoursDroitsMissing'],
+      });
+      if (texte) {
+        const bandeau = el('revenus-migration');
+        if (bandeau) bandeau.textContent = texte;
+        bandeau?.classList.remove('hidden');
         el('revenus-loading')?.classList.add('hidden');
         el('revenus-body')?.classList.add('hidden');
         return;

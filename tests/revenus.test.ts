@@ -12,6 +12,8 @@ import {
   estSejourLoue,
   estValeurInjective,
   estTableSejoursAbsente,
+  diagnosticLectureSejours,
+  messageDiagnosticSejours,
   nomFichierExport,
   partSansPrix,
   prixMoyenNuit,
@@ -520,6 +522,55 @@ describe('détection de l’absence de la table sejours', () => {
     expect(estTableSejoursAbsente('')).toBe(false);
     expect(estTableSejoursAbsente(null)).toBe(false);
     expect(estTableSejoursAbsente(undefined)).toBe(false);
+  });
+
+  it('garde son contrat sur un refus de droits (42501 reste false)', () => {
+    // Contrat historique documenté : cette fonction ne parle QUE de table
+    // absente. Le diagnostic complet passe par `diagnosticLectureSejours`.
+    expect(estTableSejoursAbsente({ code: '42501', message: 'permission denied for table sejours' })).toBe(
+      false,
+    );
+  });
+});
+
+describe('diagnostic de la lecture de sejours', () => {
+  it('classe un 42501 en droits manquants (production 2026-11-26)', () => {
+    expect(
+      diagnosticLectureSejours({
+        code: '42501',
+        message: 'permission denied for table sejours',
+        hint: 'Grant the required privileges to the current role with: GRANT SELECT ON public.sejours TO anon;',
+      }),
+    ).toBe('droits_manquants');
+    expect(diagnosticLectureSejours({ code: '42501' })).toBe('droits_manquants');
+    expect(diagnosticLectureSejours({ message: 'insufficient_privilege' })).toBe('droits_manquants');
+    expect(diagnosticLectureSejours({ message: 'permission denied for table sejours' })).toBe(
+      'droits_manquants',
+    );
+  });
+
+  it('classe toujours une table absente en non-régression', () => {
+    expect(diagnosticLectureSejours({ code: '42P01' })).toBe('table_absente');
+    expect(diagnosticLectureSejours({ message: 'schema cache' })).toBe('table_absente');
+    expect(diagnosticLectureSejours({ details: 'PGRST205' })).toBe('table_absente');
+    expect(
+      diagnosticLectureSejours("Could not find the table 'public.sejours' in the schema cache"),
+    ).toBe('table_absente');
+  });
+
+  it('classe le reste en inconnu', () => {
+    expect(diagnosticLectureSejours(null)).toBe('inconnu');
+    expect(diagnosticLectureSejours(undefined)).toBe('inconnu');
+    expect(diagnosticLectureSejours('')).toBe('inconnu');
+    expect(diagnosticLectureSejours(new TypeError('Failed to fetch'))).toBe('inconnu');
+    expect(diagnosticLectureSejours({ message: 'JWT expired' })).toBe('inconnu');
+  });
+
+  it('sélectionne le bon texte de bandeau, et rien pour inconnu', () => {
+    const textes = { tableAbsente: 'TABLE 0003', droitsManquants: 'DROITS 0011→0014' };
+    expect(messageDiagnosticSejours('table_absente', textes)).toBe('TABLE 0003');
+    expect(messageDiagnosticSejours('droits_manquants', textes)).toBe('DROITS 0011→0014');
+    expect(messageDiagnosticSejours('inconnu', textes)).toBe('');
   });
 });
 
