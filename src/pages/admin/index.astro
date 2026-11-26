@@ -152,7 +152,9 @@ const CARDS = [
             {AT['dash.migrationLuMissing']}
           </div>
 
-          <!-- Alerte : la table des séjours n'existe pas encore (chantier 6) -->
+          <!-- Alerte : lecture des séjours impossible (table absente ou droits
+               manquants). Le texte est choisi à l'exécution par
+               `messageDiagnosticSejours` ; celui-ci n'est que le repli. -->
           <div
             id="dash-ca-migration"
             class="mb-6 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
@@ -258,7 +260,11 @@ const CARDS = [
   import { getSupabase } from '../../lib/supabase';
   import { errText, toast, majBadgeNonLus, fmtPrice } from '../../lib/admin-runtime';
   import { estErreurColonneLuAbsente } from '../../lib/lu';
-  import { aggreger, estTableSejoursAbsente } from '../../lib/revenus';
+  import {
+    aggreger,
+    diagnosticLectureSejours,
+    messageDiagnosticSejours,
+  } from '../../lib/revenus';
   import { compterEnAttente } from '../../lib/demandes';
   import type { Sejour } from '../../lib/supabase';
   import { AT } from '../../i18n/admin';
@@ -430,11 +436,19 @@ const CARDS = [
         // s'affichent quand même.
         const resSejours = await supabase.from('sejours').select('*');
         if (resSejours.error) {
-          if (estTableSejoursAbsente(resSejours.error)) {
-            // Bandeau réutilisé : il nomme la migration 0003 à appliquer.
-            document
-              .getElementById('dash-ca-migration')
-              ?.classList.remove('hidden');
+          // Deux causes distinctes, deux messages : table absente (0003) ou
+          // droits manquants (42501 → migrations 0011→0014 en production).
+          const diagnostic = diagnosticLectureSejours(resSejours.error);
+          const bandeau = document.getElementById('dash-ca-migration');
+          const texte = messageDiagnosticSejours(diagnostic, {
+            tableAbsente: AT['dash.migrationSejoursMissing'],
+            droitsManquants: AT['common.sejoursDroitsMissing'],
+          });
+          if (bandeau && texte) {
+            bandeau.textContent = texte;
+            bandeau.classList.remove('hidden');
+          } else {
+            toast(AT['common.errorGeneric'], 'error');
           }
         } else {
           const sejours = (resSejours.data ?? []) as Sejour[];

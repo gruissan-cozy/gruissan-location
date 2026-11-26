@@ -34,8 +34,15 @@ describe('page /admin/demandes — lecture', () => {
   });
 
   it('affiche un bandeau explicite si la table manque', () => {
-    expect(page).toContain('estTableSejoursAbsente');
+    expect(page).toContain('diagnosticLectureSejours');
+    expect(page).toContain('messageDiagnosticSejours');
     expect(page).toContain('demandes.tableMissing');
+  });
+
+  it('distingue un refus de droits (42501) d’une table absente', () => {
+    // Depuis le 2026-11-26 : `42501` n'est pas « table absente », le
+    // bandeau doit nommer les migrations 0011→0014 au lieu de 0003.
+    expect(page).toContain('common.sejoursDroitsMissing');
   });
 });
 
