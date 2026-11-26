@@ -7,6 +7,7 @@ import type { Lang } from '../i18n';
 import { booking as bt } from '../i18n/booking';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { adresseContact } from '../lib/legal';
+import { libelleTarif } from '../lib/contenu';
 import type { Pack } from '../lib/supabase';
 
 interface Props {
@@ -71,7 +72,9 @@ const cfg = {
       .plafond_par_nuit_et_personne ?? null,
   saisons: tarifsData.saisons.map((s) => ({
     id: s.id,
-    periode: s.periode,
+    // Libellé déjà dans la langue de la page : le repli du récapitulatif
+    // (si le libellé i18n manquait) ne repart pas en français.
+    periode: libelleTarif(s.periode_i18n, lang) || s.periode,
     prix_semaine: s.prix_semaine,
     nuits_min: s.nuits_min,
   })),
