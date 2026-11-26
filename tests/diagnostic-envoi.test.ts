@@ -192,4 +192,37 @@ describe('lienMailtoRepli — ne pas perdre la demande', () => {
     expect(lien).toContain('mailto:vrai@gruissan-cozy.fr');
     expect(decodeURIComponent(lien!)).toContain('Demande de réservation');
   });
+
+  it('rédige l’email dans la langue de la page, pas en français par défaut', () => {
+    const de = lienMailtoRepli(
+      'vrai@gruissan-cozy.fr',
+      { arrivee: '2026-08-01', depart: '2026-08-08', adultes: 2, mineurs: 1 },
+      {
+        sujet: 'Buchungsanfrage — Gruissan Cozy',
+        bonjour: 'Guten Tag,',
+        intro: 'Meine Anfrage konnte nicht über die Website gesendet werden.',
+        dates: 'Daten',
+        date: 'Datum',
+        voyageurs: 'Gäste',
+        adulte: 'Erwachsene(r)',
+        mineur: 'Kind(er)',
+        nom: 'Name',
+        merci: 'Vielen Dank!',
+      },
+    );
+    const decode = decodeURIComponent(de!);
+    expect(decode).toContain('Buchungsanfrage');
+    expect(decode).toContain('Daten : 2026-08-01 → 2026-08-08');
+    expect(decode).toContain('Gäste : 2 Erwachsene(r), 1 Kind(er)');
+    expect(decode).toContain('Vielen Dank!');
+    // Aucune trace du français par défaut.
+    expect(decode).not.toContain('Demande de réservation');
+    expect(decode).not.toContain('Bonjour');
+  });
+
+  it('garde le français quand aucun libellé n’est fourni', () => {
+    const decode = decodeURIComponent(lienMailtoRepli('vrai@gruissan-cozy.fr')!);
+    expect(decode).toContain('Demande de réservation');
+    expect(decode).toContain('Bonjour,');
+  });
 });

@@ -155,6 +155,41 @@ export function messageEchecEnvoi(
   return avecEmail ? brut.replace('{email}', adresse) : brut;
 }
 
+/**
+ * Libellés de l'email de repli, dans la langue de la page.
+ *
+ * Le corps du message est rédigé par le visiteur, pas par le site : il doit
+ * partir dans SA langue. Un visiteur de `/de/reserver/` qui reçoit un email en
+ * français ne sait pas ce qu'il envoie. Les valeurs viennent de
+ * `src/i18n/booking.ts` (`booking.repli*`) ; aucune n'est écrite en dur ici.
+ */
+export interface LibellesRepli {
+  sujet: string;
+  bonjour: string;
+  intro: string;
+  dates: string;
+  date: string;
+  voyageurs: string;
+  adulte: string;
+  mineur: string;
+  nom: string;
+  merci: string;
+}
+
+/** Repli par défaut : français. Utilisé par les tests et les appels anciens. */
+export const LIBELLES_REPLI_FR: LibellesRepli = {
+  sujet: 'Demande de réservation — Gruissan Cozy',
+  bonjour: 'Bonjour,',
+  intro: "Ma demande n'a pas pu être envoyée depuis le site.",
+  dates: 'Dates',
+  date: 'Date',
+  voyageurs: 'Voyageurs',
+  adulte: 'adulte(s)',
+  mineur: 'mineur(s)',
+  nom: 'Nom',
+  merci: 'Merci !',
+};
+
 /** Détail du séjour repris dans un éventuel email de repli. */
 export interface RepliSejour {
   arrivee?: string;
@@ -173,30 +208,32 @@ export interface RepliSejour {
  * nombre de voyageurs déjà saisis : le propriétaire reçoit une demande
  * exploitable, pas un « bonjour » vide.
  */
-export function lienMailtoRepli(email: string, sejour: RepliSejour = {}): string | null {
+export function lienMailtoRepli(
+  email: string,
+  sejour: RepliSejour = {},
+  libelles: LibellesRepli = LIBELLES_REPLI_FR,
+): string | null {
   const adresse = typeof email === 'string' ? email.trim() : '';
   if (!adresse) return null;
 
+  const l = libelles;
   const lignes: string[] = [];
   const dates = [sejour.arrivee, sejour.depart].filter(
     (valeur): valeur is string => typeof valeur === 'string' && valeur.trim() !== '',
   );
-  if (dates.length === 2) lignes.push(`Dates : ${dates[0]} → ${dates[1]}`);
-  else if (dates.length === 1) lignes.push(`Date : ${dates[0]}`);
+  if (dates.length === 2) lignes.push(`${l.dates} : ${dates[0]} → ${dates[1]}`);
+  else if (dates.length === 1) lignes.push(`${l.date} : ${dates[0]}`);
 
   const adultes = Number.isFinite(sejour.adultes) ? Number(sejour.adultes) : 0;
   const mineurs = Number.isFinite(sejour.mineurs) ? Number(sejour.mineurs) : 0;
   if (adultes > 0 || mineurs > 0) {
-    lignes.push(`Voyageurs : ${adultes} adulte(s), ${mineurs} mineur(s)`);
+    lignes.push(`${l.voyageurs} : ${adultes} ${l.adulte}, ${mineurs} ${l.mineur}`);
   }
-  if (typeof sejour.nom === 'string' && sejour.nom.trim()) lignes.push(`Nom : ${sejour.nom.trim()}`);
+  if (typeof sejour.nom === 'string' && sejour.nom.trim()) lignes.push(`${l.nom} : ${sejour.nom.trim()}`);
   if (typeof sejour.message === 'string' && sejour.message.trim()) {
     lignes.push('', sejour.message.trim());
   }
 
-  const sujet = 'Demande de réservation — Gruissan Cozy';
-  const corps = ['Bonjour,', '', "Ma demande n'a pas pu être envoyée depuis le site.", '', ...lignes, '', 'Merci !'].join(
-    '\n',
-  );
-  return `mailto:${adresse}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+  const corps = [l.bonjour, '', l.intro, '', ...lignes, '', l.merci].join('\n');
+  return `mailto:${adresse}?subject=${encodeURIComponent(l.sujet)}&body=${encodeURIComponent(corps)}`;
 }
