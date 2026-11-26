@@ -12,6 +12,7 @@
     "check": "astro check",
     "security:check": "node scripts/security-check.mjs",
     "validate:i18n": "node scripts/validate-i18n.mjs",
+    "migrations:pack": "node scripts/generate-migrations-prod.mjs",
     "verify": "npm run validate:i18n && npm run security:check && npm run check && npm test && npm run build",
     "prebuild": "npm run validate:i18n",
     "preview": "astro preview",
