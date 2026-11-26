@@ -482,7 +482,7 @@ const cfgCalendrier = {
           ]}
         >
           <h3 class:list={['font-display text-2xl font-semibold', i === 0 ? 'text-white' : 'text-ocean-800']}>
-            {saison.periode}
+            {libelleTarif(saison.periode_i18n, lang) || saison.periode}
           </h3>
           <p class="mt-6">
             <span class:list={['font-display text-5xl font-semibold', i === 0 ? 'text-white' : 'text-ocean-900']}>
@@ -496,7 +496,7 @@ const cfgCalendrier = {
             {saison.prix_nuit_min} € {tr['tarifs.parNuit']} · {saison.nuits_min} {tr['tarifs.nuitsMin']}
           </p>
           <p class:list={['mt-5 pt-5 text-sm border-t', i === 0 ? 'border-ocean-700 text-ocean-100/80' : 'border-sand-200 text-ocean-700/70 italic']}>
-            {saison.note}
+            {libelleTarif(saison.note_i18n, lang) || saison.note}
           </p>
         </div>
       ))}

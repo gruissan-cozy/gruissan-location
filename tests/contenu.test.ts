@@ -133,4 +133,16 @@ describe('content/tarifs.json multilingue', () => {
     const en = JSON.stringify(tarifs.inclus.map((i: any) => i.en));
     expect(en).not.toMatch(/Ménage|Draps|Location|Forfait/);
   });
+
+  it('porte aussi périodes et notes de saison dans les 4 langues', () => {
+    for (const saison of tarifs.saisons) {
+      for (const champ of ['periode_i18n', 'note_i18n']) {
+        for (const lang of LANGUAGES) {
+          expect(saison[champ]?.[lang], `${saison.id}.${champ}[${lang}] manquant`).toBeTruthy();
+        }
+        // La clé française d'origine reste en place (rétrocompatibilité).
+        expect(saison[champ].fr).toBe(saison[champ === 'periode_i18n' ? 'periode' : 'note']);
+      }
+    }
+  });
 });

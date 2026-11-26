@@ -3,26 +3,62 @@
     {
       "id": "haute",
       "periode": "Juillet – Août",
+      "periode_i18n": {
+        "fr": "Juillet – Août",
+        "en": "July – August",
+        "es": "Julio – Agosto",
+        "de": "Juli – August"
+      },
       "prix_semaine": 1450,
       "prix_nuit_min": 240,
       "nuits_min": 7,
-      "note": "Haute saison estivale — réservation à la semaine"
+      "note": "Haute saison estivale — réservation à la semaine",
+      "note_i18n": {
+        "fr": "Haute saison estivale — réservation à la semaine",
+        "en": "Peak summer season — bookings by the week",
+        "es": "Temporada alta de verano — reserva por semanas",
+        "de": "Hochsaison im Sommer — Buchung wochenweise"
+      }
     },
     {
       "id": "moyenne",
       "periode": "Juin – Septembre",
+      "periode_i18n": {
+        "fr": "Juin – Septembre",
+        "en": "June – September",
+        "es": "Junio – Septiembre",
+        "de": "Juni – September"
+      },
       "prix_semaine": 1050,
       "prix_nuit_min": 180,
       "nuits_min": 3,
-      "note": "Printemps et début d'automne"
+      "note": "Printemps et début d'automne",
+      "note_i18n": {
+        "fr": "Printemps et début d'automne",
+        "en": "Spring and early autumn",
+        "es": "Primavera y principios de otoño",
+        "de": "Frühling und Frühherbst"
+      }
     },
     {
       "id": "basse",
       "periode": "Octobre – Mai",
+      "periode_i18n": {
+        "fr": "Octobre – Mai",
+        "en": "October – May",
+        "es": "Octubre – Mayo",
+        "de": "Oktober – Mai"
+      },
       "prix_semaine": 690,
       "prix_nuit_min": 120,
       "nuits_min": 2,
-      "note": "Arrière-saison et hiver doux"
+      "note": "Arrière-saison et hiver doux",
+      "note_i18n": {
+        "fr": "Arrière-saison et hiver doux",
+        "en": "Late season and mild winter",
+        "es": "Temporada baja y invierno suave",
+        "de": "Nachsaison und milder Winter"
+      }
     }
   ],
   "inclus": [
