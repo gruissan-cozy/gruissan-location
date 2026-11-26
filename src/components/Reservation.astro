@@ -102,6 +102,16 @@ const cfg = {
     errorReseau: b['booking.errorReseau'],
     errorReseauSansEmail: b['booking.errorReseauSansEmail'],
     repliMailto: b['booking.repliMailto'],
+    repliSujet: b['booking.repliSujet'],
+    repliBonjour: b['booking.repliBonjour'],
+    repliIntro: b['booking.repliIntro'],
+    repliDates: b['booking.repliDates'],
+    repliDate: b['booking.repliDate'],
+    repliVoyageurs: b['booking.repliVoyageurs'],
+    repliAdulte: b['booking.repliAdulte'],
+    repliMineur: b['booking.repliMineur'],
+    repliNom: b['booking.repliNom'],
+    repliMerci: b['booking.repliMerci'],
     packsChosen: b['booking.packsChosen'],
     none: b['booking.none'],
     seasonHaute: b['booking.season.haute'],
@@ -890,14 +900,31 @@ const cfgJson = JSON.stringify(cfg).replace(/</g, '\\u003c');
     );
     formError.classList.remove('hidden');
 
-    const lien = lienMailtoRepli(email, {
-      arrivee: checkIn.value,
-      depart: checkOut.value,
-      adultes: Number(adults.value) || 0,
-      mineurs: Number(minors.value) || 0,
-      nom: nomField.value,
-      message: messageField.value,
-    });
+    const lien = lienMailtoRepli(
+      email,
+      {
+        arrivee: checkIn.value,
+        depart: checkOut.value,
+        adultes: Number(adults.value) || 0,
+        mineurs: Number(minors.value) || 0,
+        nom: nomField.value,
+        message: messageField.value,
+      },
+      // L'email part dans la langue de la page : le visiteur doit comprendre
+      // ce qu'il envoie, même s'il ne lit pas le français.
+      {
+        sujet: s.repliSujet,
+        bonjour: s.repliBonjour,
+        intro: s.repliIntro,
+        dates: s.repliDates,
+        date: s.repliDate,
+        voyageurs: s.repliVoyageurs,
+        adulte: s.repliAdulte,
+        mineur: s.repliMineur,
+        nom: s.repliNom,
+        merci: s.repliMerci,
+      },
+    );
     if (lien) {
       formRepliLien.href = lien;
       formRepli.classList.remove('hidden');

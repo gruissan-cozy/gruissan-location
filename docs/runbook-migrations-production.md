@@ -48,7 +48,7 @@ il écrit dans des colonnes qui n'existent pas encore.
 0012_unifier_bookings_sejours.sql
 0013_tenant_links.sql
 0014_purge_coordonnees.sql
-→ redéploiement des 4 Edge Functions
+→ redéploiement des 5 Edge Functions
 → vérification finale
 ```
 
@@ -202,7 +202,7 @@ Attendu : une ligne.
 
 ---
 
-## 6. Étape 5 — redéployer les 4 Edge Functions
+## 6. Étape 5 — redéployer les 5 Edge Functions
 
 Le code des fonctions suppose les statuts unifiés (`confirme`, `termine`) et
 les tables de `0012`. Déployer **après** les migrations, jamais avant.
@@ -215,9 +215,11 @@ supabase functions deploy send-email       --project-ref ykvieyeftewvxjralcym
 supabase functions deploy purge-tenant-data --project-ref ykvieyeftewvxjralcym
 ```
 
-`supabase/functions/tenant-link` est la cinquième : elle sert le bouton
-« Générer le lien locataire » de `/admin/sejours/`. Les quatre fonctions
-historiques sont celles listées dans `docs/tenant-checkin-setup.md` §1.
+`tenant-link` est la cinquième : elle sert le bouton « Générer le lien
+locataire » de `/admin/sejours/`. Les quatre fonctions historiques sont celles
+listées dans `docs/tenant-checkin-setup.md` §1. Les cinq doivent être
+redéployées, sinon le back office appelle une version antérieure au schéma de
+`0012`.
 
 **Secrets à vérifier** (Edge Functions → Secrets, jamais dans le dépôt) :
 `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `OWNER_EMAIL`, `CRON_SECRET`. Le détail

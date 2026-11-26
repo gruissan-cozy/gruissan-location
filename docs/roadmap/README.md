@@ -322,7 +322,7 @@ dans cet ordre seulement :
 2. `0012_unifier_bookings_sejours.sql`
 3. `0013_tenant_links.sql`
 4. `0014_purge_coordonnees.sql` (index seulement — la purge marche sans, plus lentement)
-5. redéployer les quatre Edge Functions
+5. redéployer les cinq Edge Functions (`tenant-link` incluse)
 6. pousser `main`
 
 Sauter l'étape 1 ou 2 publie un formulaire `/reserver/` qui écrit dans des
