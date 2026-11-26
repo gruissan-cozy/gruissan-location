@@ -29,6 +29,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'common.loading': 'Chargement…',
     'common.error': 'Erreur',
     'common.errorGeneric': "Une erreur est survenue. Veuillez réessayer.",
+    // La table `sejours` existe mais Supabase refuse sa lecture (42501) :
+    // les migrations 0011→0014 ne sont pas appliquées en production.
+    'common.sejoursDroitsMissing': "Migrations 0011 à 0014 à appliquer en production : la table des séjours existe, mais Supabase refuse sa lecture (droit manquant, code 42501) — le GRANT de lecture et d'insertion de migrations/0012_unifier_bookings_sejours.sql manque. Suivez docs/runbook-migrations-production.md, puis rechargez cette page.",
     'common.active': 'Actif',
     'common.inactive': 'Inactif',
     'common.activate': 'Activer',
@@ -515,6 +518,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'common.loading': 'Loading…',
     'common.error': 'Error',
     'common.errorGeneric': 'Something went wrong. Please try again.',
+    // The `sejours` table exists but Supabase refuses to read it (42501):
+    // migrations 0011→0014 are not applied in production.
+    'common.sejoursDroitsMissing': 'Migrations 0011 to 0014 to apply in production: the stays table exists, but Supabase refuses to read it (missing privilege, code 42501) — the read and insert GRANT from migrations/0012_unifier_bookings_sejours.sql is missing. Follow docs/runbook-migrations-production.md, then reload this page.',
     'common.active': 'Active',
     'common.inactive': 'Inactive',
     'common.activate': 'Activate',
@@ -998,6 +1004,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'common.loading': 'Cargando…',
     'common.error': 'Error',
     'common.errorGeneric': 'Se ha producido un error. Inténtalo de nuevo.',
+    // La tabla `sejours` existe, pero Supabase rechaza su lectura (42501):
+    // las migraciones 0011→0014 no están aplicadas en producción.
+    'common.sejoursDroitsMissing': 'Migraciones 0011 a 0014 por aplicar en producción: la tabla de estancias existe, pero Supabase rechaza su lectura (privilegio insuficiente, código 42501) — falta el GRANT de lectura e inserción de migrations/0012_unifier_bookings_sejours.sql. Siga docs/runbook-migrations-production.md y recargue esta página.',
     'common.active': 'Activo',
     'common.inactive': 'Inactivo',
     'common.activate': 'Activar',
@@ -1482,6 +1491,9 @@ export const adminT: Record<Lang, Record<string, string>> = {
     'common.loading': 'Wird geladen…',
     'common.error': 'Fehler',
     'common.errorGeneric': 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',
+    // Die Tabelle `sejours` existiert, aber Supabase verweigert das Lesen (42501):
+    // die Migrationen 0011→0014 sind in der Produktion nicht angewendet.
+    'common.sejoursDroitsMissing': 'Migrationen 0011 bis 0014 in der Produktion anzuwenden: die Aufenthaltstabelle existiert, aber Supabase verweigert das Lesen (fehlendes Recht, Code 42501) — das Lese- und Einfüge-GRANT aus migrations/0012_unifier_bookings_sejours.sql fehlt. Folgen Sie docs/runbook-migrations-production.md und laden Sie diese Seite neu.',
     'common.active': 'Aktiv',
     'common.inactive': 'Inaktiv',
     'common.activate': 'Aktivieren',

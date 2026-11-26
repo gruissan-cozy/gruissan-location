@@ -57,7 +57,8 @@ const configured = isSupabaseConfigured;
         </div>
       </header>
 
-      <!-- Alerte : la table `sejours` n'existe pas encore (migration 0003) -->
+      <!-- Alerte : lecture de `sejours` impossible (table absente 0003 ou
+           droits manquants 42501). Le texte est choisi à l'exécution. -->
       <div
         id="taxe-migration"
         class="mb-5 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
@@ -216,7 +217,7 @@ const configured = isSupabaseConfigured;
     type SejourTaxe,
   } from '../../lib/taxe-sejour';
   import { construireCsv, nomFichierExport } from '../../lib/revenus';
-  import { estTableSejoursAbsente } from '../../lib/revenus';
+  import { diagnosticLectureSejours, messageDiagnosticSejours } from '../../lib/revenus';
   import type { Sejour } from '../../lib/supabase';
   import tarifs from '../../../content/tarifs.json';
 
@@ -444,9 +445,16 @@ const configured = isSupabaseConfigured;
       .order('arrivee', { ascending: false });
 
     if (error) {
-      // Cas particulier : la migration 0003 n'a pas encore été appliquée.
-      if (estTableSejoursAbsente(error)) {
-        el('taxe-migration')?.classList.remove('hidden');
+      // Deux causes distinctes : table absente (0003) ou droits manquants
+      // (42501 → migrations 0011→0014 non appliquées en production).
+      const texte = messageDiagnosticSejours(diagnosticLectureSejours(error), {
+        tableAbsente: AT['taxe.tableMissing'],
+        droitsManquants: AT['common.sejoursDroitsMissing'],
+      });
+      if (texte) {
+        const bandeau = el('taxe-migration');
+        if (bandeau) bandeau.textContent = texte;
+        bandeau?.classList.remove('hidden');
         el('taxe-loading')?.classList.add('hidden');
         el('taxe-body')?.classList.add('hidden');
         return;

@@ -41,7 +41,8 @@ const configured = isSupabaseConfigured;
           <p id="demandes-count" class="text-sm text-ocean-700/70"></p>
         </header>
 
-        <!-- Alerte : la table des séjours (donc la migration 0012) manque -->
+        <!-- Alerte : lecture des séjours impossible (table absente ou droits
+             manquants 42501). Le texte est choisi à l'exécution. -->
         <div
           id="demandes-migration"
           class="mb-5 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
@@ -72,7 +73,7 @@ const configured = isSupabaseConfigured;
   } from '../../lib/admin-runtime';
   import { AT } from '../../i18n/admin';
   import type { Sejour } from '../../lib/supabase';
-  import { estTableSejoursAbsente } from '../../lib/revenus';
+  import { diagnosticLectureSejours, messageDiagnosticSejours } from '../../lib/revenus';
   import { nuits } from '../../lib/sejours';
   import {
     trierDemandes,
@@ -119,7 +120,14 @@ const configured = isSupabaseConfigured;
     ]);
 
     if (resDemandes.error) {
-      if (estTableSejoursAbsente(resDemandes.error)) {
+      // Deux causes distinctes : table absente (0003) ou droits manquants
+      // (42501 → migrations 0011→0014 non appliquées en production).
+      const texte = messageDiagnosticSejours(diagnosticLectureSejours(resDemandes.error), {
+        tableAbsente: AT['demandes.tableMissing'],
+        droitsManquants: AT['common.sejoursDroitsMissing'],
+      });
+      if (texte) {
+        if (migrationEl) migrationEl.textContent = texte;
         migrationEl?.classList.remove('hidden');
         if (listEl) listEl.innerHTML = '';
         if (countEl) countEl.textContent = '';
@@ -139,6 +147,16 @@ const configured = isSupabaseConfigured;
       tous = [];
       occupationInconnue = true;
       if (countEl) countEl.textContent = '';
+      // Une lecture refusée (42501) ou une table absente ne doit pas se
+      // contenter du message « occupation inconnue » : on nomme la cause.
+      const texte = messageDiagnosticSejours(diagnosticLectureSejours(resTous.error), {
+        tableAbsente: AT['demandes.tableMissing'],
+        droitsManquants: AT['common.sejoursDroitsMissing'],
+      });
+      if (texte && migrationEl) {
+        migrationEl.textContent = texte;
+        migrationEl.classList.remove('hidden');
+      }
       if (listEl) {
         listEl.innerHTML = `<div class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-8 text-center text-sm text-amber-800 shadow-card">${esc(
           AT['demandes.occupancyUnknown'],

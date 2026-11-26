@@ -440,7 +440,7 @@ export function nuitsDisponiblesAnnee(annee: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// Dégradation : table `sejours` absente (migration 0003 non appliquée)
+// Dégradation de la lecture de `sejours` : deux causes distinctes
 // ---------------------------------------------------------------------------
 
 /** Motifs PostgREST / PostgreSQL signalant une table absente du schéma. */
@@ -453,27 +453,78 @@ const MOTIFS_TABLE_ABSENTE = [
 ];
 
 /**
+ * Motifs signalant un droit manquant (`42501`) plutôt qu'une table absente.
+ *
+ * Constat de production (2026-11-26) : la table `sejours` existe et le GRANT
+ * de colonnes de 0003 fonctionne, mais celui de 0012 manque. PostgREST répond
+ * `401 {"code":"42501","message":"permission denied for table sejours"}`.
+ * Confondre ce cas avec « table absente » envoie le propriétaire rejouer
+ * 0003 — un faux diagnostic est pire que pas de diagnostic.
+ */
+const MOTIFS_DROITS_MANQUANTS = [
+  /42501/i,
+  /permission denied/i,
+  /insufficient[_ ]privilege/i,
+];
+
+/** Cause d'un échec de lecture de `sejours`. */
+export type DiagnosticLectureSejours = 'table_absente' | 'droits_manquants' | 'inconnu';
+
+/** Concatène les champs porteurs de sens d'une erreur Supabase / JS. */
+function texteErreur(error: unknown): string {
+  if (typeof error === 'string') return error;
+  return [
+    (error as { message?: unknown }).message,
+    (error as { details?: unknown }).details,
+    (error as { hint?: unknown }).hint,
+    (error as { code?: unknown }).code,
+  ]
+    .filter(Boolean)
+    .map(String)
+    .join(' ');
+}
+
+/**
+ * Classe l'erreur d'une lecture de `sejours`.
+ *
+ * - `table_absente` : la table n'existe pas (migration 0003) ;
+ * - `droits_manquants` : la table existe mais le GRANT manque (migrations
+ *   0011→0014 non appliquées en production, GRANT de 0012 absent) ;
+ * - `inconnu` : tout le reste (réseau, session expirée, bug).
+ */
+export function diagnosticLectureSejours(error: unknown): DiagnosticLectureSejours {
+  if (!error) return 'inconnu';
+  const texte = texteErreur(error);
+  // L'ordre compte : « does not exist » (42P01) est plus précis qu'un refus.
+  if (MOTIFS_TABLE_ABSENTE.some((m) => m.test(texte))) return 'table_absente';
+  if (MOTIFS_DROITS_MANQUANTS.some((m) => m.test(texte))) return 'droits_manquants';
+  return 'inconnu';
+}
+
+/**
  * Vrai si l'erreur Supabase provient de l'absence de la table `sejours`
  * (migration `0003_sejours.sql` pas encore appliquée).
  *
- * Sans ce test, l'erreur remonte comme un message abscons et la page
- * laisse croire que les indicateurs sont à zéro.
+ * Contrat inchangé : un refus de droits (`42501`) reste `false`. Les écrans
+ * qui ont besoin des deux causes passent par `diagnosticLectureSejours`.
  */
 export function estTableSejoursAbsente(error: unknown): boolean {
-  if (!error) return false;
-  const texte =
-    typeof error === 'string'
-      ? error
-      : [
-          (error as { message?: unknown }).message,
-          (error as { details?: unknown }).details,
-          (error as { hint?: unknown }).hint,
-          (error as { code?: unknown }).code,
-        ]
-          .filter(Boolean)
-          .map(String)
-          .join(' ');
-  return MOTIFS_TABLE_ABSENTE.some((m) => m.test(texte));
+  return diagnosticLectureSejours(error) === 'table_absente';
+}
+
+/**
+ * Texte du bandeau à afficher pour un diagnostic donné.
+ *
+ * Chaîne vide pour `inconnu` : l'appelant garde alors son message générique.
+ * Les textes viennent de `src/i18n/admin.ts` (4 langues), jamais d'ici.
+ */
+export function messageDiagnosticSejours(
+  diagnostic: DiagnosticLectureSejours,
+  textes: { tableAbsente: string; droitsManquants: string },
+): string {
+  if (diagnostic === 'table_absente') return textes.tableAbsente;
+  if (diagnostic === 'droits_manquants') return textes.droitsManquants;
+  return '';
 }
 
 /** Période d'un mois civil : « 2026-07 » → { debut, fin }. */
