@@ -46,6 +46,9 @@ describe('back office — diagnostic de la lecture de sejours', () => {
     const dashboard = lire('src/pages/admin/index.astro');
     expect(dashboard).toContain("document.getElementById('dash-ca-migration')");
     expect(dashboard).toMatch(/bandeau\.textContent = texte/);
+    // Cause inconnue (réseau, JWT expiré) : le bandeau porte le message
+    // générique, il ne se contente pas d'un toast transitoire.
+    expect(dashboard).toMatch(/bandeau\.textContent = AT\['common\.errorGeneric'\]/);
   });
 
   it('la clé de bandeau existe dans les 4 langues', async () => {

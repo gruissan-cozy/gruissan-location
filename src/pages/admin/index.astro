@@ -447,6 +447,12 @@ const CARDS = [
           if (bandeau && texte) {
             bandeau.textContent = texte;
             bandeau.classList.remove('hidden');
+          } else if (bandeau) {
+            // Cause inconnue (réseau, JWT expiré…) : le bandeau reste visible
+            // avec le message générique — un toast transitoire laisserait
+            // l'utilisateur devant un tableau de bord incomplet sans trace.
+            bandeau.textContent = AT['common.errorGeneric'];
+            bandeau.classList.remove('hidden');
           } else {
             toast(AT['common.errorGeneric'], 'error');
           }
