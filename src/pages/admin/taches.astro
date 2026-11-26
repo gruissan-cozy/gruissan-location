@@ -47,6 +47,14 @@ const configured = isSupabaseConfigured;
         </div>
       </header>
 
+      <!-- Alerte : lecture de `sejours` impossible (table absente 0003 ou
+           droits manquants 42501). Le texte est choisi à l'exécution. -->
+      <div
+        id="taches-sejours-alert"
+        class="mb-5 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800"
+        role="alert"
+      ></div>
+
       <!-- Alerte : la table `sejour_taches` n'existe pas encore -->
       <div
         id="taches-migration"
@@ -94,6 +102,7 @@ const configured = isSupabaseConfigured;
     progression,
     type Tache,
   } from '../../lib/taches';
+  import { diagnosticLectureSejours, messageDiagnosticSejours } from '../../lib/revenus';
   import type { Sejour, SejourTache } from '../../lib/supabase';
 
   /** Liste type proposée par défaut (libellés éditables). */
@@ -138,6 +147,21 @@ const configured = isSupabaseConfigured;
       .order('arrivee', { ascending: false });
 
     if (resSejours.error) {
+      // Table absente (0003) et droits manquants (42501) n'appellent pas la
+      // même réponse : on affiche la bonne, jamais un simple code d'erreur.
+      const texte = messageDiagnosticSejours(diagnosticLectureSejours(resSejours.error), {
+        tableAbsente: AT['sejours.tableMissing'],
+        droitsManquants: AT['common.sejoursDroitsMissing'],
+      });
+      if (texte) {
+        const bandeau = el('taches-sejours-alert');
+        if (bandeau) {
+          bandeau.textContent = texte;
+          bandeau.classList.remove('hidden');
+        }
+        el('taches-loading')?.classList.add('hidden');
+        return;
+      }
       toast(errText(resSejours.error) || AT['common.errorGeneric'], 'error');
       return;
     }

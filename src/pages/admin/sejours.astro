@@ -333,6 +333,7 @@ const STATUTS = ['demande', 'option', 'confirme', 'annule', 'termine'] as const;
   import { AT } from '../../i18n/admin';
   import type { Sejour } from '../../lib/supabase';
   import { trouverChevauchements, nuits, plageValide } from '../../lib/sejours';
+  import { diagnosticLectureSejours, messageDiagnosticSejours } from '../../lib/revenus';
   import { construireLienLocataire } from '../../lib/lien-locataire';
 
   let sejours: Sejour[] = [];
@@ -365,14 +366,20 @@ const STATUTS = ['demande', 'option', 'confirme', 'annule', 'termine'] as const;
       .select('*')
       .order('arrivee', { ascending: false });
     if (error) {
-      // Cas particulier : la migration n'a pas encore été appliquée sur le
-      // projet Supabase — on l'explique clairement plutôt qu'un code d'erreur.
+      // Deux causes distinctes : table absente (0003) ou droits manquants
+      // (42501 → migrations 0011→0014 non appliquées en production). On
+      // explique laquelle plutôt que d'afficher un code d'erreur.
       const message = errText(error);
-      const tableAbsente = /does not exist|schema cache|PGRST205|42P01/i.test(message);
-      if (tableAbsente && listEl) {
-        listEl.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-sm leading-relaxed text-amber-800">${esc(
-          AT['sejours.tableMissing'],
-        )}</td></tr>`;
+      const texte = messageDiagnosticSejours(diagnosticLectureSejours(error), {
+        tableAbsente: AT['sejours.tableMissing'],
+        droitsManquants: AT['common.sejoursDroitsMissing'],
+      });
+      if (texte) {
+        if (listEl) {
+          listEl.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-sm leading-relaxed text-amber-800">${esc(
+            texte,
+          )}</td></tr>`;
+        }
         if (countEl) countEl.textContent = '';
         return;
       }
