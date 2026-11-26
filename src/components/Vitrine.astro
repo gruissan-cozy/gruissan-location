@@ -23,6 +23,7 @@ import {
   type JourCalendrier,
 } from '../lib/calendrier';
 import { adresseContact } from '../lib/legal';
+import { libelleTarif } from '../lib/contenu';
 import { chargerDisponibilites } from '../lib/disponibilites';
 import {
   chargerGalerie,
@@ -509,7 +510,7 @@ const cfgCalendrier = {
               <svg class="w-4 h-4 text-sunset-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
-              {item}
+              {libelleTarif(item, lang)}
             </li>
           ))}
         </ul>
@@ -522,7 +523,7 @@ const cfgCalendrier = {
         <ul class="space-y-3 text-ocean-800/80">
           {tarifsData.options.map((opt) => (
             <li class="flex justify-between items-baseline gap-4">
-              <span>{opt.nom}</span>
+              <span>{libelleTarif(opt.nom, lang)}</span>
               <span class="font-display text-lg font-semibold text-ocean-600 whitespace-nowrap">{opt.prix} €</span>
             </li>
           ))}

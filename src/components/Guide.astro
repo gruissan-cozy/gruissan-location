@@ -1,27 +1,26 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import guideData from '../../content/guide.json';
-import { getSupabase, isSupabaseConfigured, type GuideSection } from '../lib/supabase';
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 import { guideT } from '../i18n/guide';
+import {
+  fusionnerSectionsGuide,
+  type SectionGuideAffichee,
+  type SectionGuideBrute,
+} from '../lib/contenu';
 import type { Lang } from '../i18n';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props as Props;
 const tr = guideT[lang];
 
-type GuideSectionLike = Pick<
-  GuideSection,
-  'slug' | 'titre' | 'contenu' | 'icone' | 'ordre'
->;
-
 // --- Source des sections : Supabase si configuré, sinon content/guide.json ---
-let sections: GuideSectionLike[] = guideData.sections.map((s) => ({
-  slug: s.slug,
-  titre: s.titre,
-  contenu: s.contenu,
-  icone: s.icone,
-  ordre: s.ordre,
-}));
+// Le JSON statique sert de repli **par langue** : en production la colonne
+// `contenu` des lignes Supabase ne porte souvent que `fr`, et le corps doit
+// alors venir de `content/guide.json` dans la langue de la page, pas du
+// français distant.
+const statiques = guideData.sections as SectionGuideBrute[];
+let lignes: SectionGuideBrute[] = statiques;
 
 if (isSupabaseConfigured) {
   const supabase = getSupabase();
@@ -34,7 +33,7 @@ if (isSupabaseConfigured) {
         .eq('visibilite', 'public')
         .order('ordre');
       if (!error && data && data.length > 0) {
-        sections = data.map((row) => ({
+        lignes = data.map((row) => ({
           slug: row.slug as string,
           titre: row.titre as Record<string, string>,
           contenu: row.contenu as Record<string, string>,
@@ -48,12 +47,10 @@ if (isSupabaseConfigured) {
   }
 }
 
-sections.sort((a, b) => a.ordre - b.ordre);
-
-/** Titre d'une section dans la langue courante, repli sur le français. */
-const titre = (s: GuideSectionLike) => s.titre[lang] || s.titre.fr || s.slug;
-/** Contenu HTML d'une section, repli sur le français. */
-const contenu = (s: GuideSectionLike) => s.contenu[lang] || s.contenu.fr || '';
+// Titres et corps résolus une fois pour toutes dans la langue de la page.
+const sections: SectionGuideAffichee[] = fusionnerSectionsGuide(lignes, statiques, lang).sort(
+  (a, b) => a.ordre - b.ordre,
+);
 ---
 
 <Layout lang={lang} title={tr['guide.title']} description={tr['guide.subtitle']}>
@@ -101,7 +98,7 @@ const contenu = (s: GuideSectionLike) => s.contenu[lang] || s.contenu.fr || '';
             class="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-sand-200 shadow-card hover:shadow-card-hover transition-shadow text-ocean-800 font-medium"
           >
             <span aria-hidden="true" class="text-lg">{s.icone ?? '📄'}</span>
-            {titre(s)}
+            {s.titre}
           </a>
         </li>
       ))}
@@ -124,13 +121,13 @@ const contenu = (s: GuideSectionLike) => s.contenu[lang] || s.contenu.fr || '';
             class="shrink-0 w-12 h-12 rounded-2xl bg-ocean-50 flex items-center justify-center text-2xl"
           >{s.icone ?? '📄'}</span>
           <h2 class="font-display text-2xl sm:text-3xl font-semibold text-ocean-900">
-            {titre(s)}
+            {s.titre}
           </h2>
         </div>
         {/* Contenu HTML saisi par l'hôte dans le back office — contenu de confiance */}
         <div
           class="guide-content text-ocean-800/90 text-base sm:text-lg leading-relaxed space-y-3"
-          set:html={contenu(s)}
+          set:html={s.contenu}
         />
       </div>
     </section>
